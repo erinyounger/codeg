@@ -1,0 +1,409 @@
+"use client"
+
+import { useEffect, useMemo, useRef, useState } from "react"
+import { ChevronRight, FileIcon } from "lucide-react"
+import { useFolderContext } from "@/contexts/folder-context"
+import { useTabContext } from "@/contexts/tab-context"
+import type { LiveMessage } from "@/contexts/acp-connections-context"
+import { useWorkspaceContext } from "@/contexts/workspace-context"
+import { useConnection } from "@/hooks/use-connection"
+import { useDbMessageDetail } from "@/hooks/use-db-message-detail"
+import { extractSessionFilesGrouped } from "@/lib/session-files"
+import { getPendingPromptText } from "@/lib/pending-prompt-text"
+import {
+  inferLiveToolName,
+  normalizeToolName,
+} from "@/lib/tool-call-normalization"
+import type { ConnectionStatus, MessageTurn } from "@/lib/types"
+import {
+  CommitFileAdditions,
+  CommitFileDeletions,
+} from "@/components/ai-elements/commit"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils"
+
+const LIVE_FILE_WRITE_OPS = new Set(["edit", "write", "apply_patch"])
+
+function isRemovedFileDiff(diff: string | null): boolean {
+  if (!diff) return false
+
+  return (
+    /^\*\*\* Delete File:\s+/m.test(diff) ||
+    /^deleted file mode\b/m.test(diff) ||
+    /^\+\+\+\s+\/dev\/null$/m.test(diff)
+  )
+}
+
+function normalizeSlashPath(path: string): string {
+  return path.replace(/\\/g, "/")
+}
+
+function toFolderRelativePath(filePath: string, folderPath?: string): string {
+  const normalizedFilePath = normalizeSlashPath(filePath)
+  if (!folderPath) return normalizedFilePath
+
+  const normalizedFolderPath = normalizeSlashPath(folderPath).replace(
+    /\/+$/,
+    ""
+  )
+  if (!normalizedFolderPath) return normalizedFilePath
+
+  const folderPrefix = `${normalizedFolderPath}/`
+  if (normalizedFilePath.startsWith(folderPrefix)) {
+    return normalizedFilePath.slice(folderPrefix.length)
+  }
+
+  return normalizedFilePath
+}
+
+function extractTurnText(turn: MessageTurn | null): string | null {
+  if (!turn || turn.role !== "user") return null
+
+  for (const block of turn.blocks) {
+    if (block.type !== "text") continue
+    const text = block.text.trim()
+    if (text) return text
+  }
+
+  return null
+}
+
+function mergeLiveTurns(params: {
+  turns: MessageTurn[]
+  liveMessage: LiveMessage | null
+  connStatus: ConnectionStatus | null
+  pendingPromptText: string | null
+}): MessageTurn[] {
+  const { turns, liveMessage, connStatus, pendingPromptText } = params
+  if (!liveMessage || connStatus !== "prompting") return turns
+
+  const liveBlocks = liveMessage.content.flatMap((block) => {
+    if (block.type !== "tool_call") return []
+
+    const toolName = inferLiveToolName({
+      title: block.info.title,
+      kind: block.info.kind,
+      rawInput: block.info.raw_input,
+    })
+    const normalizedToolName = normalizeToolName(toolName)
+    if (!LIVE_FILE_WRITE_OPS.has(normalizedToolName)) return []
+
+    return [
+      {
+        type: "tool_use" as const,
+        tool_use_id: block.info.tool_call_id,
+        tool_name: toolName,
+        input_preview: block.info.raw_input,
+      },
+    ]
+  })
+
+  if (liveBlocks.length === 0) return turns
+
+  const now = new Date().toISOString()
+  const mergedTurns = [...turns]
+  const lastTurn = mergedTurns[mergedTurns.length - 1]
+  const lastUserTurn =
+    [...mergedTurns].reverse().find((turn) => turn.role === "user") ?? null
+  const pendingText = pendingPromptText?.trim() ?? ""
+  const shouldReuseExistingUserTurn =
+    pendingText.length > 0 && extractTurnText(lastUserTurn) === pendingText
+
+  if ((!lastTurn || lastTurn.role !== "user") && !shouldReuseExistingUserTurn) {
+    mergedTurns.push({
+      id: `live-user-${liveMessage.id}`,
+      role: "user",
+      blocks: [
+        { type: "text", text: pendingPromptText?.trim() || "Current response" },
+      ],
+      timestamp: now,
+    })
+  }
+
+  mergedTurns.push({
+    id: `live-assistant-${liveMessage.id}`,
+    role: "assistant",
+    blocks: liveBlocks,
+    timestamp: now,
+  })
+
+  return mergedTurns
+}
+
+function SessionFilesContent({
+  conversationId,
+  liveMessage,
+  connStatus,
+  pendingPromptText,
+}: {
+  conversationId: number
+  liveMessage: LiveMessage | null
+  connStatus: ConnectionStatus | null
+  pendingPromptText: string | null
+}) {
+  const { detail, loading, refetch } = useDbMessageDetail(conversationId)
+  const { openSessionFileDiff } = useWorkspaceContext()
+  const { folder } = useFolderContext()
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const prevStatusRef = useRef(connStatus)
+
+  useEffect(() => {
+    const prev = prevStatusRef.current
+    prevStatusRef.current = connStatus
+    if (prev === "prompting" && connStatus && connStatus !== "prompting") {
+      refetch()
+    }
+  }, [connStatus, refetch])
+
+  const turns = useMemo(
+    () =>
+      mergeLiveTurns({
+        turns: detail?.turns ?? [],
+        liveMessage,
+        connStatus,
+        pendingPromptText,
+      }),
+    [detail?.turns, liveMessage, connStatus, pendingPromptText]
+  )
+  const groups = useMemo(
+    () => (turns.length > 0 ? extractSessionFilesGrouped(turns) : []),
+    [turns]
+  )
+
+  const handleFileClick = (
+    filePath: string,
+    diffContent: string | null,
+    groupIndex: number,
+    changeIndex: number
+  ) => {
+    openSessionFileDiff(
+      filePath,
+      diffContent ?? `No diff data available for ${filePath}`,
+      `msg-${groupIndex + 1}-chg-${changeIndex + 1}`
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <p className="text-xs text-muted-foreground text-center">Loading...</p>
+      </div>
+    )
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <p className="text-xs text-muted-foreground text-center">
+          No file changes found in this conversation
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3 p-3">
+      {groups.map((group, groupIndex) => {
+        const groupKey = `${group.userTurnId}-${group.timestamp}-${groupIndex}`
+        const isOpen = openGroups[groupKey] ?? false
+        const totalAdditions = group.files.reduce(
+          (sum, f) => sum + f.additions,
+          0
+        )
+        const totalDeletions = group.files.reduce(
+          (sum, f) => sum + f.deletions,
+          0
+        )
+        const uniqueFileCount = new Set(
+          group.files.map((file) => file.path.replace(/\\/g, "/"))
+        ).size
+
+        return (
+          <Collapsible
+            key={groupKey}
+            className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground"
+            open={isOpen}
+            onOpenChange={(open) =>
+              setOpenGroups((prev) => ({
+                ...prev,
+                [groupKey]: open,
+              }))
+            }
+          >
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-accent/40"
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-md border border-border bg-muted/30 text-muted-foreground transition-colors",
+                    isOpen && "bg-accent text-accent-foreground"
+                  )}
+                >
+                  <ChevronRight
+                    className={cn(
+                      "h-3.5 w-3.5 transition-transform",
+                      isOpen && "rotate-90"
+                    )}
+                  />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="line-clamp-1 text-xs leading-5 text-foreground">
+                    {group.userMessage}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      {group.files.length}{" "}
+                      {group.files.length === 1 ? "change" : "changes"}
+                    </span>
+                    <span className="rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      {uniqueFileCount}{" "}
+                      {uniqueFileCount === 1 ? "File" : "Files"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                      <CommitFileAdditions
+                        count={totalAdditions}
+                        className="text-[10px]"
+                      />
+                      <CommitFileDeletions
+                        count={totalDeletions}
+                        className="text-[10px]"
+                      />
+                    </span>
+                  </div>
+                </div>
+                <span className="mt-0.5 shrink-0 rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+                  #{groupIndex + 1}
+                </span>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="border-t border-border bg-card">
+              <ul className="space-y-2 p-3">
+                {group.files.map((file, fileIndex) => {
+                  const normalizedDisplayPath = toFolderRelativePath(
+                    file.path,
+                    folder?.path
+                  )
+                  const lastSlash = normalizedDisplayPath.lastIndexOf("/")
+                  const fileName =
+                    lastSlash >= 0
+                      ? normalizedDisplayPath.slice(lastSlash + 1)
+                      : normalizedDisplayPath
+                  const isRemoved = isRemovedFileDiff(file.diff)
+
+                  return (
+                    <li key={file.id}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left min-w-0",
+                          isRemoved
+                            ? "border-destructive/30 bg-destructive/10 cursor-not-allowed"
+                            : "border-border bg-card transition-colors hover:bg-accent/40"
+                        )}
+                        disabled={isRemoved}
+                        onClick={
+                          isRemoved
+                            ? undefined
+                            : () =>
+                                handleFileClick(
+                                  file.path,
+                                  file.diff,
+                                  groupIndex,
+                                  fileIndex
+                                )
+                        }
+                        title={normalizedDisplayPath}
+                      >
+                        <FileIcon
+                          className={cn(
+                            "h-3.5 w-3.5 shrink-0",
+                            isRemoved
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          )}
+                        />
+                        <p
+                          className={cn(
+                            "min-w-0 flex-1 truncate text-xs",
+                            isRemoved ? "text-destructive" : "text-foreground"
+                          )}
+                        >
+                          {fileName}
+                        </p>
+                        {isRemoved ? (
+                          <span className="inline-flex shrink-0 items-center rounded-md border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 font-mono text-[10px] text-destructive">
+                            Remove
+                          </span>
+                        ) : (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                            <CommitFileAdditions
+                              count={file.additions}
+                              className="text-[10px]"
+                            />
+                            <CommitFileDeletions
+                              count={file.deletions}
+                              className="text-[10px]"
+                            />
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
+        )
+      })}
+    </div>
+  )
+}
+
+export function SessionFilesTab() {
+  const { tabs, activeTabId } = useTabContext()
+
+  const activeTab = tabs.find((t) => t.id === activeTabId)
+  const conversationId = activeTab?.conversationId
+  const contextKey = activeTab?.id ?? "__session-files-tab__"
+  const conn = useConnection(contextKey)
+  const pendingPromptText = getPendingPromptText(contextKey)
+
+  if (!activeTab) {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <p className="text-xs text-muted-foreground text-center">
+          Open a conversation to see its file changes
+        </p>
+      </div>
+    )
+  }
+
+  if (!conversationId) {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <p className="text-xs text-muted-foreground text-center">
+          No file changes found in this conversation
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <SessionFilesContent
+          conversationId={conversationId}
+          liveMessage={conn.liveMessage}
+          connStatus={conn.status}
+          pendingPromptText={pendingPromptText}
+        />
+      </div>
+    </div>
+  )
+}

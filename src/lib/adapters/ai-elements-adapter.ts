@@ -1,0 +1,1059 @@
+import type {
+  MessageTurn,
+  ContentBlock,
+  MessageRole,
+  TurnUsage,
+} from "@/lib/types"
+import type { LiveMessage } from "@/contexts/acp-connections-context"
+import { inferLiveToolName } from "@/lib/tool-call-normalization"
+
+/**
+ * Adapted content part types for AI SDK Elements components
+ */
+export type ToolCallState =
+  | "input-streaming"
+  | "input-available"
+  | "output-available"
+  | "output-error"
+
+export type AdaptedContentPart =
+  | { type: "text"; text: string }
+  | {
+      type: "tool-call"
+      toolCallId: string
+      toolName: string
+      displayTitle?: string | null
+      input: string | null
+      state: ToolCallState
+      output?: string | null
+      errorText?: string
+    }
+  | {
+      type: "tool-result"
+      toolCallId: string
+      output: string | null
+      errorText?: string
+      state: "output-available" | "output-error"
+    }
+  | { type: "reasoning"; content: string; isStreaming: boolean }
+
+export interface UserResourceDisplay {
+  name: string
+  uri: string
+  mime_type?: string | null
+}
+
+const BLOCKED_RESOURCE_MENTION_RE = /@([^\s@]+)\s*\[blocked[^\]]*\]/gi
+const MARKDOWN_LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/g
+
+/**
+ * Adapted message format for AI SDK Elements
+ */
+export interface AdaptedMessage {
+  id: string
+  role: MessageRole
+  content: AdaptedContentPart[]
+  userResources?: UserResourceDisplay[]
+  timestamp: string
+  usage?: TurnUsage | null
+  duration_ms?: number | null
+  model?: string | null
+}
+
+type InlineToolSegment =
+  | { kind: "text"; value: string }
+  | { kind: "tool_call" | "tool_result"; value: string }
+
+const INLINE_TOOL_TAG_RE = /<(tool_call|tool_result)>\s*([\s\S]*?)\s*<\/\1>/gi
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+  return value as Record<string, unknown>
+}
+
+function toInlinePayloadString(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function splitInlineToolSegments(text: string): InlineToolSegment[] | null {
+  INLINE_TOOL_TAG_RE.lastIndex = 0
+  const segments: InlineToolSegment[] = []
+  let cursor = 0
+  let foundTag = false
+
+  for (const match of text.matchAll(INLINE_TOOL_TAG_RE)) {
+    const full = match[0]
+    const tag = match[1]
+    const body = match[2]
+    const start = match.index ?? -1
+    if (start < 0) continue
+
+    foundTag = true
+    if (start > cursor) {
+      segments.push({
+        kind: "text",
+        value: text.slice(cursor, start),
+      })
+    }
+
+    if (tag === "tool_call" || tag === "tool_result") {
+      segments.push({
+        kind: tag,
+        value: body ?? "",
+      })
+    }
+
+    cursor = start + full.length
+  }
+
+  if (!foundTag) return null
+
+  if (cursor < text.length) {
+    segments.push({
+      kind: "text",
+      value: text.slice(cursor),
+    })
+  }
+
+  return segments
+}
+
+function parseInlineToolCallPayload(payload: string): {
+  toolName: string
+  toolCallId: string | null
+  input: string | null
+} {
+  const trimmed = payload.trim()
+  if (trimmed.length === 0) {
+    return { toolName: "tool", toolCallId: null, input: null }
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(trimmed)
+    const obj = asRecord(parsed)
+    if (!obj) {
+      return {
+        toolName: "tool",
+        toolCallId: null,
+        input: toInlinePayloadString(parsed),
+      }
+    }
+
+    const nameCandidates = [
+      obj.name,
+      obj.tool_name,
+      obj.tool,
+      obj.kind,
+      obj.type,
+    ]
+    const toolName =
+      nameCandidates
+        .find((value): value is string => typeof value === "string")
+        ?.trim() || "tool"
+
+    const idCandidates = [
+      obj.id,
+      obj.tool_call_id,
+      obj.tool_use_id,
+      obj.call_id,
+      obj.callId,
+    ]
+    const toolCallId =
+      idCandidates.find(
+        (value): value is string => typeof value === "string"
+      ) ?? null
+
+    const directInput =
+      obj.arguments ?? obj.input ?? obj.params ?? obj.payload ?? null
+    if (directInput !== null) {
+      return {
+        toolName,
+        toolCallId,
+        input: toInlinePayloadString(directInput),
+      }
+    }
+
+    const passthroughEntries = Object.entries(obj).filter(
+      ([key]) =>
+        ![
+          "name",
+          "tool_name",
+          "tool",
+          "kind",
+          "type",
+          "id",
+          "tool_call_id",
+          "tool_use_id",
+          "call_id",
+          "callId",
+        ].includes(key)
+    )
+    const fallbackInput =
+      passthroughEntries.length > 0
+        ? Object.fromEntries(passthroughEntries)
+        : null
+
+    return {
+      toolName,
+      toolCallId,
+      input: toInlinePayloadString(fallbackInput),
+    }
+  } catch {
+    return {
+      toolName: "tool",
+      toolCallId: null,
+      input: trimmed,
+    }
+  }
+}
+
+function parseInlineToolResultPayload(payload: string): {
+  output: string | null
+  isError: boolean
+} {
+  const trimmed = payload.trim()
+  if (trimmed.length === 0) {
+    return { output: null, isError: false }
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(trimmed)
+    if (typeof parsed === "string") {
+      return { output: parsed, isError: false }
+    }
+
+    const obj = asRecord(parsed)
+    if (!obj) {
+      return { output: toInlinePayloadString(parsed), isError: false }
+    }
+
+    const isError =
+      obj.is_error === true ||
+      obj.error === true ||
+      (typeof obj.status === "string" && obj.status.toLowerCase() === "error")
+
+    const outputCandidates = [
+      obj.output,
+      obj.result,
+      obj.text,
+      obj.content,
+      obj.stdout,
+      obj.stderr,
+      obj.message,
+    ]
+    const output = outputCandidates
+      .map((value) => toInlinePayloadString(value))
+      .find((value): value is string => typeof value === "string")
+
+    return {
+      output: output ?? toInlinePayloadString(parsed),
+      isError,
+    }
+  } catch {
+    return {
+      output: trimmed,
+      isError: false,
+    }
+  }
+}
+
+function expandInlineToolText(
+  text: string,
+  messageId: string,
+  blockIndex: number
+): AdaptedContentPart[] | null {
+  const segments = splitInlineToolSegments(text)
+  if (!segments) return null
+
+  const parts: AdaptedContentPart[] = []
+  let inlineCounter = 0
+
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index]
+
+    if (segment.kind === "text") {
+      if (segment.value.trim().length > 0) {
+        parts.push({
+          type: "text",
+          text: segment.value,
+        })
+      }
+      continue
+    }
+
+    if (segment.kind === "tool_call") {
+      const parsedCall = parseInlineToolCallPayload(segment.value)
+      const fallbackId = `${messageId}-inline-tool-${blockIndex}-${inlineCounter}`
+      const toolCallId = parsedCall.toolCallId ?? fallbackId
+
+      let output: string | null = null
+      let errorText: string | undefined
+      let state: ToolCallState = "output-available"
+
+      let lookahead = index + 1
+      while (
+        lookahead < segments.length &&
+        segments[lookahead].kind === "text" &&
+        segments[lookahead].value.trim().length === 0
+      ) {
+        lookahead += 1
+      }
+
+      if (
+        lookahead < segments.length &&
+        segments[lookahead].kind === "tool_result"
+      ) {
+        const parsedResult = parseInlineToolResultPayload(
+          segments[lookahead].value
+        )
+        output = parsedResult.output
+        if (parsedResult.isError) {
+          state = "output-error"
+          errorText = output ?? "Tool call failed"
+        }
+        index = lookahead
+      }
+
+      parts.push({
+        type: "tool-call",
+        toolCallId,
+        toolName: parsedCall.toolName,
+        input: parsedCall.input,
+        state,
+        output,
+        errorText,
+      })
+      inlineCounter += 1
+      continue
+    }
+
+    const parsedResult = parseInlineToolResultPayload(segment.value)
+    const toolCallId = `${messageId}-inline-tool-result-${blockIndex}-${inlineCounter}`
+    parts.push({
+      type: "tool-result",
+      toolCallId,
+      output: parsedResult.output,
+      errorText: parsedResult.isError
+        ? (parsedResult.output ?? "Tool call failed")
+        : undefined,
+      state: parsedResult.isError ? "output-error" : "output-available",
+    })
+    inlineCounter += 1
+  }
+
+  return parts
+}
+
+function sanitizeMentionName(raw: string): string {
+  return raw.replace(/[),.;:!?]+$/g, "")
+}
+
+function normalizeResourceText(text: string): string {
+  return text
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n\s+/g, "\n")
+    .trim()
+}
+
+function fileNameFromUri(uri: string): string {
+  try {
+    const url = new URL(uri)
+    const segment = url.pathname.split("/").pop() || ""
+    return decodeURIComponent(segment) || uri
+  } catch {
+    return uri
+  }
+}
+
+function addResource(
+  resources: UserResourceDisplay[],
+  resource: UserResourceDisplay
+) {
+  if (
+    resources.some(
+      (item) => item.name === resource.name && item.uri === resource.uri
+    )
+  ) {
+    return
+  }
+  resources.push(resource)
+}
+
+export function extractUserResourcesFromText(text: string): {
+  text: string
+  resources: UserResourceDisplay[]
+} {
+  const resources: UserResourceDisplay[] = []
+  const withoutBlocked = text.replace(
+    BLOCKED_RESOURCE_MENTION_RE,
+    (_match: string, mention: string) => {
+      const name = sanitizeMentionName(mention)
+      if (name.length > 0) {
+        addResource(resources, {
+          name,
+          uri: name,
+          mime_type: null,
+        })
+      }
+      return ""
+    }
+  )
+  const cleaned = withoutBlocked.replace(
+    MARKDOWN_LINK_RE,
+    (match: string, label: string, uri: string) => {
+      const normalizedLabel = label.trim()
+      const normalizedUri = uri.trim()
+      const hasMentionLabel = normalizedLabel.startsWith("@")
+      const isFileUri = normalizedUri.toLowerCase().startsWith("file://")
+      if (!hasMentionLabel && !isFileUri) {
+        return match
+      }
+
+      const candidateName = hasMentionLabel
+        ? normalizedLabel.slice(1)
+        : normalizedLabel
+      const name = sanitizeMentionName(candidateName) || fileNameFromUri(uri)
+      addResource(resources, {
+        name,
+        uri: normalizedUri,
+        mime_type: null,
+      })
+      return ""
+    }
+  )
+
+  return {
+    text: normalizeResourceText(cleaned),
+    resources,
+  }
+}
+
+function splitUserTextAndResources(parts: AdaptedContentPart[]): {
+  parts: AdaptedContentPart[]
+  resources: UserResourceDisplay[]
+} {
+  const resources: UserResourceDisplay[] = []
+  const nextParts: AdaptedContentPart[] = []
+
+  for (const part of parts) {
+    if (part.type !== "text") {
+      nextParts.push(part)
+      continue
+    }
+    const extracted = extractUserResourcesFromText(part.text)
+    if (extracted.resources.length > 0) {
+      resources.push(...extracted.resources)
+      if (extracted.text.length > 0) {
+        nextParts.push({ type: "text", text: extracted.text })
+      }
+    } else {
+      nextParts.push(part)
+    }
+  }
+
+  if (nextParts.length === 0 && resources.length > 0) {
+    nextParts.push({ type: "text", text: "Attached resources" })
+  }
+
+  return { parts: nextParts, resources }
+}
+
+/**
+ * Generate a stable tool call ID based on message ID and block index
+ */
+function generateToolCallId(messageId: string, blockIndex: number): string {
+  return `${messageId}-tool-${blockIndex}`
+}
+
+/**
+ * Transform a single ContentBlock to AdaptedContentPart
+ */
+function adaptContentBlock(
+  block: ContentBlock,
+  messageId: string,
+  blockIndex: number,
+  isStreaming: boolean = false
+): AdaptedContentPart | null {
+  switch (block.type) {
+    case "text":
+      return {
+        type: "text",
+        text: block.text,
+      }
+
+    case "tool_use":
+      return {
+        type: "tool-call",
+        toolCallId: generateToolCallId(messageId, blockIndex),
+        toolName: block.tool_name,
+        input: block.input_preview,
+        state: "input-available",
+      }
+
+    case "tool_result":
+      return {
+        type: "tool-result",
+        toolCallId: generateToolCallId(messageId, blockIndex),
+        output: block.output_preview,
+        errorText: block.is_error
+          ? block.output_preview || undefined
+          : undefined,
+        state: block.is_error ? "output-error" : "output-available",
+      }
+
+    case "thinking":
+      return {
+        type: "reasoning",
+        content: block.text,
+        isStreaming,
+      }
+
+    default:
+      return null
+  }
+}
+
+/**
+ * Build a map of tool_use_id → tool_result ContentBlock from content blocks.
+ * Used to correlate tool calls with their results.
+ */
+function buildToolResultMap(
+  blocks: ContentBlock[]
+): Map<string, ContentBlock & { type: "tool_result" }> {
+  const map = new Map<string, ContentBlock & { type: "tool_result" }>()
+  for (const block of blocks) {
+    if (block.type === "tool_result" && block.tool_use_id) {
+      map.set(block.tool_use_id, block)
+    }
+  }
+  return map
+}
+
+/**
+ * Transform a MessageTurn (from backend) to AdaptedMessage format.
+ * Same correlation logic as adaptUnifiedMessage but operates on turn.blocks.
+ */
+export function adaptMessageTurn(turn: MessageTurn): AdaptedMessage {
+  const adaptedContent: AdaptedContentPart[] = []
+  const resultMap = buildToolResultMap(turn.blocks)
+  const matchedResultIds = new Set<string>()
+
+  // Track indices of tool_result blocks consumed by position-based matching
+  const positionMatchedIndices = new Set<number>()
+
+  for (let index = 0; index < turn.blocks.length; index++) {
+    const block = turn.blocks[index]
+
+    if (turn.role === "assistant" && block.type === "text") {
+      const expandedParts = expandInlineToolText(block.text, turn.id, index)
+      if (expandedParts) {
+        adaptedContent.push(...expandedParts)
+        continue
+      }
+    }
+
+    if (block.type === "tool_use") {
+      const toolCallId = block.tool_use_id || generateToolCallId(turn.id, index)
+      const matchedResult = block.tool_use_id
+        ? resultMap.get(block.tool_use_id)
+        : undefined
+
+      if (matchedResult) {
+        matchedResultIds.add(block.tool_use_id!)
+        adaptedContent.push({
+          type: "tool-call",
+          toolCallId,
+          toolName: block.tool_name,
+          input: block.input_preview,
+          state: matchedResult.is_error ? "output-error" : "output-available",
+          output: matchedResult.output_preview,
+          errorText: matchedResult.is_error
+            ? matchedResult.output_preview || undefined
+            : undefined,
+        })
+      } else {
+        // Position-based matching: if this tool_use has no ID, check next block
+        const nextBlock = turn.blocks[index + 1]
+        const positionalResult =
+          !block.tool_use_id &&
+          nextBlock?.type === "tool_result" &&
+          !nextBlock.tool_use_id
+            ? nextBlock
+            : undefined
+
+        if (positionalResult) {
+          positionMatchedIndices.add(index + 1)
+          adaptedContent.push({
+            type: "tool-call",
+            toolCallId,
+            toolName: block.tool_name,
+            input: block.input_preview,
+            state: positionalResult.is_error
+              ? "output-error"
+              : "output-available",
+            output: positionalResult.output_preview,
+            errorText: positionalResult.is_error
+              ? positionalResult.output_preview || undefined
+              : undefined,
+          })
+        } else {
+          // For DB historical data, unmatched tools default to "completed"
+          // since the conversation has already ended. "input-available" (Running)
+          // only makes sense for live streaming contexts.
+          adaptedContent.push({
+            type: "tool-call",
+            toolCallId,
+            toolName: block.tool_name,
+            input: block.input_preview,
+            state: "output-available",
+          })
+        }
+      }
+      continue
+    }
+
+    // Skip tool_result blocks already matched by ID or position
+    if (
+      block.type === "tool_result" &&
+      ((block.tool_use_id && matchedResultIds.has(block.tool_use_id)) ||
+        positionMatchedIndices.has(index))
+    ) {
+      continue
+    }
+
+    const adapted = adaptContentBlock(block, turn.id, index, false)
+    if (adapted) {
+      adaptedContent.push(adapted)
+    }
+  }
+
+  const userSplit =
+    turn.role === "user"
+      ? splitUserTextAndResources(adaptedContent)
+      : { parts: adaptedContent, resources: [] as UserResourceDisplay[] }
+
+  return {
+    id: turn.id,
+    role: turn.role,
+    content: userSplit.parts,
+    userResources:
+      userSplit.resources.length > 0 ? userSplit.resources : undefined,
+    timestamp: turn.timestamp,
+    usage: turn.usage,
+    duration_ms: turn.duration_ms,
+    model: turn.model,
+  }
+}
+
+/**
+ * Transform all turns in a conversation to AdaptedMessage[].
+ * Internally computes completedToolIds so callers don't need to.
+ */
+export function adaptMessageTurns(turns: MessageTurn[]): AdaptedMessage[] {
+  return turns.map((turn) => adaptMessageTurn(turn))
+}
+
+/**
+ * A visual message group that merges consecutive assistant/tool turns
+ * into a single block, split only by user or system messages.
+ */
+export interface MessageGroup {
+  id: string
+  role: "user" | "assistant" | "system"
+  parts: AdaptedContentPart[]
+  userResources?: UserResourceDisplay[]
+  usage?: TurnUsage | null
+  duration_ms?: number | null
+  model?: string | null
+  models?: string[]
+}
+
+function mergeUsage(
+  a: TurnUsage | null | undefined,
+  b: TurnUsage | null | undefined
+): TurnUsage | null {
+  if (!a && !b) return null
+  if (!a) return b!
+  if (!b) return a
+  return {
+    input_tokens: a.input_tokens + b.input_tokens,
+    output_tokens: a.output_tokens + b.output_tokens,
+    cache_creation_input_tokens:
+      a.cache_creation_input_tokens + b.cache_creation_input_tokens,
+    cache_read_input_tokens:
+      a.cache_read_input_tokens + b.cache_read_input_tokens,
+  }
+}
+
+/**
+ * Group adapted messages so that consecutive assistant/tool messages
+ * are merged into one visual block, matching Claude Code terminal UX.
+ */
+export function groupAdaptedMessages(
+  messages: AdaptedMessage[]
+): MessageGroup[] {
+  const groups: MessageGroup[] = []
+  let currentGroup: MessageGroup | null = null
+
+  for (const msg of messages) {
+    const effectiveRole = msg.role === "tool" ? "assistant" : msg.role
+
+    if (effectiveRole === "user" || effectiveRole === "system") {
+      currentGroup = null
+      groups.push({
+        id: msg.id,
+        role: effectiveRole,
+        parts: [...msg.content],
+        userResources: msg.userResources,
+      })
+    } else {
+      if (currentGroup && currentGroup.role === "assistant") {
+        currentGroup.parts.push(...msg.content)
+        currentGroup.usage = mergeUsage(currentGroup.usage, msg.usage)
+        currentGroup.duration_ms =
+          (currentGroup.duration_ms ?? 0) + (msg.duration_ms ?? 0)
+        if (msg.model && !currentGroup.models?.includes(msg.model)) {
+          currentGroup.models = [...(currentGroup.models ?? []), msg.model]
+        }
+      } else {
+        currentGroup = {
+          id: msg.id,
+          role: "assistant",
+          parts: [...msg.content],
+          usage: msg.usage,
+          duration_ms: msg.duration_ms,
+          model: msg.model,
+          models: msg.model ? [msg.model] : [],
+        }
+        groups.push(currentGroup)
+      }
+    }
+  }
+
+  return groups
+}
+
+/**
+ * Map ACP tool call status to ToolCallState for display.
+ */
+function mapAcpStatusToToolCallState(status: string): ToolCallState {
+  switch (status) {
+    case "pending":
+      return "input-streaming"
+    case "in_progress":
+      return "input-available"
+    case "completed":
+      return "output-available"
+    case "failed":
+      return "output-error"
+    default:
+      return "input-available"
+  }
+}
+
+function isReadToolName(toolName: string): boolean {
+  const normalized = toolName.trim().toLowerCase()
+  return normalized === "read" || normalized === "read file"
+}
+
+function isTaskMarkdownToolName(toolName: string): boolean {
+  const normalized = toolName.trim().toLowerCase()
+  return (
+    normalized === "task" ||
+    normalized === "taskcreate" ||
+    normalized === "taskupdate" ||
+    normalized === "tasklist" ||
+    normalized.includes("explore")
+  )
+}
+
+function looksLikeJsonPayload(text: string): boolean {
+  const trimmed = text.trimStart()
+  return trimmed.startsWith("{") || trimmed.startsWith("[")
+}
+
+function collectReadOutputText(value: unknown, depth: number = 0): string[] {
+  if (depth > 6 || value === null || value === undefined) {
+    return []
+  }
+
+  if (typeof value === "string") {
+    return value.length > 0 ? [value] : []
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectReadOutputText(item, depth + 1))
+  }
+
+  if (typeof value !== "object") {
+    return []
+  }
+
+  const obj = value as Record<string, unknown>
+  const parts: string[] = []
+  const type = typeof obj.type === "string" ? obj.type.toLowerCase() : null
+  const text = obj.text
+
+  if (
+    typeof text === "string" &&
+    text.length > 0 &&
+    (type === null || type === "text")
+  ) {
+    parts.push(text)
+  }
+
+  for (const nestedKey of ["content", "output", "result", "data"]) {
+    parts.push(...collectReadOutputText(obj[nestedKey], depth + 1))
+  }
+
+  return parts
+}
+
+function extractReadTextFromJsonOutput(output: string): string | null {
+  if (!looksLikeJsonPayload(output)) {
+    return null
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(output)
+    const parts = collectReadOutputText(parsed)
+    if (parts.length === 0) return null
+    const text = parts.join("\n")
+    return text.length > 0 ? text : null
+  } catch {
+    return null
+  }
+}
+
+function decodeJsonTextValue(value: string): string {
+  try {
+    return JSON.parse(`"${value}"`) as string
+  } catch {
+    return value.replace(/\\"/g, '"').replace(/\\\\/g, "\\")
+  }
+}
+
+function extractTextFromMalformedJsonOutput(output: string): string | null {
+  const textValues = Array.from(
+    output.matchAll(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/g)
+  )
+    .map((match) => decodeJsonTextValue(match[1] ?? ""))
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+
+  if (textValues.length === 0) {
+    return null
+  }
+
+  return textValues.join("\n")
+}
+
+function stripWrappedMarkdownFence(text: string): string {
+  const normalized = text.replace(/\r\n/g, "\n")
+  const match = normalized.match(
+    /^\s*```[a-zA-Z0-9_-]*\s*\n([\s\S]*?)\n```\s*$/
+  )
+  if (!match) return text
+  return match[1]
+}
+
+function normalizeReadDisplayText(text: string): string {
+  return stripWrappedMarkdownFence(text)
+}
+
+function selectTaskMarkdownOutput(params: {
+  rawOutput: string | null
+  content: string | null
+  isFinalState: boolean
+}): string | null {
+  for (const candidate of [params.content, params.rawOutput]) {
+    if (typeof candidate !== "string" || candidate.length === 0) continue
+
+    const extractedFromJson =
+      extractReadTextFromJsonOutput(candidate) ??
+      extractTextFromMalformedJsonOutput(candidate)
+    if (extractedFromJson) {
+      return normalizeReadDisplayText(extractedFromJson)
+    }
+
+    if (!looksLikeJsonPayload(candidate)) {
+      return normalizeReadDisplayText(candidate)
+    }
+  }
+
+  if (!params.isFinalState) return null
+
+  const fallback = params.content ?? params.rawOutput
+  if (typeof fallback !== "string") return null
+
+  const extracted =
+    extractReadTextFromJsonOutput(fallback) ??
+    extractTextFromMalformedJsonOutput(fallback)
+  if (extracted) {
+    return normalizeReadDisplayText(extracted)
+  }
+
+  if (!looksLikeJsonPayload(fallback)) {
+    return normalizeReadDisplayText(fallback)
+  }
+
+  return null
+}
+
+function selectLiveToolOutput(params: {
+  toolName: string
+  rawOutput: string | null
+  content: string | null
+  isFinalState: boolean
+}): string | null {
+  if (isTaskMarkdownToolName(params.toolName)) {
+    return selectTaskMarkdownOutput(params)
+  }
+
+  if (!isReadToolName(params.toolName)) {
+    return params.rawOutput ?? params.content
+  }
+
+  for (const candidate of [params.content, params.rawOutput]) {
+    if (typeof candidate !== "string" || candidate.length === 0) continue
+    const extracted = extractReadTextFromJsonOutput(candidate)
+    if (extracted) return normalizeReadDisplayText(extracted)
+    if (!looksLikeJsonPayload(candidate))
+      return normalizeReadDisplayText(candidate)
+  }
+
+  if (!params.isFinalState) return null
+  const fallback = params.rawOutput ?? params.content
+  return typeof fallback === "string"
+    ? normalizeReadDisplayText(fallback)
+    : null
+}
+
+function formatPlanEntries(
+  entries: Array<{ content: string; priority: string; status: string }>
+): string {
+  if (entries.length === 0) {
+    return "Plan updated"
+  }
+  const lines = entries.map(
+    (entry) => `- [${entry.status}] ${entry.content} (${entry.priority})`
+  )
+  return `Plan updated:\n${lines.join("\n")}`
+}
+
+interface AdaptLiveMessageOptions {
+  isLiveStreaming?: boolean
+}
+
+function isReasoningBlock(block: LiveMessage["content"][number]): boolean {
+  return block.type === "thinking" || block.type === "plan"
+}
+
+function findLastReasoningIndex(message: LiveMessage): number {
+  for (let index = message.content.length - 1; index >= 0; index -= 1) {
+    if (isReasoningBlock(message.content[index])) {
+      return index
+    }
+  }
+  return -1
+}
+
+/**
+ * Transform a LiveMessage (from ACP) to AdaptedMessage format
+ * This is used for live streaming messages from the ACP protocol
+ */
+export function adaptLiveMessageFromAcp(
+  message: LiveMessage,
+  options: AdaptLiveMessageOptions = {}
+): AdaptedMessage {
+  const isLiveStreaming = options.isLiveStreaming ?? true
+  const adaptedContent: AdaptedContentPart[] = []
+  const lastStreamingReasoningIndex = isLiveStreaming
+    ? findLastReasoningIndex(message)
+    : -1
+
+  message.content.forEach((block, index) => {
+    switch (block.type) {
+      case "text":
+        adaptedContent.push({
+          type: "text",
+          text: block.text,
+        })
+        break
+
+      case "thinking":
+        adaptedContent.push({
+          type: "reasoning",
+          content: block.text,
+          isStreaming: index === lastStreamingReasoningIndex,
+        })
+        break
+
+      case "tool_call": {
+        const { info } = block
+        const toolName = inferLiveToolName({
+          title: info.title,
+          kind: info.kind,
+          rawInput: info.raw_input,
+        })
+        const state = mapAcpStatusToToolCallState(info.status)
+        const isFinalState =
+          state === "output-available" || state === "output-error"
+        const hasExplicitOutput =
+          info.raw_output !== null || info.content !== null
+        const selectedOutput = selectLiveToolOutput({
+          toolName,
+          rawOutput: info.raw_output,
+          content: info.content,
+          isFinalState,
+        })
+        const output = isFinalState
+          ? selectedOutput
+          : hasExplicitOutput
+            ? selectedOutput
+            : null
+        adaptedContent.push({
+          type: "tool-call",
+          toolCallId: info.tool_call_id,
+          toolName,
+          displayTitle: info.title,
+          input: info.raw_input,
+          state,
+          output,
+          errorText:
+            state === "output-error"
+              ? selectedOutput || "Tool call failed"
+              : undefined,
+        })
+        break
+      }
+
+      case "plan":
+        adaptedContent.push({
+          type: "reasoning",
+          content: formatPlanEntries(block.entries),
+          isStreaming: index === lastStreamingReasoningIndex,
+        })
+        break
+    }
+  })
+
+  return {
+    id: message.id,
+    role: message.role,
+    content: adaptedContent,
+    timestamp: new Date().toISOString(), // Live messages don't have timestamps
+  }
+}
