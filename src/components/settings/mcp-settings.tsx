@@ -559,7 +559,14 @@ export function McpSettings() {
     } finally {
       setRunningAction(null)
     }
-  }, [localAppsDraft, localSpecText, refreshLocalServers, selectedLocal, t])
+  }, [
+    localAppsDraft,
+    localSpecText,
+    mcpT,
+    refreshLocalServers,
+    selectedLocal,
+    t,
+  ])
 
   const switchInstallOption = useCallback(
     (optionId: string) => {
@@ -668,6 +675,7 @@ export function McpSettings() {
     marketDetail,
     marketSpecDirty,
     marketSpecText,
+    mcpT,
     refreshLocalServers,
     selectedInstallOption,
     t,

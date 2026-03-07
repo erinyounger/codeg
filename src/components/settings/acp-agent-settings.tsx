@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react"
 import { Reorder, useDragControls } from "motion/react"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import {
   AlertCircle,
@@ -2270,6 +2270,7 @@ function AgentReorderItem({
 }
 
 export function AcpAgentSettings() {
+  const locale = useLocale()
   const t = useTranslations("AcpAgentSettings")
   const rawTranslator = t as unknown as AcpTranslator
   acpTranslator = (key, values) => rawTranslator(key, values)
@@ -3029,27 +3030,36 @@ export function AcpAgentSettings() {
   const selectedIsSaving = selectedAgent
     ? Boolean(saving[selectedAgent.agent_type])
     : false
-  const selectedCodexAuthError =
-    selectedAgent?.agent_type === "codex" && selectedDraft
-      ? parseCodexAuthJsonText(selectedDraft.codexAuthJsonText)
-      : null
+  const selectedAgentKind = selectedAgent?.agent_type ?? null
+  const selectedCodexAuthJsonText = selectedDraft?.codexAuthJsonText ?? ""
+  const selectedConfigText = selectedDraft?.configText ?? ""
+  const selectedOpenCodeAuthJsonText = selectedDraft?.openCodeAuthJsonText ?? ""
+  const selectedCodexAuthError = useMemo(() => {
+    if (selectedAgentKind !== "codex" || !locale) return null
+    return parseCodexAuthJsonText(selectedCodexAuthJsonText)
+  }, [locale, selectedAgentKind, selectedCodexAuthJsonText])
   const selectedCodexReasoningEffortOption =
     selectedAgent?.agent_type === "codex" && selectedDraft
       ? (CODEX_REASONING_EFFORT_OPTIONS.find(
           (option) => option.value === selectedDraft.codexReasoningEffort
         ) ?? null)
       : null
-  const selectedOpenCodeConfig =
-    selectedAgent?.agent_type === "open_code" && selectedDraft
-      ? extractOpenCodeConfigValues(
-          selectedDraft.configText,
-          selectedDraft.openCodeAuthJsonText
-        )
-      : null
-  const selectedChecks = useMemo(
-    () => (selectedAgent ? getAgentChecks(selectedAgent, selectedCurrent) : []),
-    [selectedAgent, selectedCurrent]
-  )
+  const selectedOpenCodeConfig = useMemo(() => {
+    if (selectedAgentKind !== "open_code" || !locale) return null
+    return extractOpenCodeConfigValues(
+      selectedConfigText,
+      selectedOpenCodeAuthJsonText
+    )
+  }, [
+    locale,
+    selectedAgentKind,
+    selectedConfigText,
+    selectedOpenCodeAuthJsonText,
+  ])
+  const selectedChecks = useMemo(() => {
+    if (!selectedAgent || !locale) return []
+    return getAgentChecks(selectedAgent, selectedCurrent)
+  }, [locale, selectedAgent, selectedCurrent])
 
   useEffect(() => {
     if (!selectedAgent || selectedChecks.length === 0) return
@@ -3179,7 +3189,7 @@ export function AcpAgentSettings() {
         claudeDefaultOpusModel: important.claudeDefaultOpusModel,
       }))
     },
-    [selectedAgent, selectedDraft, t, updateSelectedDraft]
+    [selectedAgent, selectedDraft, updateSelectedDraft]
   )
 
   const handleImportantConfigChange = useCallback(
@@ -3212,7 +3222,7 @@ export function AcpAgentSettings() {
         }
       })
     },
-    [selectedAgent, selectedDraft, updateSelectedDraft]
+    [selectedAgent, selectedDraft, t, updateSelectedDraft]
   )
 
   const handleGeminiFieldChange = useCallback(
@@ -3298,7 +3308,7 @@ export function AcpAgentSettings() {
         }
       })
     },
-    [selectedAgent, selectedDraft, updateSelectedDraft]
+    [selectedAgent, selectedDraft, t, updateSelectedDraft]
   )
 
   const handleGeminiAuthModeChange = useCallback(
@@ -3364,7 +3374,7 @@ export function AcpAgentSettings() {
         configText: nextConfig.configText,
       }))
     },
-    [selectedAgent, selectedDraft, updateSelectedDraft]
+    [selectedAgent, selectedDraft, t, updateSelectedDraft]
   )
 
   const handleOpenClawFieldChange = useCallback(
@@ -3393,7 +3403,7 @@ export function AcpAgentSettings() {
         }),
       }))
     },
-    [selectedAgent, selectedDraft, t, updateSelectedDraft]
+    [selectedAgent, selectedDraft, updateSelectedDraft]
   )
 
   const handleOpenCodeConfigPatch = useCallback(
@@ -3956,7 +3966,7 @@ export function AcpAgentSettings() {
         codexSupportsWebsockets: important.supportsWebsockets,
       }))
     },
-    [selectedAgent, selectedDraft, t, updateSelectedDraft]
+    [selectedAgent, selectedDraft, updateSelectedDraft]
   )
 
   const handleCodexConfigTomlTextChange = useCallback(
@@ -4014,7 +4024,7 @@ export function AcpAgentSettings() {
         codexConfigTomlText: nextToml,
       }))
     },
-    [selectedAgent, selectedDraft, t, updateSelectedDraft]
+    [selectedAgent, selectedDraft, updateSelectedDraft]
   )
 
   const handleCodexImportantConfigChange = useCallback(
@@ -4081,7 +4091,7 @@ export function AcpAgentSettings() {
         codexConfigTomlText: nextToml,
       }))
     },
-    [selectedAgent, selectedDraft, updateSelectedDraft]
+    [selectedAgent, selectedDraft, t, updateSelectedDraft]
   )
 
   const handleCodexSupportsWebsocketsChange = useCallback(
