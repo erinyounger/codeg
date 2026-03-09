@@ -1,4 +1,3 @@
-use chrono::Utc;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::NotSet, ColumnTrait, DatabaseConnection, EntityTrait,
     QueryFilter, Set,
@@ -74,7 +73,8 @@ pub async fn import_local_conversations(
             continue;
         }
 
-        let now = Utc::now();
+        let created_at = summary.started_at;
+        let updated_at = summary.ended_at.unwrap_or(created_at);
         let conv = conversation::ActiveModel {
             id: NotSet,
             folder_id: Set(folder_id),
@@ -86,8 +86,8 @@ pub async fn import_local_conversations(
             external_id: Set(Some(summary.id.clone())),
             parent_id: Set(None),
             message_count: Set(summary.message_count as i32),
-            created_at: Set(summary.started_at),
-            updated_at: Set(now),
+            created_at: Set(created_at),
+            updated_at: Set(updated_at),
             deleted_at: Set(None),
         };
         conv.insert(conn).await?;
