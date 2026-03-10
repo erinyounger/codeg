@@ -36,6 +36,7 @@ interface MessageListViewProps {
   sessionStats?: SessionStats | null
   detailLoading?: boolean
   detailError?: string | null
+  hideEmptyState?: boolean
 }
 
 interface ResolvedMessageGroup extends MessageGroup {
@@ -133,6 +134,7 @@ export function MessageListView({
   sessionStats = null,
   detailLoading = false,
   detailError = null,
+  hideEmptyState = false,
 }: MessageListViewProps) {
   const t = useTranslations("Folder.chat.messageList")
   const sharedT = useTranslations("Folder.chat.shared")
@@ -237,14 +239,15 @@ export function MessageListView({
   }, [])
 
   const emptyState = useMemo(
-    () => (
-      <div className="px-4 py-12 text-center">
-        <p className="text-muted-foreground text-sm">
-          {t("emptyConversation")}
-        </p>
-      </div>
-    ),
-    [t]
+    () =>
+      hideEmptyState ? null : (
+        <div className="px-4 py-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            {t("emptyConversation")}
+          </p>
+        </div>
+      ),
+    [hideEmptyState, t]
   )
 
   const agentPlanOverlayKey = liveMessage?.id ?? `history-${conversationId}`

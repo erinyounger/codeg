@@ -11,6 +11,7 @@ import { useConnectionLifecycle } from "@/hooks/use-connection-lifecycle"
 import { MessageListView } from "@/components/message/message-list-view"
 import { ConversationShell } from "@/components/chat/conversation-shell"
 import { AgentSelector } from "@/components/chat/agent-selector"
+import { ChatInput } from "@/components/chat/chat-input"
 import {
   createConversation,
   openSettingsWindow,
@@ -151,6 +152,7 @@ const ConversationTabView = memo(function ConversationTabView({
   const [agentConnectError, setAgentConnectError] = useState<string | null>(
     null
   )
+  const [hasSentMessage, setHasSentMessage] = useState(false)
 
   const hasPersistedConversation = dbConversationId != null
   const canAutoConnect =
@@ -425,6 +427,7 @@ const ConversationTabView = memo(function ConversationTabView({
       )
       setSendSignal((prev) => prev + 1)
       setSyncState(effectiveConversationId, "awaiting_persist")
+      setHasSentMessage(true)
       lifecycleSend(draft, selectedModeIdArg)
 
       const persistedId = dbConvIdRef.current
@@ -534,6 +537,9 @@ const ConversationTabView = memo(function ConversationTabView({
     [connConnect, connDisconnect, workingDirForConnection]
   )
 
+  const showDraftHeader = !hasPersistedConversation
+  const isWelcomeMode = showDraftHeader && !hasSentMessage
+
   const messageListNode = (
     <MessageListView
       conversationId={effectiveConversationId}
@@ -543,10 +549,9 @@ const ConversationTabView = memo(function ConversationTabView({
       sessionStats={detail?.session_stats ?? null}
       detailLoading={detailLoading}
       detailError={detailError}
+      hideEmptyState={showDraftHeader}
     />
   )
-
-  const showDraftHeader = !hasPersistedConversation
 
   return (
     <ConversationShell
@@ -569,8 +574,59 @@ const ConversationTabView = memo(function ConversationTabView({
       availableCommands={connectionCommands}
       attachmentTabId={tabId}
       draftStorageKey={draftStorageKey}
+      hideInput={isWelcomeMode}
     >
-      {showDraftHeader ? (
+      {isWelcomeMode ? (
+        <div className="flex h-full min-h-0 flex-col items-center justify-center">
+          <div className="flex w-full max-w-2xl flex-col gap-4 px-4">
+            <AgentSelector
+              defaultAgentType={selectedAgent}
+              onSelect={handleAgentSelect}
+              onAgentsLoaded={(agents) => {
+                setAgentsLoaded(true)
+                setUsableAgentCount(
+                  agents.filter((agent) => agent.enabled && agent.available)
+                    .length
+                )
+              }}
+              onOpenAgentsSettings={handleOpenAgentsSettings}
+              disabled={isConnecting || dbConversationId != null}
+            />
+            {autoConnectError || agentConnectError ? (
+              <button
+                type="button"
+                onClick={handleOpenAgentsSettings}
+                className="w-full cursor-pointer rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-center text-xs text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <div
+                  className="overflow-hidden text-ellipsis whitespace-nowrap text-center"
+                  title={autoConnectError ?? agentConnectError ?? ""}
+                >
+                  {autoConnectError ?? agentConnectError}
+                </div>
+              </button>
+            ) : null}
+            <ChatInput
+              status={connStatus}
+              promptCapabilities={conn.promptCapabilities}
+              defaultPath={workingDirForConnection}
+              onFocus={handleFocus}
+              onSend={handleSend}
+              onCancel={handleCancel}
+              modes={connectionModes}
+              configOptions={connectionConfigOptions}
+              modeLoading={modeLoading}
+              configOptionsLoading={configOptionsLoading}
+              selectedModeId={selectedModeId}
+              onModeChange={setModeId}
+              onConfigOptionChange={handleSetConfigOption}
+              availableCommands={connectionCommands}
+              attachmentTabId={tabId}
+              draftStorageKey={draftStorageKey}
+            />
+          </div>
+        </div>
+      ) : showDraftHeader ? (
         <div className="flex h-full min-h-0 flex-col">
           <div className="px-4 pt-3 pb-2">
             <AgentSelector

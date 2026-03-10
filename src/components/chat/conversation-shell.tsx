@@ -32,6 +32,7 @@ interface ConversationShellProps {
   availableCommands?: AvailableCommandInfo[] | null
   attachmentTabId?: string | null
   draftStorageKey?: string | null
+  hideInput?: boolean
 }
 
 export function ConversationShell({
@@ -55,6 +56,7 @@ export function ConversationShell({
   availableCommands,
   attachmentTabId,
   draftStorageKey,
+  hideInput = false,
 }: ConversationShellProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -65,24 +67,26 @@ export function ConversationShell({
         onRespond={onRespondPermission}
       />
 
-      <ChatInput
-        status={status}
-        promptCapabilities={promptCapabilities}
-        defaultPath={defaultPath}
-        onFocus={onFocus}
-        onSend={onSend}
-        onCancel={onCancel}
-        modes={modes}
-        configOptions={configOptions}
-        modeLoading={modeLoading}
-        configOptionsLoading={configOptionsLoading}
-        selectedModeId={selectedModeId}
-        onModeChange={onModeChange}
-        onConfigOptionChange={onConfigOptionChange}
-        availableCommands={availableCommands}
-        attachmentTabId={attachmentTabId}
-        draftStorageKey={draftStorageKey}
-      />
+      {!hideInput && (
+        <ChatInput
+          status={status}
+          promptCapabilities={promptCapabilities}
+          defaultPath={defaultPath}
+          onFocus={onFocus}
+          onSend={onSend}
+          onCancel={onCancel}
+          modes={modes}
+          configOptions={configOptions}
+          modeLoading={modeLoading}
+          configOptionsLoading={configOptionsLoading}
+          selectedModeId={selectedModeId}
+          onModeChange={onModeChange}
+          onConfigOptionChange={onConfigOptionChange}
+          availableCommands={availableCommands}
+          attachmentTabId={attachmentTabId}
+          draftStorageKey={draftStorageKey}
+        />
+      )}
 
       {error && (
         <div className="px-4 py-2 text-xs text-destructive bg-destructive/5 border-t border-destructive/20">
