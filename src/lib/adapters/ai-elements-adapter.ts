@@ -674,15 +674,15 @@ export function adaptMessageTurn(
               : undefined,
           })
         } else {
-          // For DB historical data, unmatched tools default to "completed"
-          // since the conversation has already ended. "input-available" (Running)
-          // only makes sense for live streaming contexts.
+          // For live streaming, unmatched tools are still running.
+          // For DB historical data, default to "completed" since the
+          // conversation has already ended.
           adaptedContent.push({
             type: "tool-call",
             toolCallId,
             toolName: block.tool_name,
             input: block.input_preview,
-            state: "output-available",
+            state: isStreaming ? "input-available" : "output-available",
           })
         }
       }
