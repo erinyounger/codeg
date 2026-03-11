@@ -871,6 +871,7 @@ function getToolIcon(
   if (name === "task") return getTaskToolIcon(input ?? null)
   if (name === "taskcreate" || name === "taskupdate" || name === "tasklist")
     return <ListTodoIcon className={ICON_CLASS} />
+  if (name === "agent") return getTaskToolIcon(input ?? null)
   if (name === "skill") return <SparklesIcon className={ICON_CLASS} />
   if (name === "enterplanmode" || name === "exitplanmode")
     return <BrainIcon className={ICON_CLASS} />
@@ -994,6 +995,13 @@ function deriveToolTitle(
 
   // Task / agent tools
   if (name === "task") {
+    const subagent = getField("subagent_type")
+    const desc = getField("description")
+    const prefix = subagent ? `${subagent}: ` : ""
+    if (desc) return `${prefix}${ellipsis(desc, 60 - prefix.length)}`
+    if (subagent) return subagent
+  }
+  if (name === "agent") {
     const subagent = getField("subagent_type")
     const desc = getField("description")
     const prefix = subagent ? `${subagent}: ` : ""
@@ -2156,7 +2164,8 @@ const ToolCallPart = memo(function ToolCallPart({
             input={part.input}
           />
         )}
-        {toolNameLower === "task" && part.output ? (
+        {(toolNameLower === "task" || toolNameLower === "agent") &&
+        part.output ? (
           <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&_ul]:list-inside [&_ol]:list-inside">
             <MessageResponse>{part.output}</MessageResponse>
           </div>

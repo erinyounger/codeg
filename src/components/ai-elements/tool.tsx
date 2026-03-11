@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl"
 import { isValidElement } from "react"
 
 import { CodeBlock } from "./code-block"
+import { MessageResponse } from "./message"
 
 export type ToolProps = ComponentProps<typeof Collapsible>
 
@@ -315,12 +316,34 @@ function isDuplicateErrorOutput(
 export type ToolOutputProps = ComponentProps<"div"> & {
   output: ToolPart["output"]
   errorText: ToolPart["errorText"]
+  renderAsMarkdown?: boolean
+}
+
+const MD_INDICATORS = [
+  /^#{1,6}\s/m,
+  /^\s*[-*+]\s/m,
+  /^\s*\d+\.\s/m,
+  /\*\*[^*]+\*\*/,
+  /\[.+\]\(.+\)/,
+  /```[\s\S]*?```/,
+  /^\s*>/m,
+  /^\|.+\|$/m,
+]
+
+function looksLikeMarkdown(text: string): boolean {
+  let count = 0
+  for (const re of MD_INDICATORS) {
+    if (re.test(text)) count++
+    if (count >= 2) return true
+  }
+  return false
 }
 
 export const ToolOutput = ({
   className,
   output,
   errorText,
+  renderAsMarkdown,
   ...props
 }: ToolOutputProps) => {
   const t = useTranslations("Folder.chat.tool")
@@ -342,8 +365,18 @@ export const ToolOutput = ({
       <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
     )
   } else if (typeof output === "string") {
-    const language = detectOutputLanguage(output)
-    Output = <CodeBlock code={output} language={language} />
+    const shouldRenderMd =
+      renderAsMarkdown ?? (detectOutputLanguage(output) === "log" && looksLikeMarkdown(output))
+    if (shouldRenderMd) {
+      Output = (
+        <div className="prose prose-sm dark:prose-invert max-w-none p-3 text-sm [&_ul]:list-inside [&_ol]:list-inside">
+          <MessageResponse>{output}</MessageResponse>
+        </div>
+      )
+    } else {
+      const language = detectOutputLanguage(output)
+      Output = <CodeBlock code={output} language={language} />
+    }
   }
 
   return (

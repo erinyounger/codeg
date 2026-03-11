@@ -32,6 +32,29 @@ const EXACT_TOOL_NAME_ALIASES: Record<string, string> = {
   web_search: "websearch",
   context7_query_docs: "context7_query-docs",
   context7_resolve_library_id: "context7_resolve-library-id",
+  agent: "agent",
+  // Gemini CLI
+  searchtext: "grep",
+  search_text: "grep",
+  writefile: "write",
+  editfile: "edit",
+  // Codex
+  update_plan: "task",
+  request_user_input: "question",
+  // OpenCode
+  delegate_task: "task",
+  call_omo_agent: "agent",
+  ast_grep_search: "grep",
+  ast_grep_replace: "edit",
+  background_task: "task",
+  background_cancel: "task",
+  background_output: "task",
+  slashcommand: "skill",
+  question: "question",
+  lsp_diagnostics: "lsp",
+  lsp_document_symbols: "lsp",
+  lsp_goto_definition: "lsp",
+  lsp_servers: "lsp",
   execute: "bash",
   search: "grep",
   fetch: "webfetch",
@@ -65,6 +88,10 @@ function inferFromFreeformName(input: string): string | null {
   if (/^glob(?:\b|[_\s:-])/.test(normalized)) return "glob"
   if (/^webfetch(?:\b|[_\s:-])/.test(normalized)) return "webfetch"
   if (/^websearch(?:\b|[_\s:-])/.test(normalized)) return "websearch"
+  if (/\bweb[_\s-]?search\b/.test(normalized)) return "websearch"
+  if (/\bgrep\b/.test(normalized)) return "grep"
+  if (/\bagent\b/.test(normalized)) return "agent"
+  if (/\blsp\b/.test(normalized)) return "lsp"
   if (/^todowrite(?:\b|[_\s:-])/.test(normalized)) return "todowrite"
   if (/^taskupdate(?:\b|[_\s:-])/.test(normalized)) return "taskupdate"
   if (/^taskcreate(?:\b|[_\s:-])/.test(normalized)) return "taskcreate"
