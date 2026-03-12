@@ -270,8 +270,7 @@ function reducer(
       // DB data is authoritative for completed turns — always clear localTurns.
       // Only preserve optimisticTurns + liveMessage if user actively sent
       // a message and is awaiting agent response.
-      const isActivelyInteracting =
-        current.syncState === "awaiting_persist"
+      const isActivelyInteracting = current.syncState === "awaiting_persist"
 
       const nextSession: ConversationRuntimeSession = {
         ...current,
@@ -358,8 +357,7 @@ function reducer(
       // Also block during cold loading (detailLoading) — the reconnect
       // liveMessage arrives before DB data, causing overlap after fetch.
       const hasExistingTurns =
-        (session.detail?.turns.length ?? 0) > 0 ||
-        session.localTurns.length > 0
+        (session.detail?.turns.length ?? 0) > 0 || session.localTurns.length > 0
       if (
         action.liveMessage !== null &&
         session.liveMessage === null &&
@@ -559,6 +557,7 @@ export function ConversationRuntimeProvider({
   const [state, dispatch] = useReducer(reducer, initialState)
 
   const stateRef = useRef(state)
+  // eslint-disable-next-line react-hooks/refs -- stateRef is only read in callbacks, not during render
   stateRef.current = state
 
   const getSession = useCallback(
@@ -681,16 +680,14 @@ export function ConversationRuntimeProvider({
         const delay = attempt === 0 ? 1500 : 3000
         timerId = setTimeout(() => {
           if (cancelled) return
-          const session =
-            stateRef.current.byConversationId.get(runtimeId)
+          const session = stateRef.current.byConversationId.get(runtimeId)
           if (!session || session.localTurns.length === 0) return
           if (session.syncState === "awaiting_persist") return
 
           getFolderConversation(dbConversationId)
             .then((parsed) => {
               if (cancelled) return
-              const cur =
-                stateRef.current.byConversationId.get(runtimeId)
+              const cur = stateRef.current.byConversationId.get(runtimeId)
               if (!cur || cur.localTurns.length === 0) return
               if (cur.syncState === "awaiting_persist") return
 
@@ -716,10 +713,7 @@ export function ConversationRuntimeProvider({
 
               for (let i = 0; i < localAssistantIndices.length; i++) {
                 const parsedIdx = offset + i
-                if (
-                  parsedIdx < 0 ||
-                  parsedIdx >= parsedAssistantTurns.length
-                )
+                if (parsedIdx < 0 || parsedIdx >= parsedAssistantTurns.length)
                   continue
                 const pt = parsedAssistantTurns[parsedIdx]
                 if (!pt.usage && !pt.duration_ms && !pt.model) continue

@@ -31,9 +31,7 @@ export function useConversationDetail(conversationId: number): {
 
   return {
     detail: session?.detail ?? null,
-    loading: session
-      ? session.detailLoading
-      : !isVirtual,
+    loading: session ? session.detailLoading : !isVirtual,
     error: session?.detailError ?? null,
   }
 }

@@ -532,6 +532,7 @@ const ConversationTabView = memo(function ConversationTabView({
       refreshConversations,
       selectedAgent,
       setExternalId,
+      setPendingCleanup,
       setSyncState,
       sharedT,
       tWelcome,
@@ -818,7 +819,9 @@ export function ConversationDetailPanel() {
           // Update conversation status — use the DB summary (found by
           // external_id above) since matchedConversationId may be a virtual
           // (negative) ID that won't match any DB record.
-          const dbId = summary?.id ?? (matchedConversationId > 0 ? matchedConversationId : null)
+          const dbId =
+            summary?.id ??
+            (matchedConversationId > 0 ? matchedConversationId : null)
           if (dbId && (!summary || summary.status === "in_progress")) {
             updateConversationStatus(dbId, "pending_review")
               .then(() => refreshConversations())
