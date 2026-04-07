@@ -411,6 +411,198 @@ do_token() {
     fi
 }
 
+# Build frontend only
+do_build_frontend() {
+    log "Building frontend..."
+
+    # Check if pnpm is available
+    if ! command -v pnpm &> /dev/null; then
+        error "pnpm not found. Please install pnpm: npm install -g pnpm"
+        exit 1
+    fi
+
+    # Get project root (parent of bin/)
+    local project_root
+    project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+    cd "$project_root"
+
+    # Install dependencies if needed
+    if [ ! -d "node_modules" ]; then
+        info "Installing dependencies..."
+        pnpm install
+    fi
+
+    # Build frontend
+    pnpm build
+
+    if [ $? -eq 0 ]; then
+        success "Frontend built successfully"
+        info "Output: ${project_root}/out/"
+    else
+        error "Frontend build failed"
+        exit 1
+    fi
+}
+
+# Build backend only
+do_build_backend() {
+    log "Building backend (codeg-server)..."
+
+    # Get project root
+    local project_root
+    project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+    local cargo_dir="${project_root}/src-tauri"
+
+    # Check if cargo is available
+    if ! command -v cargo &> /dev/null; then
+        error "cargo not found. Please install Rust"
+        exit 1
+    fi
+
+    # Build server binary (release mode, no default features for standalone server)
+    cargo build --release --bin codeg-server --no-default-features --manifest-path "$cargo_dir/Cargo.toml"
+
+    if [ $? -eq 0 ]; then
+        local binary_path="${cargo_dir}/target/release/codeg-server"
+        local dest_path="${HOME}/.local/bin/codeg-server"
+
+        # Copy to ~/.local/bin for easy access (skip if same file)
+        mkdir -p "${HOME}/.local/bin"
+        if [ "$binary_path" -ef "$dest_path" ]; then
+            info "Binary already in place: $dest_path"
+        else
+            cp "$binary_path" "$dest_path"
+            chmod +x "$dest_path"
+        fi
+
+        success "Backend built successfully"
+        info "Binary: $dest_path"
+    else
+        error "Backend build failed"
+        exit 1
+    fi
+}
+
+# Build both frontend and backend
+do_build() {
+    log "Building codeg (frontend + backend)..."
+
+    do_build_frontend
+    do_build_backend
+
+    success "Build complete!"
+    info "Frontend: ${project_root:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/out/"
+    info "Backend: ${HOME}/.local/bin/codeg-server"
+}
+
+# Create deployment package
+do_package() {
+    log "Creating deployment package..."
+
+    # Get project root
+    local project_root
+    project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    local timestamp=$(date '+%Y%m%d_%H%M%S')
+    local package_name="codeg-${timestamp}"
+    local package_dir="/tmp/${package_name}"
+    local dist_dir="${project_root}/dist"
+
+    # Clean and create dist directory
+    rm -rf "$dist_dir"
+    mkdir -p "$dist_dir"
+
+    # Create package directory
+    mkdir -p "$package_dir"
+
+    # Copy frontend build (out/) if exists
+    if [ -d "${project_root}/out" ]; then
+        cp -r "${project_root}/out" "$package_dir/"
+        info "Added frontend (out/)"
+    else
+        warn "Frontend not built yet (run './codeg.sh build' first)"
+    fi
+
+    # Copy server binary
+    if [ -f "${HOME}/.local/bin/codeg-server" ]; then
+        cp "${HOME}/.local/bin/codeg-server" "$package_dir/"
+        chmod +x "$package_dir/codeg-server"
+        info "Added backend binary"
+    elif [ -f "${project_root}/src-tauri/target/release/codeg-server" ]; then
+        cp "${project_root}/src-tauri/target/release/codeg-server" "$package_dir/"
+        chmod +x "$package_dir/codeg-server"
+        info "Added backend binary"
+    else
+        warn "Backend binary not found"
+    fi
+
+    # Copy startup script
+    cp "${BASH_SOURCE[0]}" "$package_dir/codeg.sh"
+    chmod +x "$package_dir/codeg.sh"
+
+    # Copy docker files if exist
+    if [ -f "${project_root}/Dockerfile" ]; then
+        cp "${project_root}/Dockerfile" "$package_dir/"
+    fi
+    if [ -f "${project_root}/docker-compose.yml" ]; then
+        cp "${project_root}/docker-compose.yml" "$package_dir/"
+    fi
+
+    # Create README for deployment
+    cat > "$package_dir/README.md" << 'READMEOF'
+# Codeg Deployment Package
+
+## Quick Start
+
+1. Extract this package to your server
+2. Run `./codeg.sh start` to start the server
+3. Access the UI at http://localhost:3080
+
+## Files
+
+- `out/` - Frontend static files (serve with any static file server)
+- `codeg-server` - Backend server binary
+- `codeg.sh` - Management script
+
+## Environment Variables
+
+- `CODEG_PORT` - Server port (default: 3080)
+- `CODEG_HOST` - Server host (default: 0.0.0.0)
+- `CODEG_TOKEN` - Authentication token
+- `CODEG_DATA_DIR` - Data directory
+- `CODEG_STATIC_DIR` - Static files directory (default: ./out)
+
+## Docker
+
+```bash
+docker-compose up -d
+```
+
+## Direct Usage
+
+```bash
+./codeg.sh start        # Start server
+./codeg.sh stop         # Stop server
+./codeg.sh status       # Check status
+./codeg.sh set-token X  # Set auth token
+```
+READMEOF
+
+    # Create tarball
+    cd /tmp
+    tar -czf "${dist_dir}/${package_name}.tar.gz" "$package_name"
+
+    # Cleanup
+    rm -rf "$package_dir"
+
+    success "Package created: ${dist_dir}/${package_name}.tar.gz"
+
+    # Also show size
+    local size=$(du -h "${dist_dir}/${package_name}.tar.gz" | cut -f1)
+    info "Package size: $size"
+}
+
 # Show usage
 usage() {
     cat << EOF
@@ -419,13 +611,17 @@ codeg-server management script
 Usage: ./codeg.sh <command>
 
 Commands:
-  start              Start the server
-  stop               Thoroughly stop the server (kill process tree)
-  restart            Thoroughly restart the server
-  set-token <TOKEN>  Set static authentication token
-  status             Show server status
-  token              Show current token
-  help               Show this help message
+  build               Build both frontend and backend
+  build-frontend      Build frontend only (pnpm build)
+  build-backend       Build backend only (cargo build)
+  package             Create deployment package (tarball)
+  start               Start the server
+  stop                Thoroughly stop the server (kill process tree)
+  restart             Thoroughly restart the server
+  set-token <TOKEN>   Set static authentication token
+  status              Show server status
+  token               Show current token
+  help                Show this help message
 
 Environment variables:
   CODEG_PORT        Server port (default: 3080)
@@ -451,6 +647,18 @@ main() {
     local command="${1:-}"
 
     case "$command" in
+        build)
+            do_build
+            ;;
+        build-frontend)
+            do_build_frontend
+            ;;
+        build-backend)
+            do_build_backend
+            ;;
+        package)
+            do_package
+            ;;
         start)
             do_start
             ;;

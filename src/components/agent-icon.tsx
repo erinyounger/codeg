@@ -6,7 +6,7 @@ import {
   ClaudeCode,
   Cline,
   Codex,
-  GeminiCLI,
+  Gemini,
   OpenClaw,
   OpenCode,
 } from "@lobehub/icons"
@@ -22,7 +22,7 @@ type AnyIcon = React.ComponentType<any>
 const COLOR_ICONS: Partial<Record<AgentType, AnyIcon>> = {
   claude_code: ClaudeCode.Color,
   codex: Codex.Color,
-  gemini: GeminiCLI.Color,
+  gemini: Gemini.Color,
   open_claw: OpenClaw.Color,
 }
 
