@@ -8,8 +8,11 @@
 # 设置静态 token（可选）
 ./codeg.sh set-token your-secret-token
 
-# 启动服务
+# 启动服务（默认端口 3080）
 ./codeg.sh start
+
+# 指定端口启动
+CODEG_PORT=8080 ./codeg.sh start
 
 # 查看状态
 ./codeg.sh status
@@ -34,7 +37,7 @@
 | `CODEG_PORT` | 3080 | 服务器端口 |
 | `CODEG_HOST` | 0.0.0.0 | 服务器地址 |
 | `CODEG_TOKEN` | 自动生成 | 认证 token |
-| `CODEG_DATA_DIR` | ~/.codeg | 数据目录 |
+| `CODEG_DATA_DIR` | ~/.local/share/codeg | 数据目录 |
 | `CODEG_STATIC_DIR` | - | 静态文件目录 |
 | `CODG_PID_FILE` | ~/.codeg/codeg-server.pid | PID 文件路径 |
 | `CODG_LOG_FILE` | ~/.codeg/codeg-server.log | 日志文件路径 |
@@ -63,10 +66,8 @@ CODEG_PORT=8080 ./codeg.sh start
 
 ## 前置条件
 
-需要先构建 server 二进制：
+需要将 codeg-server 二进制链接到 `~/.local/bin/`：
 
 ```bash
-cargo build --bin codeg-server --no-default-features --release
+ln -sf ~/code/codeg/src-tauri/target/release/codeg-server ~/.local/bin/codeg-server
 ```
-
-构建产物位于 `src-tauri/target/release/codeg-server`。

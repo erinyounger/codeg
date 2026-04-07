@@ -47,21 +47,54 @@ success() {
     echo -e "${GREEN}[OK]${NC} $*"
 }
 
+info() {
+    echo -e "${NC}[INFO]${NC} $*"
+}
+
 # Ensure ~/.codeg directory exists
 ensure_config_dir() {
     mkdir -p "$(dirname "$PID_FILE")"
     mkdir -p "$(dirname "$TOKEN_FILE")"
 }
 
+# Setup Node.js environment (NVM, fnm, etc.) to ensure Agent CLIs are found
+setup_node_env() {
+    # Source NVM if available
+    if [ -s "$HOME/.nvm/nvm.sh" ]; then
+        # Load NVM without output
+        \. "$HOME/.nvm/nvm.sh" --no-use 2>/dev/null || true
+    fi
+
+    # Source NVM bash completion if available
+    if [ -s "$HOME/.nvm/bash_completion" ]; then
+        \. "$HOME/.nvm/bash_completion" 2>/dev/null || true
+    fi
+
+    # Add NVM-managed Node paths to PATH (find all versions)
+    if [ -d "$HOME/.nvm/versions/node" ]; then
+        for version_dir in "$HOME/.nvm/versions/node"/*/; do
+            if [ -d "${version_dir}bin" ]; then
+                export PATH="${version_dir}bin:$PATH"
+            fi
+        done
+    fi
+
+    # Also add ~/.local/bin which may contain global npm packages
+    export PATH="$HOME/.local/bin:$PATH"
+}
+
 # Get server binary path
 get_server_binary() {
     local binary=""
 
+    # Check ~/.local/bin first (symlinked from src-tauri)
+    if [ -f "${HOME}/.local/bin/codeg-server" ]; then
+        binary="${HOME}/.local/bin/codeg-server"
     # Check if running from source (development)
-    if [ -f "${SCRIPT_DIR}/src-tauri/target/release/codeg-server" ]; then
-        binary="${SCRIPT_DIR}/src-tauri/target/release/codeg-server"
-    elif [ -f "${SCRIPT_DIR}/src-tauri/target/debug/codeg-server" ]; then
-        binary="${SCRIPT_DIR}/src-tauri/target/debug/codeg-server"
+    elif [ -f "${SCRIPT_DIR}/../src-tauri/target/release/codeg-server" ]; then
+        binary="${SCRIPT_DIR}/../src-tauri/target/release/codeg-server"
+    elif [ -f "${SCRIPT_DIR}/../src-tauri/target/debug/codeg-server" ]; then
+        binary="${SCRIPT_DIR}/../src-tauri/target/debug/codeg-server"
     # Check if installed system-wide
     elif command -v codeg-server &> /dev/null; then
         binary="codeg-server"
@@ -174,6 +207,9 @@ kill_all_instances() {
 
 # Start the server
 do_start() {
+    # Setup Node.js environment for Agent CLIs (openclaw, claude-agent-acp, etc.)
+    setup_node_env
+
     local binary
     binary=$(get_server_binary)
 
@@ -205,26 +241,46 @@ do_start() {
         log "Using saved token from $TOKEN_FILE"
     fi
 
-    # Start server in background
+    # Start server in background with environment variables
     ensure_config_dir
 
-    nohup "$binary" \
-        ${CODEG_PORT:+CODEG_PORT="$CODEG_PORT"} \
-        ${CODEG_HOST:+CODEG_HOST="$CODEG_HOST"} \
-        ${CODEG_TOKEN:+CODEG_TOKEN="$CODEG_TOKEN"} \
-        ${CODEG_DATA_DIR:+CODEG_DATA_DIR="$CODEG_DATA_DIR"} \
-        ${CODEG_STATIC_DIR:+CODEG_STATIC_DIR="$CODEG_STATIC_DIR"} \
+    # Build environment and run
+    nohup env \
+        ${CODEG_PORT:+CODEG_PORT=$CODEG_PORT} \
+        ${CODEG_HOST:+CODEG_HOST=$CODEG_HOST} \
+        ${CODEG_TOKEN:+CODEG_TOKEN=$CODEG_TOKEN} \
+        ${CODEG_DATA_DIR:+CODEG_DATA_DIR=$CODEG_DATA_DIR} \
+        ${CODEG_STATIC_DIR:+CODEG_STATIC_DIR=$CODEG_STATIC_DIR} \
+        "$binary" \
         > "$LOG_FILE" 2>&1 &
-
-    local new_pid=$!
-    echo $new_pid > "$PID_FILE"
 
     # Wait a moment for server to start
     sleep 2
 
-    if is_running "$new_pid"; then
+    # Find the actual server process
+    local new_pid
+    new_pid=$(pgrep -f "codeg-server" | head -1 || true)
+
+    if [ -n "$new_pid" ] && is_running "$new_pid"; then
+        echo $new_pid > "$PID_FILE"
         success "codeg-server started (PID: $new_pid)"
         log "Log file: $LOG_FILE"
+
+        # Extract and display listening addresses from log
+        sleep 1
+        local listening_lines
+        listening_lines=$(grep -E "Listening on:" -A 10 "$LOG_FILE" 2>/dev/null | tail -n +2 | head -10)
+        if [ -n "$listening_lines" ]; then
+            echo ""
+            info "Listening on:"
+            echo "$listening_lines" | while IFS= read -r line; do
+                [ -n "$line" ] && echo "  $line"
+            done
+        fi
+        if [ -n "$CODEG_TOKEN" ]; then
+            echo ""
+            info "Auth Token: $CODEG_TOKEN"
+        fi
     else
         error "Failed to start codeg-server"
         error "Check log: $LOG_FILE"
@@ -284,11 +340,35 @@ do_set_token() {
 
 # Show status
 do_status() {
+    # Setup Node.js environment for Agent CLI checks
+    setup_node_env
+
+    # Load saved token
+    local saved_token=""
+    if [ -f "$TOKEN_FILE" ]; then
+        saved_token=$(cat "$TOKEN_FILE")
+    fi
+
     local pid
     pid=$(get_pid)
 
     if [ -n "$pid" ] && is_running "$pid"; then
         success "codeg-server is running (PID: $pid)"
+
+        # Extract and display listening addresses from log
+        local listening_lines
+        listening_lines=$(grep -E "Listening on:" -A 10 "$LOG_FILE" 2>/dev/null | tail -n +2 | head -10)
+        if [ -n "$listening_lines" ]; then
+            echo ""
+            info "Listening on:"
+            echo "$listening_lines" | while IFS= read -r line; do
+                [ -n "$line" ] && echo "  $line"
+            done
+        fi
+        if [ -n "$saved_token" ]; then
+            echo ""
+            info "Auth Token: $saved_token"
+        fi
 
         # Show some info
         if [ -f "$LOG_FILE" ]; then
@@ -306,6 +386,17 @@ do_status() {
             info "codeg-server is not running"
         fi
     fi
+
+    # Show Agent CLI availability
+    echo ""
+    info "Agent CLI status:"
+    for cli in openclaw claude-agent-acp gemini cline codex-acp; do
+        if command -v "$cli" &> /dev/null; then
+            success "  $cli: $(command -v $cli)"
+        else
+            warn "  $cli: not found"
+        fi
+    done
 }
 
 # Show current token
