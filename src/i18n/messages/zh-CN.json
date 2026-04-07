@@ -93,7 +93,8 @@
       "version_control": "版本控制",
       "system": "系统",
       "chat_channels": "消息渠道",
-      "web_service": "Web 服务"
+      "web_service": "Web 服务",
+      "model_providers": "模型供应商"
     }
   },
   "AppearanceSettings": {
@@ -554,7 +555,10 @@
       "modelId": "模型 ID",
       "modelName": "模型名称",
       "deleteModel": "删除模型 {modelId}",
-      "nativeJsonConfig": "OpenCode 原生 JSON 配置"
+      "nativeJsonConfig": "OpenCode 原生 JSON 配置",
+      "mainModel": "主模型",
+      "smallModel": "小模型",
+      "noMatchingModels": "没有匹配的模型"
     },
     "openClaw": {
       "gatewayConfig": "Gateway 配置",
@@ -564,7 +568,18 @@
       "gatewayTokenHint": "建议使用 token-file 替代明文 Token，可通过 openclaw 命令行配置。",
       "sessionKeyHint": "可选。指定 Gateway Session Key，留空则自动分配隔离会话。"
     },
+    "authModeOfficialSubscription": "官网订阅",
+    "authModeCustomEndpoint": "自定义接口",
+    "authModeCustomEndpointHint": "手动配置 API URL 和 API Key 连接自定义接口。",
+    "authModeModelProvider": "模型供应商",
+    "modelProvider": "模型供应商",
+    "modelProviderHint": "使用已配置的模型供应商的 API URL 和 API Key。",
+    "selectModelProvider": "选择模型供应商",
+    "noModelProviderAvailable": "该代理未配置模型供应商。请前往模型供应商设置添加。",
     "claude": {
+      "authMode": "认证方式",
+      "officialSubscription": "官方订阅",
+      "officialSubscriptionHint": "使用 Anthropic 官方订阅，无需 API Key。",
       "mainModel": "主模型",
       "reasoningModel": "推理模型（thinking）",
       "haikuDefaultModel": "Haiku 默认模型",
@@ -623,7 +638,8 @@
       "configSavedHint": "已有会话需要重新打开才能生效",
       "saveConfigManagementFailed": "保存配置管理失败",
       "clineSaved": "Cline 配置已保存",
-      "saveClineFailed": "保存 Cline 配置失败"
+      "saveClineFailed": "保存 Cline 配置失败",
+      "modelProviderRequired": "请先选择一个模型供应商再保存。"
     },
     "version": {
       "statusLabel": "版本状态",
@@ -1808,5 +1824,38 @@
       "pt": "葡萄牙语",
       "ar": "阿拉伯语"
     }
+  },
+  "ModelProviderSettings": {
+    "sectionTitle": "模型供应商",
+    "sectionDescription": "管理 Agent 的 API 供应商凭据。",
+    "filterAll": "全部",
+    "providerListTitle": "已配置的供应商",
+    "addProvider": "添加供应商",
+    "editProvider": "编辑供应商",
+    "noProviders": "尚未配置模型供应商。",
+    "providerName": "名称",
+    "providerNamePlaceholder": "例如 OpenAI、Anthropic",
+    "apiUrl": "API 地址",
+    "apiUrlPlaceholder": "https://api.openai.com/v1",
+    "apiKey": "API 密钥",
+    "apiKeyPlaceholder": "sk-...",
+    "apiKeyKeepCurrent": "留空则保持不变",
+    "agentTypes": "代理类型",
+    "agentTypesRequired": "至少选择一个代理类型。",
+    "nameRequired": "供应商名称不能为空。",
+    "apiUrlRequired": "API 地址不能为空。",
+    "apiKeyRequired": "API 密钥不能为空。",
+    "loadFailed": "加载供应商失败。",
+    "saveFailed": "保存更改失败。",
+    "createSuccess": "供应商已创建。",
+    "editSuccess": "供应商已更新。",
+    "deleteSuccess": "供应商已删除。",
+    "deleteConfirmTitle": "删除供应商",
+    "deleteConfirmMessage": "确定要永久删除供应商「{name}」吗？",
+    "deleteBlockedByAgent": "{agents} 正在使用该配置，请先解除关联后再删除。",
+    "cancel": "取消",
+    "delete": "删除",
+    "create": "创建",
+    "save": "保存"
   }
 }

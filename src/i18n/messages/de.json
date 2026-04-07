@@ -93,7 +93,8 @@
       "version_control": "Versionskontrolle",
       "system": "Systemeinstellungen",
       "chat_channels": "Chat-Kanäle",
-      "web_service": "Webdienst"
+      "web_service": "Webdienst",
+      "model_providers": "Modellanbieter"
     }
   },
   "AppearanceSettings": {
@@ -554,7 +555,10 @@
       "modelId": "Modell-ID",
       "modelName": "Modellname",
       "deleteModel": "Modell {modelId} löschen",
-      "nativeJsonConfig": "OpenCode Native JSON-Konfiguration"
+      "nativeJsonConfig": "OpenCode Native JSON-Konfiguration",
+      "mainModel": "Hauptmodell",
+      "smallModel": "Kleines Modell",
+      "noMatchingModels": "Keine passenden Modelle"
     },
     "openClaw": {
       "gatewayConfig": "Gateway-Konfiguration",
@@ -564,7 +568,18 @@
       "gatewayTokenHint": "Wenn möglich token-file statt Klartext-Token verwenden; über openclaw CLI konfigurieren.",
       "sessionKeyHint": "Optional. Gateway-Session-Key angeben; leer lassen für automatische Zuweisung einer isolierten Session."
     },
+    "authModeOfficialSubscription": "Offizielles Abonnement",
+    "authModeCustomEndpoint": "Benutzerdefinierter Endpunkt",
+    "authModeCustomEndpointHint": "API-URL und API-Key manuell für einen benutzerdefinierten Endpunkt konfigurieren.",
+    "authModeModelProvider": "Modellanbieter",
+    "modelProvider": "Modellanbieter",
+    "modelProviderHint": "API-URL und API-Key eines konfigurierten Modellanbieters verwenden.",
+    "selectModelProvider": "Modellanbieter auswählen",
+    "noModelProviderAvailable": "Kein Modellanbieter für diesen Agent konfiguriert. Gehen Sie zu den Modellanbieter-Einstellungen, um einen hinzuzufügen.",
     "claude": {
+      "authMode": "Authentifizierungsmodus",
+      "officialSubscription": "Offizielles Abonnement",
+      "officialSubscriptionHint": "Offizielles Anthropic-Abonnement verwenden, kein API-Key erforderlich.",
       "mainModel": "Hauptmodell",
       "reasoningModel": "Reasoning-Modell (thinking)",
       "haikuDefaultModel": "Standard-Haiku-Modell",
@@ -623,7 +638,8 @@
       "configSavedHint": "Bestehende Sitzungen müssen neu geöffnet werden, damit die Änderungen wirksam werden",
       "saveConfigManagementFailed": "Speichern der Konfigurationsverwaltung fehlgeschlagen",
       "clineSaved": "Cline-Konfiguration gespeichert",
-      "saveClineFailed": "Cline-Konfiguration konnte nicht gespeichert werden"
+      "saveClineFailed": "Cline-Konfiguration konnte nicht gespeichert werden",
+      "modelProviderRequired": "Bitte wählen Sie vor dem Speichern einen Modellanbieter aus."
     },
     "version": {
       "statusLabel": "Versionsstatus",
@@ -1808,5 +1824,38 @@
       "pt": "Portugiesisch",
       "ar": "Arabisch"
     }
+  },
+  "ModelProviderSettings": {
+    "sectionTitle": "Modellanbieter",
+    "sectionDescription": "API-Anbieter-Zugangsdaten für Agenten verwalten.",
+    "filterAll": "Alle",
+    "providerListTitle": "Konfigurierte Anbieter",
+    "addProvider": "Anbieter hinzufügen",
+    "editProvider": "Anbieter bearbeiten",
+    "noProviders": "Noch keine Modellanbieter konfiguriert.",
+    "providerName": "Name",
+    "providerNamePlaceholder": "z.B. OpenAI, Anthropic",
+    "apiUrl": "API-URL",
+    "apiUrlPlaceholder": "https://api.openai.com/v1",
+    "apiKey": "API-Schlüssel",
+    "apiKeyPlaceholder": "sk-...",
+    "apiKeyKeepCurrent": "Leer lassen, um aktuellen Wert beizubehalten",
+    "agentTypes": "Agententypen",
+    "agentTypesRequired": "Mindestens ein Agententyp ist erforderlich.",
+    "nameRequired": "Anbietername ist erforderlich.",
+    "apiUrlRequired": "API-URL ist erforderlich.",
+    "apiKeyRequired": "API-Schlüssel ist erforderlich.",
+    "loadFailed": "Anbieter konnten nicht geladen werden.",
+    "saveFailed": "Änderungen konnten nicht gespeichert werden.",
+    "createSuccess": "Anbieter erstellt.",
+    "editSuccess": "Anbieter aktualisiert.",
+    "deleteSuccess": "Anbieter gelöscht.",
+    "deleteConfirmTitle": "Anbieter löschen",
+    "deleteConfirmMessage": "Der Anbieter \"{name}\" wird dauerhaft gelöscht. Sind Sie sicher?",
+    "deleteBlockedByAgent": "{agents} verwendet diesen Anbieter. Bitte trennen Sie die Verbindung vor dem Löschen.",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "create": "Erstellen",
+    "save": "Speichern"
   }
 }

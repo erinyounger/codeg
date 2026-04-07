@@ -19,6 +19,7 @@ use crate::acp::types::{
 #[cfg(feature = "tauri-runtime")]
 use crate::acp::types::{ConnectionInfo, ForkResultInfo, PromptInputBlock};
 use crate::db::service::agent_setting_service;
+use crate::db::service::model_provider_service;
 use crate::db::AppDatabase;
 use crate::models::agent::AgentType;
 use crate::web::event_bridge::EventEmitter;
@@ -1121,6 +1122,11 @@ pub(crate) fn load_agent_local_config_json(agent_type: AgentType) -> Option<Stri
 fn merge_json_values(base: &mut serde_json::Value, patch: &serde_json::Value) {
     if let (Some(base_obj), Some(patch_obj)) = (base.as_object_mut(), patch.as_object()) {
         for (key, patch_value) in patch_obj {
+            if patch_value.is_null() {
+                // null in patch means "remove this key"
+                base_obj.remove(key);
+                continue;
+            }
             match base_obj.get_mut(key) {
                 Some(base_value) => merge_json_values(base_value, patch_value),
                 None => {
@@ -1490,11 +1496,25 @@ fn trim_non_empty(value: Option<String>) -> Option<String> {
     })
 }
 
-fn important_env_targets(agent_type: AgentType) -> (&'static str, &'static str, &'static str) {
+/// Primary env var keys for each agent type: (api_base_url, api_key, model).
+/// Shared by runtime env resolution, model-provider cascade, and config patching.
+fn agent_env_keys(agent_type: AgentType) -> (&'static str, &'static str, &'static str) {
     match agent_type {
-        AgentType::ClaudeCode => ("ANTHROPIC_BASE_URL", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL"),
+        AgentType::ClaudeCode => ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_MODEL"),
         AgentType::Gemini => ("GOOGLE_GEMINI_BASE_URL", "GEMINI_API_KEY", "GEMINI_MODEL"),
         _ => ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"),
+    }
+}
+
+/// Serialize a BTreeMap into env_json for database storage.
+/// Returns `None` when the map is empty.
+fn serialize_env_map(env: &BTreeMap<String, String>) -> Result<Option<String>, AcpError> {
+    if env.is_empty() {
+        Ok(None)
+    } else {
+        serde_json::to_string(env)
+            .map(Some)
+            .map_err(|e| AcpError::protocol(e.to_string()))
     }
 }
 
@@ -1523,7 +1543,7 @@ pub(crate) fn build_runtime_env_from_setting(
         merged.insert(key, trimmed.to_string());
     }
 
-    let (api_base_url_key, api_key_key, model_key) = important_env_targets(agent_type);
+    let (api_base_url_key, api_key_key, model_key) = agent_env_keys(agent_type);
     if let Some(value) = trim_non_empty(config.api_base_url) {
         merged.insert(api_base_url_key.to_string(), value);
     }
@@ -1537,6 +1557,173 @@ pub(crate) fn build_runtime_env_from_setting(
     }
 
     merged
+}
+
+/// Resolve model provider credentials into runtime env vars if `model_provider_id` is set.
+pub(crate) async fn apply_model_provider_env(
+    agent_type: AgentType,
+    setting: Option<&crate::db::entities::agent_setting::Model>,
+    runtime_env: &mut BTreeMap<String, String>,
+    conn: &sea_orm::DatabaseConnection,
+) {
+    let provider_id = match setting.and_then(|s| s.model_provider_id) {
+        Some(id) => id,
+        None => return,
+    };
+    let provider = match model_provider_service::get_by_id(conn, provider_id).await {
+        Ok(Some(p)) => p,
+        _ => return,
+    };
+    let (url_key, key_key, _) = agent_env_keys(agent_type);
+    if !provider.api_url.trim().is_empty() {
+        runtime_env.insert(url_key.to_string(), provider.api_url.clone());
+    }
+    if !provider.api_key.trim().is_empty() {
+        runtime_env.insert(key_key.to_string(), provider.api_key.clone());
+    }
+}
+
+/// Update on-disk config files for a single agent when model provider credentials change.
+/// Uses `agent_env_keys` to determine the correct env var names per agent type.
+fn cascade_update_agent_config(
+    agent_type: AgentType,
+    api_url: &str,
+    api_key: &str,
+) -> Result<(), AcpError> {
+    let (url_key, key_key, _) = agent_env_keys(agent_type);
+    match agent_type {
+        AgentType::ClaudeCode | AgentType::Gemini => {
+            // Write into config.env (not root-level)
+            let mut env = serde_json::Map::new();
+            env.insert(url_key.to_string(), serde_json::Value::String(api_url.to_string()));
+            env.insert(key_key.to_string(), serde_json::Value::String(api_key.to_string()));
+            let patch = serde_json::json!({ "env": env });
+            let patch_str = serde_json::to_string(&patch)
+                .map_err(|e| AcpError::protocol(e.to_string()))?;
+            persist_agent_local_config_json(agent_type, Some(&patch_str))?;
+        }
+        AgentType::OpenClaw => {
+            // agent_local_config_path returns None for OpenClaw — no-op
+        }
+        AgentType::Codex => {
+            let auth_path = codex_auth_json_path();
+            let mut auth_obj = if auth_path.exists() {
+                fs::read_to_string(&auth_path)
+                    .ok()
+                    .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+                    .filter(|v| v.is_object())
+                    .unwrap_or_else(|| serde_json::json!({}))
+            } else {
+                serde_json::json!({})
+            };
+            if !api_key.trim().is_empty() {
+                auth_obj[key_key] = serde_json::Value::String(api_key.to_string());
+            }
+            let auth_str = serde_json::to_string_pretty(&auth_obj)
+                .map_err(|e| AcpError::protocol(e.to_string()))?;
+
+            let config_path = codex_config_toml_path();
+            let mut toml_value = if config_path.exists() {
+                fs::read_to_string(&config_path)
+                    .ok()
+                    .and_then(|raw| raw.parse::<toml::Value>().ok())
+                    .filter(|v| v.is_table())
+                    .unwrap_or_else(|| toml::Value::Table(toml::map::Map::new()))
+            } else {
+                toml::Value::Table(toml::map::Map::new())
+            };
+            if let Some(table) = toml_value.as_table_mut() {
+                if api_url.trim().is_empty() {
+                    table.remove("api_base_url");
+                } else {
+                    table.insert("api_base_url".to_string(), toml::Value::String(api_url.to_string()));
+                }
+            }
+            let toml_str = toml::to_string_pretty(&toml_value)
+                .map_err(|e| AcpError::protocol(e.to_string()))?;
+
+            persist_codex_native_config_files(Some(&auth_str), Some(&toml_str))?;
+        }
+        AgentType::OpenCode => {
+            let auth_path = opencode_auth_json_path();
+            let mut auth_obj = if auth_path.exists() {
+                fs::read_to_string(&auth_path)
+                    .ok()
+                    .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+                    .filter(|v| v.is_object())
+                    .unwrap_or_else(|| serde_json::json!({}))
+            } else {
+                serde_json::json!({})
+            };
+            if !api_key.trim().is_empty() {
+                auth_obj["api_key"] = serde_json::Value::String(api_key.to_string());
+            }
+            let auth_str = serde_json::to_string_pretty(&auth_obj)
+                .map_err(|e| AcpError::protocol(e.to_string()))?;
+            persist_opencode_auth_json(&auth_str)?;
+
+            let patch = serde_json::json!({ "apiBaseUrl": api_url });
+            let patch_str = serde_json::to_string(&patch)
+                .map_err(|e| AcpError::protocol(e.to_string()))?;
+            persist_agent_local_config_json(agent_type, Some(&patch_str))?;
+        }
+        AgentType::Cline => {}
+    }
+    Ok(())
+}
+
+/// Cascade model provider credential changes to all dependent agent settings and config files.
+pub(crate) async fn cascade_update_model_provider(
+    db: &AppDatabase,
+    provider_id: i32,
+    new_api_url: &str,
+    new_api_key: &str,
+    emitter: &EventEmitter,
+) -> Result<(), AcpError> {
+    let dependents = agent_setting_service::find_by_model_provider_id(&db.conn, provider_id)
+        .await
+        .map_err(|e| AcpError::protocol(e.to_string()))?;
+
+    for setting in &dependents {
+        let agent_type: AgentType = match serde_json::from_str(&setting.agent_type) {
+            Ok(at) => at,
+            Err(_) => continue,
+        };
+
+        // 1. Update env_json in database (uses agent_env_keys for consistent key names)
+        let (url_key, key_key, _) = agent_env_keys(agent_type);
+        let mut env_map: BTreeMap<String, String> = setting
+            .env_json
+            .as_deref()
+            .and_then(|raw| serde_json::from_str(raw).ok())
+            .unwrap_or_default();
+
+        if !new_api_url.trim().is_empty() {
+            env_map.insert(url_key.to_string(), new_api_url.to_string());
+        }
+        if !new_api_key.trim().is_empty() {
+            env_map.insert(key_key.to_string(), new_api_key.to_string());
+        }
+
+        let patch = agent_setting_service::AgentSettingsUpdate {
+            enabled: setting.enabled,
+            env_json: serialize_env_map(&env_map)?,
+            model_provider_id: setting.model_provider_id,
+        };
+        agent_setting_service::update(&db.conn, agent_type, patch)
+            .await
+            .map_err(|e| AcpError::protocol(e.to_string()))?;
+
+        // 2. Update on-disk config files
+        if let Err(e) = cascade_update_agent_config(agent_type, new_api_url, new_api_key) {
+            eprintln!(
+                "[ModelProvider] cascade_update_agent_config({agent_type}) failed: {e}, skipping config update"
+            );
+        }
+
+        emit_acp_agents_updated(emitter, "env_updated", Some(agent_type));
+    }
+    Ok(())
 }
 
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
@@ -1578,6 +1765,9 @@ pub async fn acp_connect(
     let local_config_json = load_agent_local_config_json(agent_type);
     let mut runtime_env =
         build_runtime_env_from_setting(agent_type, setting.as_ref(), local_config_json.as_deref());
+
+    // Resolve model provider credentials if configured.
+    apply_model_provider_env(agent_type, setting.as_ref(), &mut runtime_env, &db.conn).await;
 
     // For OpenClaw: when creating a new conversation (no session_id to resume),
     // signal that we want a fresh transcript via --reset-session.
@@ -1795,7 +1985,7 @@ pub(crate) async fn acp_list_agents_core(
                     }
                     env.insert(key, trimmed.to_string());
                 }
-                let (api_base_url_key, api_key_key, model_key) = important_env_targets(agent_type);
+                let (api_base_url_key, api_key_key, model_key) = agent_env_keys(agent_type);
                 if let Some(value) = trim_non_empty(local_cfg.api_base_url) {
                     env.insert(api_base_url_key.to_string(), value);
                 }
@@ -1859,6 +2049,7 @@ pub(crate) async fn acp_list_agents_core(
             codex_auth_json,
             codex_config_toml,
             cline_secrets_json,
+            model_provider_id: setting.and_then(|m| m.model_provider_id),
         });
     }
 
@@ -1912,11 +2103,7 @@ pub(crate) async fn acp_update_agent_preferences_core(
         .await
         .map_err(|e| AcpError::protocol(e.to_string()))?;
 
-    let env_json = if env.is_empty() {
-        None
-    } else {
-        Some(serde_json::to_string(&env).map_err(|e| AcpError::protocol(e.to_string()))?)
-    };
+    let env_json = serialize_env_map(&env)?;
     let config_json = config_json.and_then(|raw| {
         let trimmed = raw.trim();
         if trimmed.is_empty() {
@@ -1943,7 +2130,11 @@ pub(crate) async fn acp_update_agent_preferences_core(
         }
     }
 
-    let patch = agent_setting_service::AgentSettingsUpdate { enabled, env_json };
+    let patch = agent_setting_service::AgentSettingsUpdate {
+        enabled,
+        env_json,
+        model_provider_id: None,
+    };
     agent_setting_service::update(&db.conn, agent_type, patch)
         .await
         .map_err(|e| AcpError::protocol(e.to_string()))?;
@@ -2016,6 +2207,146 @@ pub async fn acp_update_agent_preferences(
         agent_type, enabled, env, config_json, opencode_auth_json,
         codex_auth_json, codex_config_toml, &db, &emitter,
     ).await
+}
+
+pub(crate) async fn acp_update_agent_env_core(
+    agent_type: AgentType,
+    enabled: bool,
+    env: BTreeMap<String, String>,
+    model_provider_id: Option<i32>,
+    db: &AppDatabase,
+    emitter: &EventEmitter,
+) -> Result<(), AcpError> {
+    let default = agent_setting_service::AgentDefaultInput {
+        agent_type,
+        registry_id: registry::registry_id_for(agent_type).to_string(),
+        default_sort_order: i32::MAX / 2,
+    };
+
+    agent_setting_service::ensure_defaults(&db.conn, &[default])
+        .await
+        .map_err(|e| AcpError::protocol(e.to_string()))?;
+
+    let patch = agent_setting_service::AgentSettingsUpdate {
+        enabled,
+        env_json: serialize_env_map(&env)?,
+        model_provider_id,
+    };
+    agent_setting_service::update(&db.conn, agent_type, patch)
+        .await
+        .map_err(|e| AcpError::protocol(e.to_string()))?;
+
+    emit_acp_agents_updated(emitter, "env_updated", Some(agent_type));
+    Ok(())
+}
+
+#[cfg(feature = "tauri-runtime")]
+#[cfg_attr(feature = "tauri-runtime", tauri::command)]
+pub async fn acp_update_agent_env(
+    agent_type: AgentType,
+    enabled: bool,
+    env: BTreeMap<String, String>,
+    model_provider_id: Option<i32>,
+    db: State<'_, AppDatabase>,
+    app: tauri::AppHandle,
+) -> Result<(), AcpError> {
+    let emitter = EventEmitter::Tauri(app);
+    acp_update_agent_env_core(agent_type, enabled, env, model_provider_id, &db, &emitter).await
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn acp_update_agent_config_core(
+    agent_type: AgentType,
+    config_json: Option<String>,
+    opencode_auth_json: Option<String>,
+    codex_auth_json: Option<String>,
+    codex_config_toml: Option<String>,
+    emitter: &EventEmitter,
+) -> Result<(), AcpError> {
+    let config_json = config_json.and_then(|raw| {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+    let opencode_auth_json = opencode_auth_json.and_then(|raw| {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+    if let Some(raw) = config_json.as_deref() {
+        let parsed = serde_json::from_str::<serde_json::Value>(raw)
+            .map_err(|e| AcpError::protocol(format!("invalid config_json: {e}")))?;
+        if !parsed.is_object() {
+            return Err(AcpError::protocol(
+                "invalid config_json: root must be a JSON object",
+            ));
+        }
+    }
+
+    if agent_type == AgentType::Codex {
+        if codex_auth_json.is_some() || codex_config_toml.is_some() {
+            persist_codex_native_config_files(
+                codex_auth_json.as_deref(),
+                codex_config_toml.as_deref(),
+            )?;
+        }
+        emit_acp_agents_updated(emitter, "config_updated", Some(agent_type));
+        return Ok(());
+    }
+
+    if agent_type == AgentType::OpenCode {
+        if let Some(raw_auth) = opencode_auth_json.as_deref() {
+            persist_opencode_auth_json(raw_auth)?;
+        }
+        if let Some(raw) = config_json.as_deref() {
+            persist_agent_local_config_json(agent_type, Some(raw))?;
+        }
+        emit_acp_agents_updated(emitter, "config_updated", Some(agent_type));
+        return Ok(());
+    }
+
+    if agent_type == AgentType::Cline {
+        if let Some(raw) = config_json.as_deref() {
+            persist_cline_local_config(Some(raw))?;
+        }
+        emit_acp_agents_updated(emitter, "config_updated", Some(agent_type));
+        return Ok(());
+    }
+
+    // Claude Code, Gemini, OpenClaw — write config JSON to local file without merging env
+    let local_patch_value = config_json
+        .as_deref()
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
+        .filter(|value| value.is_object())
+        .unwrap_or_else(|| serde_json::json!({}));
+    let local_patch_json = serde_json::to_string(&local_patch_value)
+        .map_err(|e| AcpError::protocol(format!("serialize local patch failed: {e}")))?;
+    persist_agent_local_config_json(agent_type, Some(local_patch_json.as_str()))?;
+    emit_acp_agents_updated(emitter, "config_updated", Some(agent_type));
+    Ok(())
+}
+
+#[cfg(feature = "tauri-runtime")]
+#[cfg_attr(feature = "tauri-runtime", tauri::command)]
+pub async fn acp_update_agent_config(
+    agent_type: AgentType,
+    config_json: Option<String>,
+    opencode_auth_json: Option<String>,
+    codex_auth_json: Option<String>,
+    codex_config_toml: Option<String>,
+    app: tauri::AppHandle,
+) -> Result<(), AcpError> {
+    let emitter = EventEmitter::Tauri(app);
+    acp_update_agent_config_core(
+        agent_type, config_json, opencode_auth_json, codex_auth_json, codex_config_toml, &emitter,
+    )
+    .await
 }
 
 pub(crate) async fn acp_download_agent_binary_core(

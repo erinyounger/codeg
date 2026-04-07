@@ -220,6 +220,21 @@ export function compareAgentType(a: AgentType, b: AgentType): number {
   return aIndex - bIndex
 }
 
+export const ALL_AGENT_TYPES: AgentType[] = [
+  "claude_code",
+  "codex",
+  "open_code",
+  "gemini",
+  "open_claw",
+  "cline",
+]
+
+export const MODEL_PROVIDER_AGENT_TYPES: AgentType[] = [
+  "claude_code",
+  "codex",
+  "gemini",
+]
+
 export const AGENT_LABELS: Record<AgentType, string> = {
   claude_code: "Claude Code",
   codex: "Codex",
@@ -230,10 +245,10 @@ export const AGENT_LABELS: Record<AgentType, string> = {
 }
 
 export const AGENT_COLORS: Record<AgentType, string> = {
-  claude_code: "bg-orange-500",
-  codex: "bg-green-500",
-  open_code: "bg-blue-500",
-  gemini: "bg-blue-400",
+  claude_code: "bg-[#D97757]",
+  codex: "bg-[#7A9DFF]",
+  open_code: "bg-black",
+  gemini: "bg-[#3186FF]",
   open_claw: "bg-emerald-600",
   cline: "bg-purple-500",
 }
@@ -466,6 +481,7 @@ export interface AcpAgentInfo {
   codex_auth_json: string | null
   codex_config_toml: string | null
   cline_secrets_json: string | null
+  model_provider_id: number | null
 }
 
 // Lightweight agent status returned by acp_get_agent_status
@@ -887,4 +903,15 @@ export interface ChatChannelMessageLog {
   status: "sent" | "failed"
   error_detail: string | null
   created_at: string
+}
+
+export interface ModelProviderInfo {
+  id: number
+  name: string
+  api_url: string
+  api_key: string
+  api_key_masked: string
+  agent_types: AgentType[]
+  created_at: string
+  updated_at: string
 }

@@ -21,7 +21,8 @@ mod tauri_app {
     use crate::chat_channel::manager::ChatChannelManager;
     use crate::commands::{
         acp as acp_commands, chat_channel as chat_channel_commands, conversations, folder_commands,
-        folders, mcp as mcp_commands, notification, project_boot, system_settings,
+        folders, mcp as mcp_commands, model_provider as model_provider_commands, notification,
+        project_boot, system_settings,
         terminal as terminal_commands, version_control, windows,
     };
     use crate::terminal::manager::TerminalManager;
@@ -346,6 +347,8 @@ mod tauri_app {
                 acp_commands::acp_prepare_npx_agent,
                 acp_commands::acp_uninstall_agent,
                 acp_commands::acp_update_agent_preferences,
+                acp_commands::acp_update_agent_env,
+                acp_commands::acp_update_agent_config,
                 acp_commands::acp_reorder_agents,
                 acp_commands::acp_list_agent_skills,
                 acp_commands::acp_read_agent_skill,
@@ -391,6 +394,10 @@ mod tauri_app {
                 chat_channel_commands::set_chat_message_language,
                 chat_channel_commands::weixin_get_qrcode,
                 chat_channel_commands::weixin_check_qrcode,
+                model_provider_commands::list_model_providers,
+                model_provider_commands::create_model_provider,
+                model_provider_commands::update_model_provider,
+                model_provider_commands::delete_model_provider,
                 web::start_web_server,
                 web::stop_web_server,
                 web::get_web_server_status,

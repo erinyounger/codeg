@@ -1,17 +1,14 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "agent_setting")]
+#[sea_orm(table_name = "model_provider")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub agent_type: String,
-    pub registry_id: String,
-    pub enabled: bool,
-    pub sort_order: i32,
-    pub installed_version: Option<String>,
-    pub env_json: Option<String>,
-    pub model_provider_id: Option<i32>,
+    pub name: String,
+    pub api_url: String,
+    pub api_key: String,
+    pub agent_types_json: String,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }

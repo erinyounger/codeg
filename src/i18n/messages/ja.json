@@ -93,7 +93,8 @@
       "version_control": "バージョン管理",
       "system": "システム",
       "chat_channels": "チャットチャンネル",
-      "web_service": "Webサービス"
+      "web_service": "Webサービス",
+      "model_providers": "モデルプロバイダー"
     }
   },
   "AppearanceSettings": {
@@ -554,7 +555,10 @@
       "modelId": "モデル ID",
       "modelName": "モデル名",
       "deleteModel": "モデル {modelId} を削除",
-      "nativeJsonConfig": "OpenCode ネイティブ JSON 設定"
+      "nativeJsonConfig": "OpenCode ネイティブ JSON 設定",
+      "mainModel": "メインモデル",
+      "smallModel": "スモールモデル",
+      "noMatchingModels": "一致するモデルがありません"
     },
     "openClaw": {
       "gatewayConfig": "Gateway 設定",
@@ -564,7 +568,18 @@
       "gatewayTokenHint": "可能な場合は平文トークンではなく token-file の使用を推奨します。openclaw CLI で設定してください。",
       "sessionKeyHint": "任意。gateway の session key を指定します。空欄の場合は分離されたセッションが自動割り当てされます。"
     },
+    "authModeOfficialSubscription": "公式サブスクリプション",
+    "authModeCustomEndpoint": "カスタムエンドポイント",
+    "authModeCustomEndpointHint": "API URL と API Key を手動で設定してカスタムエンドポイントに接続します。",
+    "authModeModelProvider": "モデルプロバイダー",
+    "modelProvider": "モデルプロバイダー",
+    "modelProviderHint": "設定済みモデルプロバイダーの API URL と API Key を使用します。",
+    "selectModelProvider": "モデルプロバイダーを選択",
+    "noModelProviderAvailable": "このエージェントにはモデルプロバイダーが設定されていません。モデルプロバイダー設定で追加してください。",
     "claude": {
+      "authMode": "認証方式",
+      "officialSubscription": "公式サブスクリプション",
+      "officialSubscriptionHint": "Anthropic 公式サブスクリプションを使用、API Key 不要。",
       "mainModel": "メインモデル",
       "reasoningModel": "推論モデル（thinking）",
       "haikuDefaultModel": "デフォルト Haiku モデル",
@@ -623,7 +638,8 @@
       "configSavedHint": "既存のセッションは再度開く必要があります",
       "saveConfigManagementFailed": "設定管理の保存に失敗しました",
       "clineSaved": "Cline設定を保存しました",
-      "saveClineFailed": "Cline設定の保存に失敗しました"
+      "saveClineFailed": "Cline設定の保存に失敗しました",
+      "modelProviderRequired": "保存する前にモデルプロバイダーを選択してください。"
     },
     "version": {
       "statusLabel": "バージョン状態",
@@ -1808,5 +1824,38 @@
       "pt": "ポルトガル語",
       "ar": "アラビア語"
     }
+  },
+  "ModelProviderSettings": {
+    "sectionTitle": "モデルプロバイダー",
+    "sectionDescription": "エージェントのAPIプロバイダー認証情報を管理します。",
+    "filterAll": "すべて",
+    "providerListTitle": "設定済みプロバイダー",
+    "addProvider": "プロバイダーを追加",
+    "editProvider": "プロバイダーを編集",
+    "noProviders": "モデルプロバイダーはまだ設定されていません。",
+    "providerName": "名前",
+    "providerNamePlaceholder": "例: OpenAI、Anthropic",
+    "apiUrl": "API URL",
+    "apiUrlPlaceholder": "https://api.openai.com/v1",
+    "apiKey": "APIキー",
+    "apiKeyPlaceholder": "sk-...",
+    "apiKeyKeepCurrent": "空欄のまま現在の値を維持",
+    "agentTypes": "エージェントタイプ",
+    "agentTypesRequired": "少なくとも1つのエージェントタイプを選択してください。",
+    "nameRequired": "プロバイダー名は必須です。",
+    "apiUrlRequired": "API URLは必須です。",
+    "apiKeyRequired": "APIキーは必須です。",
+    "loadFailed": "プロバイダーの読み込みに失敗しました。",
+    "saveFailed": "変更の保存に失敗しました。",
+    "createSuccess": "プロバイダーを作成しました。",
+    "editSuccess": "プロバイダーを更新しました。",
+    "deleteSuccess": "プロバイダーを削除しました。",
+    "deleteConfirmTitle": "プロバイダーを削除",
+    "deleteConfirmMessage": "プロバイダー「{name}」を完全に削除しますか？",
+    "deleteBlockedByAgent": "{agents} がこのプロバイダーを使用中です。削除する前にリンクを解除してください。",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "create": "作成",
+    "save": "保存"
   }
 }

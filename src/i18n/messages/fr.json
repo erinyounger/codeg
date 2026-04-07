@@ -93,7 +93,8 @@
       "version_control": "Contrôle de version",
       "system": "Système",
       "chat_channels": "Canaux de chat",
-      "web_service": "Service Web"
+      "web_service": "Service Web",
+      "model_providers": "Fournisseurs de Modèles"
     }
   },
   "AppearanceSettings": {
@@ -554,7 +555,10 @@
       "modelId": "ID du modèle",
       "modelName": "Nom du modèle",
       "deleteModel": "Supprimer le modèle {modelId}",
-      "nativeJsonConfig": "Configuration JSON native OpenCode"
+      "nativeJsonConfig": "Configuration JSON native OpenCode",
+      "mainModel": "Modèle principal",
+      "smallModel": "Petit modèle",
+      "noMatchingModels": "Aucun modèle correspondant"
     },
     "openClaw": {
       "gatewayConfig": "Configuration Gateway",
@@ -564,7 +568,18 @@
       "gatewayTokenHint": "Utilisez token-file plutôt qu’un token en clair si possible ; configurez-le via le CLI openclaw.",
       "sessionKeyHint": "Optionnel. Spécifie la session key de la gateway ; laisser vide pour auto-attribuer une session isolée."
     },
+    "authModeOfficialSubscription": "Abonnement officiel",
+    "authModeCustomEndpoint": "Endpoint personnalisé",
+    "authModeCustomEndpointHint": "Configurer manuellement l'URL API et la clé API pour un endpoint personnalisé.",
+    "authModeModelProvider": "Fournisseur de modèle",
+    "modelProvider": "Fournisseur de modèle",
+    "modelProviderHint": "Utiliser l'URL API et la clé API d'un fournisseur de modèle configuré.",
+    "selectModelProvider": "Sélectionner un fournisseur de modèle",
+    "noModelProviderAvailable": "Aucun fournisseur de modèle configuré pour cet agent. Allez dans les paramètres des fournisseurs de modèle pour en ajouter un.",
     "claude": {
+      "authMode": "Mode d'authentification",
+      "officialSubscription": "Abonnement officiel",
+      "officialSubscriptionHint": "Utiliser l'abonnement officiel Anthropic, pas de clé API requise.",
       "mainModel": "Modèle principal",
       "reasoningModel": "Modèle de raisonnement (thinking)",
       "haikuDefaultModel": "Modèle Haiku par défaut",
@@ -623,7 +638,8 @@
       "configSavedHint": "Les sessions existantes doivent être rouvertes pour prendre effet",
       "saveConfigManagementFailed": "Échec de l’enregistrement de la gestion de configuration",
       "clineSaved": "Configuration Cline enregistrée",
-      "saveClineFailed": "Échec de l'enregistrement de la configuration Cline"
+      "saveClineFailed": "Échec de l'enregistrement de la configuration Cline",
+      "modelProviderRequired": "Veuillez sélectionner un fournisseur de modèle avant d'enregistrer."
     },
     "version": {
       "statusLabel": "Statut de version",
@@ -1808,5 +1824,38 @@
       "pt": "Portugais",
       "ar": "Arabe"
     }
+  },
+  "ModelProviderSettings": {
+    "sectionTitle": "Fournisseurs de Modèles",
+    "sectionDescription": "Gérer les identifiants des fournisseurs d'API pour les agents.",
+    "filterAll": "Tous",
+    "providerListTitle": "Fournisseurs Configurés",
+    "addProvider": "Ajouter un Fournisseur",
+    "editProvider": "Modifier le Fournisseur",
+    "noProviders": "Aucun fournisseur de modèle configuré.",
+    "providerName": "Nom",
+    "providerNamePlaceholder": "Ex. OpenAI, Anthropic",
+    "apiUrl": "URL de l'API",
+    "apiUrlPlaceholder": "https://api.openai.com/v1",
+    "apiKey": "Clé API",
+    "apiKeyPlaceholder": "sk-...",
+    "apiKeyKeepCurrent": "Laisser vide pour conserver l'actuelle",
+    "agentTypes": "Types d'Agent",
+    "agentTypesRequired": "Au moins un type d'agent est requis.",
+    "nameRequired": "Le nom du fournisseur est requis.",
+    "apiUrlRequired": "L'URL de l'API est requise.",
+    "apiKeyRequired": "La clé API est requise.",
+    "loadFailed": "Échec du chargement des fournisseurs.",
+    "saveFailed": "Échec de la sauvegarde.",
+    "createSuccess": "Fournisseur créé.",
+    "editSuccess": "Fournisseur mis à jour.",
+    "deleteSuccess": "Fournisseur supprimé.",
+    "deleteConfirmTitle": "Supprimer le Fournisseur",
+    "deleteConfirmMessage": "Le fournisseur \"{name}\" sera définitivement supprimé. Êtes-vous sûr ?",
+    "deleteBlockedByAgent": "{agents} utilise ce fournisseur. Veuillez le dissocier avant de supprimer.",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "save": "Enregistrer"
   }
 }

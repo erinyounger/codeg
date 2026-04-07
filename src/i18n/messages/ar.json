@@ -93,7 +93,8 @@
       "version_control": "التحكم بالإصدارات",
       "system": "النظام",
       "chat_channels": "قنوات المحادثة",
-      "web_service": "خدمة الويب"
+      "web_service": "خدمة الويب",
+      "model_providers": "مزودو النماذج"
     }
   },
   "AppearanceSettings": {
@@ -554,7 +555,10 @@
       "modelId": "معرّف النموذج",
       "modelName": "اسم النموذج",
       "deleteModel": "حذف النموذج {modelId}",
-      "nativeJsonConfig": "إعداد JSON الأصلي لـ OpenCode"
+      "nativeJsonConfig": "إعداد JSON الأصلي لـ OpenCode",
+      "mainModel": "النموذج الرئيسي",
+      "smallModel": "النموذج الصغير",
+      "noMatchingModels": "لا توجد نماذج مطابقة"
     },
     "openClaw": {
       "gatewayConfig": "إعداد Gateway",
@@ -564,7 +568,18 @@
       "gatewayTokenHint": "يُفضّل استخدام token-file بدل الرمز النصي متى أمكن؛ قم بالإعداد عبر openclaw CLI.",
       "sessionKeyHint": "اختياري. حدّد مفتاح جلسة gateway؛ واتركه فارغًا للتعيين التلقائي لجلسة معزولة."
     },
+    "authModeOfficialSubscription": "الاشتراك الرسمي",
+    "authModeCustomEndpoint": "نقطة نهاية مخصصة",
+    "authModeCustomEndpointHint": "تكوين عنوان API ومفتاح API يدوياً لنقطة نهاية مخصصة.",
+    "authModeModelProvider": "مزود النموذج",
+    "modelProvider": "مزود النموذج",
+    "modelProviderHint": "استخدم عنوان API ومفتاح API من مزود نموذج مُعدّ.",
+    "selectModelProvider": "اختر مزود النموذج",
+    "noModelProviderAvailable": "لا يوجد مزود نموذج مُعدّ لهذا الوكيل. انتقل إلى إعدادات مزود النموذج لإضافة واحد.",
     "claude": {
+      "authMode": "وضع المصادقة",
+      "officialSubscription": "الاشتراك الرسمي",
+      "officialSubscriptionHint": "استخدم اشتراك Anthropic الرسمي، لا حاجة لمفتاح API.",
       "mainModel": "النموذج الرئيسي",
       "reasoningModel": "نموذج الاستدلال (thinking)",
       "haikuDefaultModel": "نموذج Haiku الافتراضي",
@@ -623,7 +638,8 @@
       "configSavedHint": "يجب إعادة فتح الجلسات الحالية لتطبيق التغييرات",
       "saveConfigManagementFailed": "فشل حفظ إدارة الإعدادات",
       "clineSaved": "تم حفظ تكوين Cline",
-      "saveClineFailed": "فشل في حفظ تكوين Cline"
+      "saveClineFailed": "فشل في حفظ تكوين Cline",
+      "modelProviderRequired": "يرجى اختيار مزود نموذج قبل الحفظ."
     },
     "version": {
       "statusLabel": "حالة الإصدار",
@@ -1808,5 +1824,38 @@
       "pt": "البرتغالية",
       "ar": "العربية"
     }
+  },
+  "ModelProviderSettings": {
+    "sectionTitle": "مزودو النماذج",
+    "sectionDescription": "إدارة بيانات اعتماد مزودي API للوكلاء.",
+    "filterAll": "الكل",
+    "providerListTitle": "المزودون المُعدّون",
+    "addProvider": "إضافة مزود",
+    "editProvider": "تعديل المزود",
+    "noProviders": "لم يتم تكوين أي مزود نماذج بعد.",
+    "providerName": "الاسم",
+    "providerNamePlaceholder": "مثال: OpenAI، Anthropic",
+    "apiUrl": "عنوان API",
+    "apiUrlPlaceholder": "https://api.openai.com/v1",
+    "apiKey": "مفتاح API",
+    "apiKeyPlaceholder": "sk-...",
+    "apiKeyKeepCurrent": "اتركه فارغاً للإبقاء على الحالي",
+    "agentTypes": "أنواع الوكلاء",
+    "agentTypesRequired": "يجب اختيار نوع وكيل واحد على الأقل.",
+    "nameRequired": "اسم المزود مطلوب.",
+    "apiUrlRequired": "عنوان API مطلوب.",
+    "apiKeyRequired": "مفتاح API مطلوب.",
+    "loadFailed": "فشل تحميل المزودين.",
+    "saveFailed": "فشل حفظ التغييرات.",
+    "createSuccess": "تم إنشاء المزود.",
+    "editSuccess": "تم تحديث المزود.",
+    "deleteSuccess": "تم حذف المزود.",
+    "deleteConfirmTitle": "حذف المزود",
+    "deleteConfirmMessage": "سيتم حذف المزود \"{name}\" نهائياً. هل أنت متأكد؟",
+    "deleteBlockedByAgent": "{agents} يستخدم هذا المزود. يرجى إلغاء الربط قبل الحذف.",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "create": "إنشاء",
+    "save": "حفظ"
   }
 }

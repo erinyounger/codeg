@@ -57,6 +57,7 @@ import type {
   ChatChannelInfo,
   ChannelStatusInfo,
   ChatChannelMessageLog,
+  ModelProviderInfo,
 } from "./types"
 
 export async function listConversations(params?: {
@@ -220,6 +221,40 @@ export async function acpUpdateAgentPreferences(
     agentType,
     enabled: params.enabled,
     env: params.env,
+    configJson: params.config_json ?? null,
+    opencodeAuthJson: params.opencode_auth_json ?? null,
+    codexAuthJson: params.codex_auth_json ?? null,
+    codexConfigToml: params.codex_config_toml ?? null,
+  })
+}
+
+export async function acpUpdateAgentEnv(
+  agentType: AgentType,
+  params: {
+    enabled: boolean
+    env: Record<string, string>
+    modelProviderId?: number | null
+  }
+): Promise<void> {
+  return getTransport().call("acp_update_agent_env", {
+    agentType,
+    enabled: params.enabled,
+    env: params.env,
+    modelProviderId: params.modelProviderId ?? null,
+  })
+}
+
+export async function acpUpdateAgentConfig(
+  agentType: AgentType,
+  params: {
+    config_json?: string | null
+    opencode_auth_json?: string | null
+    codex_auth_json?: string | null
+    codex_config_toml?: string | null
+  }
+): Promise<void> {
+  return getTransport().call("acp_update_agent_config", {
+    agentType,
     configJson: params.config_json ?? null,
     opencodeAuthJson: params.opencode_auth_json ?? null,
     codexAuthJson: params.codex_auth_json ?? null,
@@ -1467,4 +1502,41 @@ export async function weixinCheckQrcode(
   status: string
 }> {
   return getTransport().call("weixin_check_qrcode", { channelId, qrcode })
+}
+
+// ---------------------------------------------------------------------------
+// Model Providers
+// ---------------------------------------------------------------------------
+
+export async function listModelProviders(): Promise<ModelProviderInfo[]> {
+  return getTransport().call("list_model_providers")
+}
+
+export async function createModelProvider(params: {
+  name: string
+  apiUrl: string
+  apiKey: string
+  agentTypes: string[]
+}): Promise<ModelProviderInfo> {
+  return getTransport().call("create_model_provider", params)
+}
+
+export async function updateModelProvider(params: {
+  id: number
+  name?: string | null
+  apiUrl?: string | null
+  apiKey?: string | null
+  agentTypes?: string[] | null
+}): Promise<ModelProviderInfo> {
+  return getTransport().call("update_model_provider", {
+    id: params.id,
+    name: params.name ?? null,
+    apiUrl: params.apiUrl ?? null,
+    apiKey: params.apiKey ?? null,
+    agentTypes: params.agentTypes ?? null,
+  })
+}
+
+export async function deleteModelProvider(id: number): Promise<void> {
+  return getTransport().call("delete_model_provider", { id })
 }
