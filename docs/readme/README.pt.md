@@ -26,9 +26,7 @@ Docker — possibilitando o desenvolvimento remoto a partir de qualquer navegado
 paralelo via `git worktree`, gerenciamento de MCP/Skills, interação com canais de chat (Telegram, Lark, iLink, etc.)
 e fluxos integrados de Git/arquivos/terminal.
 
-## Fluxo de comunicação
-
-![Fluxo de comunicação](../images/communication-flow.svg)
+![gallery](../images/gallery.svg)
 
 ## Interface principal
 ![Codeg Light](../images/main-light.png#gh-light-mode-only)
@@ -45,7 +43,7 @@ e fluxos integrados de Git/arquivos/terminal.
 - Ingestão local de conversas com renderização estruturada
 - Desenvolvimento paralelo com fluxos `git worktree` integrados
 - **Inicializador de Projeto** — crie novos projetos visualmente com pré-visualização em tempo real
-- **Canais de Chat** — conecte Telegram, Lark (Feishu), iLink (Weixin) e mais aos seus agentes de codificação para interação completa de sessão e controle remoto de tarefas
+- **Canais de Chat** — conecte Telegram, Lark (Feishu), iLink (Weixin) e mais aos seus agentes de codificação para notificações em tempo real, interação completa de sessão e controle remoto de tarefas
 - Gerenciamento de MCP (varredura local + busca/instalação no registro)
 - Gerenciamento de Skills (escopo global e por projeto)
 - Gerenciamento de contas remotas Git (GitHub e outros servidores Git)
@@ -308,6 +306,11 @@ Next.js 16 (Static Export) + React 19
 - O acesso à rede ocorre apenas em ações iniciadas pelo usuário
 - Suporte a proxy do sistema para ambientes corporativos
 - O modo de serviço web usa autenticação baseada em token
+
+## Agradecimentos
+
+- [LinuxDO](https://linux.do) — a comunidade onde tudo começou
+- [ACP](https://agentclientprotocol.com) — o Agent Client Protocol (ACP) é a base que permite ao Codeg conectar-se a múltiplos agentes
 
 ## Licença
 

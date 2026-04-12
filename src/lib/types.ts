@@ -256,7 +256,6 @@ export const AGENT_COLORS: Record<AgentType, string> = {
 // ACP connection status (matches Rust ConnectionStatus)
 export type ConnectionStatus =
   | "connecting"
-  | "downloading"
   | "connected"
   | "prompting"
   | "disconnected"
@@ -442,7 +441,14 @@ export type AcpEvent =
       connection_id: string
       status: ConnectionStatus
     }
-  | { type: "error"; connection_id: string; message: string }
+  | {
+      type: "error"
+      connection_id: string
+      message: string
+      agent_type: string
+      /** Stable backend error identifier for localization (e.g. "initialize_timeout"). */
+      code: string | null
+    }
   | {
       type: "available_commands"
       connection_id: string
@@ -519,6 +525,45 @@ export interface AgentSkillsListResult {
 export interface AgentSkillContent {
   skill: AgentSkillItem
   content: string
+}
+
+/**
+ * Built-in expert skills, sourced from obra/superpowers and bundled into
+ * the codeg binary. Experts live in a central store at `~/.codeg/skills/`
+ * and are linked into agent skill directories on demand.
+ */
+export interface ExpertMetadata {
+  id: string
+  category: string
+  icon: string | null
+  sort_order: number
+  display_name: Record<string, string>
+  description: Record<string, string>
+  bundled_hash: string
+}
+
+export interface ExpertListItem {
+  metadata: ExpertMetadata
+  installed_centrally: boolean
+  user_modified: boolean
+  central_path: string
+}
+
+export type ExpertLinkState =
+  | "not_linked"
+  | "linked_to_codeg"
+  | "linked_elsewhere"
+  | "blocked_by_real_directory"
+  | "broken"
+
+export interface ExpertInstallStatus {
+  expertId: string
+  agentType: AgentType
+  state: ExpertLinkState
+  linkPath: string
+  targetPath: string | null
+  expectedTargetPath: string
+  copyMode: boolean
 }
 
 export interface SystemProxySettings {
@@ -840,6 +885,7 @@ export type FixActionKind =
   | "redownload_binary"
   | "retry_connection"
   | "open_agents_settings"
+  | "install_opencode_plugins"
 
 export interface FixAction {
   label: string
@@ -862,6 +908,40 @@ export interface PreflightResult {
   agent_name: string
   passed: boolean
   checks: CheckItem[]
+}
+
+// ─── OpenCode Plugins ───
+
+export type PluginStatus = "installed" | "missing"
+
+export interface PluginInfo {
+  name: string
+  declared_spec: string
+  installed_version: string | null
+  status: PluginStatus
+}
+
+export interface PluginCheckSummary {
+  config_path: string
+  cache_dir: string
+  plugins: PluginInfo[]
+  has_project_config_hint: boolean
+}
+
+export type PluginInstallEventKind = "started" | "log" | "completed" | "failed"
+
+export interface PluginInstallEvent {
+  task_id: string
+  kind: PluginInstallEventKind
+  payload: string
+}
+
+export type AgentInstallEventKind = "started" | "log" | "completed" | "failed"
+
+export interface AgentInstallEvent {
+  task_id: string
+  kind: AgentInstallEventKind
+  payload: string
 }
 
 // ─── Chat Channels ───

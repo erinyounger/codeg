@@ -125,7 +125,7 @@ function normalizeErrorMessage(error: unknown): string {
   return String(error)
 }
 
-function isExpectedAutoLinkError(error: unknown): boolean {
+function isExpectedConnectError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false
   return (error as { alerted?: unknown }).alerted === true
 }
@@ -225,7 +225,9 @@ const ConversationTabView = memo(function ConversationTabView({
   // resolves, we can't update the DB status yet.  This ref records the
   // desired status so the createConversation callback can apply it.
   const deferredStatusRef = useRef<string | null>(null)
-  const externalIdSavedRef = useRef(false)
+  // For existing conversations (opened from sidebar), the external_id is
+  // already persisted — don't let a session/new fallback overwrite it.
+  const externalIdSavedRef = useRef(conversationId != null)
   const sessionIdRef = useRef<string | null>(null)
   const syncCancelRef = useRef<(() => void) | null>(null)
 
@@ -308,8 +310,7 @@ const ConversationTabView = memo(function ConversationTabView({
   useEffect(() => {
     connStatusRef.current = connStatus
   }, [connStatus])
-  const isConnecting =
-    connStatus === "connecting" || connStatus === "downloading"
+  const isConnecting = connStatus === "connecting"
   const connectionModes = useMemo(
     () => conn.modes?.available_modes ?? [],
     [conn.modes?.available_modes]
@@ -477,6 +478,11 @@ const ConversationTabView = memo(function ConversationTabView({
     if (statusUpdatedRef.current) return
     const persistedId = dbConvIdRef.current
     if (!persistedId) return
+    // Only update status if the user actually interacted in this session.
+    // A pure history view (opened from sidebar, no messages sent) should
+    // not flip the conversation to "completed" just because the ACP
+    // connection disconnected (e.g. agent auth expired).
+    if (!hasSentMessage) return
     if (connStatus === "disconnected") {
       statusUpdatedRef.current = true
       updateConversationLocal(persistedId, { status: "completed" })
@@ -490,7 +496,7 @@ const ConversationTabView = memo(function ConversationTabView({
         console.error("[ConversationTabView] update status:", e)
       )
     }
-  }, [connStatus, updateConversationLocal])
+  }, [connStatus, hasSentMessage, updateConversationLocal])
 
   useEffect(() => {
     if (dbConversationId == null) return
@@ -749,15 +755,13 @@ const ConversationTabView = memo(function ConversationTabView({
       const s = connStatusRef.current
       const doConnect = () => {
         if (!workingDirForConnection) return
-        connConnect(nextAgentType, workingDirForConnection, undefined, {
-          source: "auto_link",
-        })
+        connConnect(nextAgentType, workingDirForConnection, undefined)
           .then(() => {
             setAgentConnectError(null)
           })
           .catch((e) => {
             setAgentConnectError(normalizeErrorMessage(e))
-            if (!isExpectedAutoLinkError(e)) {
+            if (!isExpectedConnectError(e)) {
               console.error("[ConversationTabView] switch agent:", e)
             }
           })
@@ -888,6 +892,7 @@ const ConversationTabView = memo(function ConversationTabView({
       selectedModeId={selectedModeId}
       onModeChange={handleModeChange}
       onConfigOptionChange={handleSetConfigOption}
+      agentType={selectedAgent}
       availableCommands={connectionCommands}
       attachmentTabId={tabId}
       draftStorageKey={draftStorageKey}
@@ -959,6 +964,7 @@ const ConversationTabView = memo(function ConversationTabView({
               selectedModeId={selectedModeId}
               onModeChange={handleModeChange}
               onConfigOptionChange={handleSetConfigOption}
+              agentType={selectedAgent}
               availableCommands={connectionCommands}
               attachmentTabId={tabId}
               draftStorageKey={draftStorageKey}

@@ -85,6 +85,8 @@ import type {
   ModelProviderInfo,
   PreflightResult,
 } from "@/lib/types"
+import { useAgentInstallStream } from "@/hooks/use-agent-install-stream"
+import { OpencodePluginsModal } from "./opencode-plugins-modal"
 
 interface AgentCheckState {
   result?: PreflightResult
@@ -118,6 +120,7 @@ interface AgentDraft {
   codexProviderOptions: string[]
   codexReasoningEffort: CodexReasoningEffort
   codexSupportsWebsockets: boolean
+  codexSkills: boolean
   claudeMainModel: string
   claudeReasoningModel: string
   claudeDefaultHaikuModel: string
@@ -155,6 +158,7 @@ type UiFixAction =
         | "upgrade_npx"
         | "uninstall_binary"
         | "uninstall_npx"
+        | "install_opencode_plugins"
       payload: string
     }
 
@@ -676,6 +680,7 @@ function patchGeminiConfigText(
   if (typeof patch.model === "string") {
     delete config.model
     delete config.model_name
+    assignOrRemoveEnv(GEMINI_ENV_KEYS.model, patch.model)
   }
   assignOrRemoveEnv(GEMINI_ENV_KEYS.baseUrl, patch.apiBaseUrl)
   if (typeof patch.apiBaseUrl === "string") {
@@ -798,6 +803,12 @@ function patchGeminiAuthMode(
     next.apiBaseUrl = ""
     next.geminiApiKey = ""
     next.googleApiKey = ""
+    return next
+  }
+  if (mode === "model_provider") {
+    next.googleCloudProject = ""
+    next.googleCloudLocation = ""
+    next.googleApplicationCredentials = ""
     return next
   }
   next.apiBaseUrl = ""
@@ -1135,6 +1146,7 @@ interface CodexTomlImportantValues {
   providerBaseUrls: Record<string, string>
   providerSupportsWebsockets: Record<string, boolean>
   featureResponsesWebsocketsV2: boolean
+  featureSkills: boolean
 }
 
 interface CodexImportantValues {
@@ -1145,6 +1157,7 @@ interface CodexImportantValues {
   reasoningEffort: CodexReasoningEffort
   providerOptions: string[]
   supportsWebsockets: boolean
+  skills: boolean
 }
 
 const CODEX_DEFAULT_MODEL_PROVIDER = "codeg"
@@ -1305,6 +1318,7 @@ function extractCodexTomlImportantValues(
   let modelReasoningEffort: CodexReasoningEffort =
     CODEX_DEFAULT_REASONING_EFFORT
   let featureResponsesWebsocketsV2 = false
+  let featureSkills = false
   let currentProviderSection: string | null = null
   let inFeaturesSection = false
 
@@ -1370,6 +1384,10 @@ function extractCodexTomlImportantValues(
         featureResponsesWebsocketsV2 = boolAssignment.value
         continue
       }
+      if (inFeaturesSection && boolAssignment.key === "skills") {
+        featureSkills = boolAssignment.value
+        continue
+      }
       const dottedProviderWebsocketMatch = boolAssignment.key.match(
         /^model_providers\.([A-Za-z0-9_-]+)\.supports_websockets$/
       )
@@ -1381,6 +1399,10 @@ function extractCodexTomlImportantValues(
       }
       if (boolAssignment.key === "features.responses_websockets_v2") {
         featureResponsesWebsocketsV2 = boolAssignment.value
+        continue
+      }
+      if (boolAssignment.key === "features.skills") {
+        featureSkills = boolAssignment.value
         continue
       }
     }
@@ -1429,6 +1451,7 @@ function extractCodexTomlImportantValues(
     providerBaseUrls,
     providerSupportsWebsockets,
     featureResponsesWebsocketsV2,
+    featureSkills,
   }
 }
 
@@ -1523,6 +1546,7 @@ function extractCodexImportantValues(
       toml.providerNames
     ),
     supportsWebsockets: providerSupportsWebsockets,
+    skills: toml.featureSkills,
   }
 }
 
@@ -1694,7 +1718,14 @@ function upsertTomlSectionBooleanKey(
     if (assignmentIndex >= 0) {
       lines[assignmentIndex] = lineText
     } else {
-      lines.splice(section.end, 0, lineText)
+      let insertAt = section.end
+      for (let i = section.end - 1; i > section.start; i -= 1) {
+        if (lines[i].trim() !== "") {
+          insertAt = i + 1
+          break
+        }
+      }
+      lines.splice(insertAt, 0, lineText)
     }
     return lines.join("\n").trim()
   }
@@ -1920,6 +1951,7 @@ function patchCodexConfigTomlText(
     modelProvider?: string
     modelReasoningEffort?: string
     supportsWebsockets?: boolean
+    skills?: boolean
   }
 ): string {
   let nextTomlText = configTomlText
@@ -2012,6 +2044,14 @@ function patchCodexConfigTomlText(
     "responses_websockets_v2",
     shouldEnableFeature ? true : null
   )
+  if (typeof patch.skills === "boolean") {
+    nextTomlText = upsertTomlSectionBooleanKey(
+      nextTomlText,
+      "features",
+      "skills",
+      patch.skills ? true : null
+    )
+  }
   nextTomlText = updateTomlRootBooleanKey(
     nextTomlText,
     "disable_response_storage",
@@ -2245,6 +2285,7 @@ function buildAgentDraft(agent: AcpAgentInfo): AgentDraft {
     codexProviderOptions: codexImportant.providerOptions,
     codexReasoningEffort: codexImportant.reasoningEffort,
     codexSupportsWebsockets: codexImportant.supportsWebsockets,
+    codexSkills: codexImportant.skills,
     claudeMainModel: important.claudeMainModel,
     claudeReasoningModel: important.claudeReasoningModel,
     claudeDefaultHaikuModel: important.claudeDefaultHaikuModel,
@@ -2546,6 +2587,10 @@ export function AcpAgentSettings() {
   const [modelProviders, setModelProviders] = useState<ModelProviderInfo[]>([])
   const [uninstallConfirmAgent, setUninstallConfirmAgent] =
     useState<AcpAgentInfo | null>(null)
+  const [pluginModalOpen, setPluginModalOpen] = useState(false)
+  const [pluginModalAgent, setPluginModalAgent] = useState<AgentType | null>(
+    null
+  )
   const [expandedChecks, setExpandedChecks] = useState<Record<string, boolean>>(
     {}
   )
@@ -2580,6 +2625,9 @@ export function AcpAgentSettings() {
   const busyActionRef = useRef<Set<AgentType>>(new Set())
   const handledSearchAgentRef = useRef<string | null>(null)
   const agentListRef = useRef<HTMLDivElement | null>(null)
+  const installStream = useAgentInstallStream()
+  const [streamAgentType, setStreamAgentType] = useState<AgentType | null>(null)
+  const installLogEndRef = useRef<HTMLDivElement | null>(null)
 
   const sortedAgents = useMemo(
     () =>
@@ -2703,6 +2751,30 @@ export function AcpAgentSettings() {
     },
     [runPreflight]
   )
+
+  useEffect(() => {
+    return () => installStream.reset()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const container = installLogEndRef.current?.parentElement
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  }, [installStream.logs])
+
+  useEffect(() => {
+    if (
+      installStream.status === "success" ||
+      installStream.status === "failed"
+    ) {
+      if (streamAgentType) {
+        runPreflight(streamAgentType).catch(() => {})
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [installStream.status])
 
   useEffect(() => {
     refreshAgents().catch((err) => {
@@ -2896,11 +2968,14 @@ export function AcpAgentSettings() {
         [agent.agent_type]:
           kind ?? (mode === "download" ? "download_binary" : "upgrade_binary"),
       }))
+      const taskId = crypto.randomUUID()
+      setStreamAgentType(agent.agent_type)
+      await installStream.start(taskId)
       try {
         if (mode === "upgrade") {
           await acpClearBinaryCache(agent.agent_type)
         }
-        await acpDownloadAgentBinary(agent.agent_type)
+        await acpDownloadAgentBinary(agent.agent_type, taskId)
         await runPreflight(agent.agent_type)
         const detectedVersion = await acpDetectAgentLocalVersion(
           agent.agent_type
@@ -2946,7 +3021,8 @@ export function AcpAgentSettings() {
         }))
       }
     },
-    [runPreflight, t]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [runPreflight, t, installStream.start]
   )
 
   const runNpxAction = useCallback(
@@ -2958,10 +3034,14 @@ export function AcpAgentSettings() {
         ...prev,
         [agent.agent_type]: mode === "install" ? "install_npx" : "upgrade_npx",
       }))
+      const taskId = crypto.randomUUID()
+      setStreamAgentType(agent.agent_type)
+      await installStream.start(taskId)
       try {
         const installedVersion = await acpPrepareNpxAgent(
           agent.agent_type,
-          agent.registry_version
+          agent.registry_version,
+          taskId
         )
         setAgents((prev) =>
           prev.map((item) =>
@@ -3018,7 +3098,8 @@ export function AcpAgentSettings() {
         }))
       }
     },
-    [runPreflight, t]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [runPreflight, t, installStream.start]
   )
 
   const runUninstallAction = useCallback(
@@ -3033,8 +3114,11 @@ export function AcpAgentSettings() {
             ? "uninstall_binary"
             : "uninstall_npx",
       }))
+      const taskId = crypto.randomUUID()
+      setStreamAgentType(agent.agent_type)
+      await installStream.start(taskId)
       try {
-        await acpUninstallAgent(agent.agent_type)
+        await acpUninstallAgent(agent.agent_type, taskId)
         setAgents((prev) =>
           prev.map((item) =>
             item.agent_type === agent.agent_type
@@ -3061,7 +3145,8 @@ export function AcpAgentSettings() {
         }))
       }
     },
-    [runPreflight, t]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [runPreflight, t, installStream.start]
   )
 
   const handleFixAction = async (agent: AcpAgentInfo, action: UiFixAction) => {
@@ -3097,6 +3182,11 @@ export function AcpAgentSettings() {
     }
     if (action.kind === "redownload_binary") {
       await runBinaryAction(agent, "upgrade", "redownload_binary")
+      return
+    }
+    if (action.kind === "install_opencode_plugins") {
+      setPluginModalAgent(agent.agent_type)
+      setPluginModalOpen(true)
       return
     }
     await runPreflight(agent.agent_type)
@@ -3200,6 +3290,7 @@ export function AcpAgentSettings() {
                         "uninstall_binary",
                         "uninstall_npx",
                         "redownload_binary",
+                        "install_opencode_plugins",
                       ].includes(fix.kind)
                     }
                     onClick={() => {
@@ -3220,6 +3311,8 @@ export function AcpAgentSettings() {
                     ) : fix.kind === "uninstall_binary" ||
                       fix.kind === "uninstall_npx" ? (
                       <Trash2 className="h-3 w-3" />
+                    ) : fix.kind === "install_opencode_plugins" ? (
+                      <Download className="h-3 w-3" />
                     ) : null}
                     {fix.label}
                   </Button>
@@ -4425,6 +4518,7 @@ export function AcpAgentSettings() {
         codexProviderOptions: important.providerOptions,
         codexReasoningEffort: important.reasoningEffort,
         codexSupportsWebsockets: important.supportsWebsockets,
+        codexSkills: important.skills,
       }))
     },
     [selectedAgent, selectedDraft, updateSelectedDraft]
@@ -4447,6 +4541,7 @@ export function AcpAgentSettings() {
         codexProviderOptions: important.providerOptions,
         codexReasoningEffort: important.reasoningEffort,
         codexSupportsWebsockets: important.supportsWebsockets,
+        codexSkills: important.skills,
       }))
     },
     [selectedAgent, selectedDraft, updateSelectedDraft]
@@ -4498,6 +4593,7 @@ export function AcpAgentSettings() {
           codexProviderOptions: synced.providerOptions,
           codexReasoningEffort: synced.reasoningEffort,
           codexSupportsWebsockets: synced.supportsWebsockets,
+          codexSkills: synced.skills,
         }))
         return
       }
@@ -4530,6 +4626,7 @@ export function AcpAgentSettings() {
         codexProviderOptions: synced.providerOptions,
         codexReasoningEffort: synced.reasoningEffort,
         codexSupportsWebsockets: synced.supportsWebsockets,
+        codexSkills: synced.skills,
       }))
     },
     [selectedAgent, selectedDraft, updateSelectedDraft]
@@ -4595,6 +4692,7 @@ export function AcpAgentSettings() {
         codexProviderOptions: synced.providerOptions,
         codexReasoningEffort: synced.reasoningEffort,
         codexSupportsWebsockets: synced.supportsWebsockets,
+        codexSkills: synced.skills,
         codexAuthJsonText: nextAuth.authJsonText,
         codexConfigTomlText: nextToml,
       }))
@@ -4630,6 +4728,39 @@ export function AcpAgentSettings() {
         codexProviderOptions: synced.providerOptions,
         codexReasoningEffort: synced.reasoningEffort,
         codexSupportsWebsockets: synced.supportsWebsockets,
+        codexSkills: synced.skills,
+        codexConfigTomlText: nextToml,
+      }))
+    },
+    [selectedAgent, selectedDraft, updateSelectedDraft]
+  )
+
+  const handleCodexSkillsChange = useCallback(
+    (enabled: boolean) => {
+      if (
+        !selectedAgent ||
+        !selectedDraft ||
+        selectedAgent.agent_type !== "codex"
+      )
+        return
+      const nextToml = patchCodexConfigTomlText(
+        selectedDraft.codexConfigTomlText,
+        { skills: enabled }
+      )
+      const synced = extractCodexImportantValues(
+        selectedDraft.codexAuthJsonText,
+        nextToml
+      )
+      updateSelectedDraft((current) => ({
+        ...current,
+        apiBaseUrl: synced.apiBaseUrl,
+        apiKey: synced.apiKey ?? current.apiKey,
+        model: synced.model,
+        codexModelProvider: synced.modelProvider,
+        codexProviderOptions: synced.providerOptions,
+        codexReasoningEffort: synced.reasoningEffort,
+        codexSupportsWebsockets: synced.supportsWebsockets,
+        codexSkills: synced.skills,
         codexConfigTomlText: nextToml,
       }))
     },
@@ -4913,6 +5044,24 @@ export function AcpAgentSettings() {
                       {t("preflight.notRun")}
                     </div>
                   )}
+                  {installStream.status !== "idle" &&
+                    streamAgentType === selectedAgent.agent_type && (
+                      <div className="mt-2 rounded-md border bg-muted/50 text-muted-foreground p-3 max-h-[200px] overflow-y-auto font-mono text-[11px] leading-relaxed">
+                        {installStream.logs.map((line, i) => (
+                          <div
+                            key={i}
+                            className={
+                              line.startsWith("ERROR:")
+                                ? "text-destructive"
+                                : ""
+                            }
+                          >
+                            {line}
+                          </div>
+                        ))}
+                        <div ref={installLogEndRef} />
+                      </div>
+                    )}
                 </div>
 
                 <div className="space-y-2">
@@ -5190,6 +5339,19 @@ export function AcpAgentSettings() {
                     </div>
 
                     <div className="space-y-1.5">
+                      <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                        <label className="text-[11px] text-muted-foreground">
+                          {t("codex.enableSkills")}
+                        </label>
+                        <Switch
+                          checked={selectedDraft.codexSkills}
+                          onCheckedChange={handleCodexSkillsChange}
+                          aria-label={t("codex.enableSkillsAria")}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
                       <label className="text-[11px] text-muted-foreground">
                         {t("codex.authJsonNative")}
                       </label>
@@ -5201,7 +5363,7 @@ export function AcpAgentSettings() {
                         placeholder={`{
   "OPENAI_API_KEY": "sk-..."
 }`}
-                        className="min-h-28 font-mono text-xs"
+                        className="min-h-28 max-h-60 font-mono text-xs"
                       />
                       {selectedCodexAuthError && (
                         <div className="rounded-md border border-red-500/30 bg-red-500/5 px-2.5 py-1.5 text-[11px] text-red-400">
@@ -5230,7 +5392,7 @@ responses_websockets_v2 = true
 [model_providers.codeg]
 base_url = "https://api.openai.com/v1"
 supports_websockets = true`}
-                        className="min-h-40 font-mono text-xs"
+                        className="min-h-40 max-h-80 font-mono text-xs"
                       />
                     </div>
 
@@ -7075,6 +7237,17 @@ supports_websockets = true`}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <OpencodePluginsModal
+        open={pluginModalOpen}
+        onOpenChange={setPluginModalOpen}
+        onCompleted={() => {
+          if (pluginModalAgent) {
+            runPreflight(pluginModalAgent)
+          }
+          setPluginModalAgent(null)
+        }}
+      />
     </div>
   )
 }

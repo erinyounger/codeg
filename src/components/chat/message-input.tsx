@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { isDesktop } from "@/lib/platform"
 import Image from "next/image"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  BookOpenText,
   Check,
   ChevronUp,
   Ellipsis,
@@ -21,6 +22,7 @@ import {
   Plus,
   Send,
   Command,
+  Sparkles,
   Square,
   X,
 } from "lucide-react"
@@ -28,6 +30,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ImagePreviewDialog } from "@/components/ui/image-preview-dialog"
@@ -38,7 +42,10 @@ import { readFileBase64 } from "@/lib/api"
 import { openFileDialog } from "@/lib/platform"
 import { disposeTauriListener } from "@/lib/tauri-listener"
 import type {
+  AgentSkillItem,
+  AgentType,
   AvailableCommandInfo,
+  ExpertListItem,
   PromptCapabilitiesInfo,
   PromptDraft,
   PromptInputBlock,
@@ -53,10 +60,16 @@ import {
 } from "@/lib/session-attachment-events"
 import { ModeSelector } from "@/components/chat/mode-selector"
 import { SessionConfigSelector } from "@/components/chat/session-config-selector"
-import { SlashCommandMenu } from "@/components/chat/slash-command-menu"
+import {
+  getExpertIcon,
+  pickExpertLocalized,
+} from "@/components/chat/experts-command-menu"
 import { FileMentionMenu } from "@/components/chat/file-mention-menu"
 import { DropdownRadioItemContent } from "@/components/chat/dropdown-radio-item-content"
 import { useFileTree } from "@/hooks/use-file-tree"
+import { useBuiltInExperts } from "@/hooks/use-built-in-experts"
+import { useAgentExperts } from "@/hooks/use-agent-experts"
+import { useAgentSkills } from "@/hooks/use-agent-skills"
 import { joinFsPath } from "@/lib/path-utils"
 import {
   clearMessageInputDraft,
@@ -81,6 +94,7 @@ interface MessageInputProps {
   selectedModeId?: string | null
   onModeChange?: (modeId: string) => void
   onConfigOptionChange?: (configId: string, valueId: string) => void
+  agentType?: AgentType | null
   availableCommands?: AvailableCommandInfo[] | null
   promptCapabilities: PromptCapabilitiesInfo
   attachmentTabId?: string | null
@@ -286,6 +300,7 @@ export function MessageInput({
   selectedModeId,
   onModeChange,
   onConfigOptionChange,
+  agentType,
   availableCommands,
   promptCapabilities,
   attachmentTabId,
@@ -300,6 +315,86 @@ export function MessageInput({
 }: MessageInputProps) {
   const t = useTranslations("Folder.chat.messageInput")
   const tQueue = useTranslations("Folder.chat.messageQueue")
+  const tExperts = useTranslations("ExpertsSettings")
+  const locale = useLocale()
+  const builtInExperts = useBuiltInExperts()
+  const expertIdSet = useMemo(
+    () => new Set(builtInExperts.map((item) => item.metadata.id)),
+    [builtInExperts]
+  )
+  // Experts linked to the current agent via symlinks in the settings page.
+  // Kept so the dedicated expert (Sparkles) button can still surface them.
+  const availableExperts = useAgentExperts(agentType ?? null)
+  // The `$` prefix autocomplete is Codex-only: Codex advertises very few
+  // native slash commands, so we augment the dropdown with the agent's
+  // skills read from disk. Other agents already surface their full command
+  // set through ACP `availableCommands`, so injecting skills there would
+  // be duplicate/extra UI noise — skip the skills fetch for them entirely.
+  const skillAgentType = agentType === "codex" ? "codex" : null
+  const availableSkills = useAgentSkills(skillAgentType)
+  // Expert skills are symlinked into the agent's skill directories, so they
+  // also show up in `acp_list_agent_skills`. Strip them out — experts remain
+  // reachable via the expert button, and the `$` list is skills-only.
+  const nonExpertSkills = useMemo(
+    () => availableSkills.filter((skill) => !expertIdSet.has(skill.id)),
+    [availableSkills, expertIdSet]
+  )
+  const expertPrefix = agentType === "codex" ? "$" : "/"
+  // Stable presentation order for expert categories in the button
+  // dropdown. Keep this in sync with experts-settings.tsx so both surfaces
+  // group experts the same way.
+  const groupedExperts = useMemo(() => {
+    const CATEGORY_SORT: Record<string, number> = {
+      discovery: 1,
+      planning: 2,
+      execution: 3,
+      quality: 4,
+      debugging: 5,
+      review: 6,
+      meta: 7,
+    }
+    const groups = new Map<string, typeof availableExperts>()
+    const sorted = [...availableExperts].sort((a, b) => {
+      const ca = CATEGORY_SORT[a.metadata.category] ?? 99
+      const cb = CATEGORY_SORT[b.metadata.category] ?? 99
+      if (ca !== cb) return ca - cb
+      const sa = a.metadata.sort_order ?? 0
+      const sb = b.metadata.sort_order ?? 0
+      if (sa !== sb) return sa - sb
+      return a.metadata.id.localeCompare(b.metadata.id)
+    })
+    for (const item of sorted) {
+      const list = groups.get(item.metadata.category) ?? []
+      list.push(item)
+      groups.set(item.metadata.category, list)
+    }
+    return Array.from(groups.entries()).sort(
+      (a, b) => (CATEGORY_SORT[a[0]] ?? 99) - (CATEGORY_SORT[b[0]] ?? 99)
+    )
+  }, [availableExperts])
+  const translateExpertCategory = useCallback(
+    (category: string): string => {
+      switch (category) {
+        case "discovery":
+          return tExperts("categories.discovery")
+        case "planning":
+          return tExperts("categories.planning")
+        case "execution":
+          return tExperts("categories.execution")
+        case "quality":
+          return tExperts("categories.quality")
+        case "debugging":
+          return tExperts("categories.debugging")
+        case "review":
+          return tExperts("categories.review")
+        case "meta":
+          return tExperts("categories.meta")
+        default:
+          return category
+      }
+    },
+    [tExperts]
+  )
   const { shortcuts } = useShortcutSettings()
   const effectiveDraftStorageKey = draftStorageKey ?? attachmentTabId ?? null
   const resolvedPlaceholder = placeholder ?? t("askAnything")
@@ -423,21 +518,97 @@ export function MessageInput({
   const hasSendableContent = text.trim().length > 0 || hasAttachments
 
   // ── Slash command autocomplete ──
+  //
+  // Built-in experts are always surfaced via the Sparkles button, so any
+  // agent-advertised command whose name matches an expert id is hidden
+  // from the slash list to avoid showing the same item twice. For non-Codex
+  // agents the dropdown only shows the agent's own `availableCommands` —
+  // Codex additionally gets a `$`-triggered skills list because its native
+  // command set is very small.
   const [slashMenuOpen, setSlashMenuOpen] = useState(false)
   const [slashSelectedIndex, setSlashSelectedIndex] = useState(0)
+  // Byte offset of the `/` or `$` character that opened the menu. Tracking the
+  // position lets the user invoke a slash command mid-text (e.g. after typing
+  // prose) and only replace the slash token on selection, leaving surrounding
+  // content intact.
+  const [slashTriggerPos, setSlashTriggerPos] = useState<number | null>(null)
+  const slashTriggerPosRef = useRef<number | null>(null)
+  useEffect(() => {
+    slashTriggerPosRef.current = slashTriggerPos
+  }, [slashTriggerPos])
   const slashCommands = useMemo(
-    () => availableCommands ?? [],
-    [availableCommands]
+    () => (availableCommands ?? []).filter((cmd) => !expertIdSet.has(cmd.name)),
+    [availableCommands, expertIdSet]
   )
   const filteredSlashCommands = useMemo(() => {
-    if (!slashMenuOpen || slashCommands.length === 0) return []
-    const match = text.match(/^\/(\S*)$/)
-    if (!match) return []
-    const filter = match[1].toLowerCase()
+    if (!slashMenuOpen || slashCommands.length === 0 || slashTriggerPos == null)
+      return []
+    if (text[slashTriggerPos] !== "/") return []
+    const afterTrigger = text.slice(slashTriggerPos + 1)
+    const endIdx = afterTrigger.search(/\s/)
+    const filter = (
+      endIdx === -1 ? afterTrigger : afterTrigger.slice(0, endIdx)
+    ).toLowerCase()
     return slashCommands.filter((cmd) =>
       cmd.name.toLowerCase().startsWith(filter)
     )
-  }, [slashMenuOpen, slashCommands, text])
+  }, [slashMenuOpen, slashCommands, text, slashTriggerPos])
+  const filteredSlashSkills = useMemo(() => {
+    // Skills autocomplete is Codex-only and triggered by `$`.
+    if (agentType !== "codex") return []
+    if (
+      !slashMenuOpen ||
+      nonExpertSkills.length === 0 ||
+      slashTriggerPos == null
+    )
+      return []
+    if (text[slashTriggerPos] !== "$") return []
+    const afterTrigger = text.slice(slashTriggerPos + 1)
+    const endIdx = afterTrigger.search(/\s/)
+    const filter = (
+      endIdx === -1 ? afterTrigger : afterTrigger.slice(0, endIdx)
+    ).toLowerCase()
+    return nonExpertSkills.filter((skill) =>
+      skill.id.toLowerCase().startsWith(filter)
+    )
+  }, [slashMenuOpen, nonExpertSkills, text, agentType, slashTriggerPos])
+  const slashAutocompleteCount =
+    filteredSlashCommands.length + filteredSlashSkills.length
+
+  // Keep the highlighted row inside the current result window. As the user
+  // types and the filter narrows, the previously-highlighted index can point
+  // past the end of the merged list (commands + experts), which would make
+  // Enter/Tab a silent no-op. Clamp back to the last available row whenever
+  // the count changes.
+  useEffect(() => {
+    if (
+      slashAutocompleteCount > 0 &&
+      slashSelectedIndex >= slashAutocompleteCount
+    ) {
+      setSlashSelectedIndex(slashAutocompleteCount - 1)
+    }
+  }, [slashAutocompleteCount, slashSelectedIndex])
+
+  // Keep the highlighted row visible inside the popup when keyboard navigation
+  // pushes it past the scroll viewport. Without this the cursor silently runs
+  // off the rendered area when the filtered list overflows `max-h`.
+  const slashMenuListRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!slashMenuOpen) return
+    const container = slashMenuListRef.current
+    if (!container) return
+    const el = container.children[slashSelectedIndex] as HTMLElement | undefined
+    if (!el) return
+    const elTop = el.offsetTop
+    const elBottom = elTop + el.offsetHeight
+    const viewTop = container.scrollTop
+    const viewBottom = viewTop + container.clientHeight
+    if (elTop < viewTop) {
+      container.scrollTop = elTop
+    } else if (elBottom > viewBottom) {
+      container.scrollTop = elBottom - container.clientHeight
+    }
+  }, [slashMenuOpen, slashSelectedIndex, slashAutocompleteCount])
 
   // ── @ file mention autocomplete ──
   const [atMenuOpen, setAtMenuOpen] = useState(false)
@@ -777,8 +948,40 @@ export function MessageInput({
   )
 
   const handleSlashSelect = useCallback((cmd: AvailableCommandInfo) => {
-    setText(`/${cmd.name} `)
+    const pos = slashTriggerPosRef.current
+    const current = textRef.current
+    const insertion = `/${cmd.name}`
+    if (
+      pos == null ||
+      pos < 0 ||
+      pos >= current.length ||
+      current[pos] !== "/"
+    ) {
+      // Fallback path: no tracked trigger (shouldn't normally happen). Behave
+      // like the legacy wholesale-replace so slash commands still work.
+      setText(`${insertion} `)
+      setSlashMenuOpen(false)
+      setSlashTriggerPos(null)
+      return
+    }
+    const before = current.slice(0, pos)
+    const afterSlash = current.slice(pos + 1)
+    const tokenMatch = afterSlash.match(/^\S*/)
+    const tokenLen = tokenMatch ? tokenMatch[0].length : 0
+    const rest = afterSlash.slice(tokenLen)
+    const needsSpace = !/^\s/.test(rest)
+    const newText = before + insertion + (needsSpace ? " " : "") + rest
+    setText(newText)
     setSlashMenuOpen(false)
+    setSlashTriggerPos(null)
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current
+      if (ta) {
+        ta.focus()
+        const newPos = before.length + insertion.length + (needsSpace ? 1 : 0)
+        ta.setSelectionRange(newPos, newPos)
+      }
+    })
   }, [])
 
   const handleSlashPopoverSelect = useCallback((cmd: AvailableCommandInfo) => {
@@ -798,6 +1001,82 @@ export function MessageInput({
       }
     })
   }, [])
+
+  const handleSkillAutocompleteSelect = useCallback(
+    (skill: AgentSkillItem) => {
+      // Codex uses `$<id>`, other agents use `/<id>` — matching the prefix
+      // that triggered the autocomplete list.
+      const pos = slashTriggerPosRef.current
+      const current = textRef.current
+      const triggerChar = expertPrefix.length === 1 ? expertPrefix : "$"
+      const insertion = `${expertPrefix}${skill.id}`
+      if (
+        pos == null ||
+        pos < 0 ||
+        pos >= current.length ||
+        current[pos] !== triggerChar
+      ) {
+        setText(`${insertion} `)
+        setSlashMenuOpen(false)
+        setSlashTriggerPos(null)
+        return
+      }
+      const before = current.slice(0, pos)
+      const afterTrigger = current.slice(pos + 1)
+      const tokenMatch = afterTrigger.match(/^\S*/)
+      const tokenLen = tokenMatch ? tokenMatch[0].length : 0
+      const rest = afterTrigger.slice(tokenLen)
+      const needsSpace = !/^\s/.test(rest)
+      const newText = before + insertion + (needsSpace ? " " : "") + rest
+      setText(newText)
+      setSlashMenuOpen(false)
+      setSlashTriggerPos(null)
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current
+        if (ta) {
+          ta.focus()
+          const newPos = before.length + insertion.length + (needsSpace ? 1 : 0)
+          ta.setSelectionRange(newPos, newPos)
+        }
+      })
+    },
+    [expertPrefix]
+  )
+
+  // Experts always inject `prefix + expert-id ` at the very front of the
+  // input, never at the cursor. The expert skill is a whole-turn directive
+  // that the agent inspects first, so prepending keeps semantics unambiguous
+  // regardless of what the user has already typed. If another expert prefix
+  // is already at the front (from a prior click), replace it instead of
+  // stacking — the agent only honors the first command, so a stacked prefix
+  // would silently drop the earlier choice.
+  const handleExpertPopoverSelect = useCallback(
+    (expert: ExpertListItem) => {
+      const current = textRef.current
+      const insertion = `${expertPrefix}${expert.metadata.id} `
+      const escapedPrefix = expertPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      const existingPrefix = current.match(
+        new RegExp(`^${escapedPrefix}([A-Za-z0-9_-]+)\\s`)
+      )
+      let base = current
+      if (existingPrefix && expertIdSet.has(existingPrefix[1])) {
+        base = current.slice(existingPrefix[0].length)
+      }
+      const newText = base.length === 0 ? insertion : insertion + base
+      setText(newText)
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current
+        if (ta) {
+          ta.focus()
+          // Place the caret just after the inserted prefix so the user can
+          // start (or continue) typing context for the expert.
+          const pos = insertion.length
+          ta.setSelectionRange(pos, pos)
+        }
+      })
+    },
+    [expertIdSet, expertPrefix]
+  )
 
   const atTriggerPosRef = useRef(atTriggerPos)
   useEffect(() => {
@@ -834,20 +1113,37 @@ export function MessageInput({
       const value = e.target.value
       setText(value)
 
-      // Slash command detection (only at start of input)
-      if (slashCommands.length > 0 && /^\/(\S*)$/.test(value)) {
-        setSlashSelectedIndex(0)
-        setSlashMenuOpen(true)
-        setAtMenuOpen(false)
-        return
-      } else {
-        setSlashMenuOpen(false)
+      const cursorPos = e.target.selectionStart ?? value.length
+      const beforeCursor = value.slice(0, cursorPos)
+
+      // Slash command detection. Allow the trigger at the very start of the
+      // input or immediately after whitespace, so users can still invoke a
+      // command after typing surrounding prose. Any of agent commands,
+      // agent-enabled experts, or (for Codex) skills can satisfy the prompt,
+      // so open the menu whenever at least one is available.
+      const hasSlashSource =
+        slashCommands.length > 0 ||
+        availableExperts.length > 0 ||
+        nonExpertSkills.length > 0
+      if (hasSlashSource) {
+        const slashRegex =
+          agentType === "codex" ? /(^|\s)([/$])(\S*)$/ : /(^|\s)(\/)(\S*)$/
+        const slashMatch = beforeCursor.match(slashRegex)
+        if (slashMatch) {
+          const triggerPos =
+            beforeCursor.length - slashMatch[0].length + slashMatch[1].length
+          setSlashTriggerPos(triggerPos)
+          setSlashSelectedIndex(0)
+          setSlashMenuOpen(true)
+          setAtMenuOpen(false)
+          return
+        }
       }
+      setSlashMenuOpen(false)
+      setSlashTriggerPos(null)
 
       // @ file mention detection (at any cursor position)
-      const cursorPos = e.target.selectionStart
-      if (cursorPos != null && defaultPath) {
-        const beforeCursor = value.slice(0, cursorPos)
+      if (defaultPath) {
         const atMatch = beforeCursor.match(/(^|[\s])@([^\s]*)$/)
         if (atMatch) {
           const atPos =
@@ -861,7 +1157,13 @@ export function MessageInput({
       }
       setAtMenuOpen(false)
     },
-    [slashCommands.length, defaultPath]
+    [
+      slashCommands.length,
+      availableExperts.length,
+      nonExpertSkills.length,
+      defaultPath,
+      agentType,
+    ]
   )
 
   const handlePickFiles = useCallback(async () => {
@@ -1143,29 +1445,39 @@ export function MessageInput({
         return
       }
 
-      if (slashMenuOpen && filteredSlashCommands.length > 0) {
+      if (slashMenuOpen && slashAutocompleteCount > 0) {
         if (e.key === "ArrowDown") {
           e.preventDefault()
           setSlashSelectedIndex((i) =>
-            i < filteredSlashCommands.length - 1 ? i + 1 : 0
+            i < slashAutocompleteCount - 1 ? i + 1 : 0
           )
           return
         }
         if (e.key === "ArrowUp") {
           e.preventDefault()
           setSlashSelectedIndex((i) =>
-            i > 0 ? i - 1 : filteredSlashCommands.length - 1
+            i > 0 ? i - 1 : slashAutocompleteCount - 1
           )
           return
         }
         if (e.key === "Enter" || e.key === "Tab") {
           e.preventDefault()
-          handleSlashSelect(filteredSlashCommands[slashSelectedIndex])
+          // The merged list is [commands, skills].
+          if (slashSelectedIndex < filteredSlashCommands.length) {
+            handleSlashSelect(filteredSlashCommands[slashSelectedIndex])
+          } else {
+            const skillIndex = slashSelectedIndex - filteredSlashCommands.length
+            const skill = filteredSlashSkills[skillIndex]
+            if (skill) {
+              handleSkillAutocompleteSelect(skill)
+            }
+          }
           return
         }
         if (e.key === "Escape") {
           e.preventDefault()
           setSlashMenuOpen(false)
+          setSlashTriggerPos(null)
           return
         }
       }
@@ -1227,9 +1539,12 @@ export function MessageInput({
       handleSend,
       shortcuts,
       slashMenuOpen,
+      slashAutocompleteCount,
       filteredSlashCommands,
+      filteredSlashSkills,
       slashSelectedIndex,
       handleSlashSelect,
+      handleSkillAutocompleteSelect,
       atMenuOpen,
       filteredAtFiles,
       atSelectedIndex,
@@ -1400,12 +1715,65 @@ export function MessageInput({
       onDragLeave={handleContainerDragLeave}
       onDrop={handleContainerDrop}
     >
-      {slashMenuOpen && filteredSlashCommands.length > 0 && (
-        <SlashCommandMenu
-          commands={filteredSlashCommands}
-          selectedIndex={slashSelectedIndex}
-          onSelect={handleSlashSelect}
-        />
+      {slashMenuOpen && slashAutocompleteCount > 0 && (
+        <div
+          ref={slashMenuListRef}
+          className="absolute bottom-full left-0 right-0 mb-1 z-50 max-h-[min(16rem,40dvh)] overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg"
+        >
+          {filteredSlashCommands.map((cmd, i) => (
+            <button
+              key={`cmd-${cmd.name}`}
+              type="button"
+              className={cn(
+                "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm",
+                i === slashSelectedIndex
+                  ? "bg-accent text-accent-foreground"
+                  : "hover:bg-muted"
+              )}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                handleSlashSelect(cmd)
+              }}
+            >
+              <span className="shrink-0 font-mono text-primary">
+                /{cmd.name}
+              </span>
+              <span className="truncate text-xs text-muted-foreground">
+                {cmd.description}
+              </span>
+            </button>
+          ))}
+          {filteredSlashSkills.map((skill, i) => {
+            const absoluteIndex = filteredSlashCommands.length + i
+            return (
+              <button
+                key={`skill-${skill.scope}-${skill.id}`}
+                type="button"
+                className={cn(
+                  "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm",
+                  absoluteIndex === slashSelectedIndex
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-muted"
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  handleSkillAutocompleteSelect(skill)
+                }}
+              >
+                <BookOpenText className="mt-0.5 size-4 shrink-0 text-primary/80" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate font-medium">{skill.name}</span>
+                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                      {expertPrefix}
+                      {skill.id}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
       )}
       {atMenuOpen && filteredAtFiles.length > 0 && (
         <FileMentionMenu
@@ -1511,6 +1879,73 @@ export function MessageInput({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
+                  disabled={disabled}
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6 shrink-0 bg-transparent"
+                  title={t("expertSkills")}
+                  aria-label={t("expertSkills")}
+                >
+                  <Sparkles className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                align="start"
+                className="min-w-80 overflow-y-auto"
+                style={{
+                  maxHeight:
+                    "min(32rem, var(--radix-dropdown-menu-content-available-height))",
+                }}
+              >
+                {availableExperts.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                    {t("expertsEmptyForAgent")}
+                  </div>
+                ) : (
+                  groupedExperts.map(([category, items], groupIndex) => (
+                    <div key={category}>
+                      {groupIndex > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wide">
+                        {translateExpertCategory(category)}
+                      </DropdownMenuLabel>
+                      {items.map((expert) => {
+                        const Icon = getExpertIcon(expert.metadata.icon)
+                        const name =
+                          pickExpertLocalized(
+                            expert.metadata.display_name,
+                            locale
+                          ) || expert.metadata.id
+                        const description = pickExpertLocalized(
+                          expert.metadata.description,
+                          locale
+                        )
+                        return (
+                          <DropdownMenuItem
+                            key={expert.metadata.id}
+                            onClick={() => handleExpertPopoverSelect(expert)}
+                            className="items-start gap-2"
+                          >
+                            <Icon className="mt-0.5 size-4 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-medium">{name}</div>
+                              {description && (
+                                <div className="line-clamp-2 text-xs text-muted-foreground">
+                                  {description}
+                                </div>
+                              )}
+                            </div>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </div>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
                   disabled={disabled || slashCommands.length === 0}
                   variant="outline"
                   size="icon"
@@ -1527,7 +1962,11 @@ export function MessageInput({
               <DropdownMenuContent
                 side="top"
                 align="start"
-                className="min-w-72"
+                className="min-w-72 overflow-y-auto"
+                style={{
+                  maxHeight:
+                    "min(32rem, var(--radix-dropdown-menu-content-available-height))",
+                }}
               >
                 {slashCommands.map((cmd) => (
                   <DropdownMenuItem
@@ -1542,15 +1981,15 @@ export function MessageInput({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* 宽屏内联显示，窄屏（<300px）通过"更多"气泡显示 */}
-            <div className="hidden @[300px]:contents">{selectorItems}</div>
+            {/* 宽屏内联显示，窄屏（<480px）通过"更多"气泡显示 */}
+            <div className="hidden @[480px]:contents">{selectorItems}</div>
             {hasAnySelector && (
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-6 w-6 shrink-0 bg-transparent @[300px]:hidden"
+                    className="h-6 w-6 shrink-0 bg-transparent @[480px]:hidden"
                   >
                     <Ellipsis className="size-4" />
                   </Button>

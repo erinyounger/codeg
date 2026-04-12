@@ -22,7 +22,9 @@ import { createMathPlugin } from "@streamdown/math"
 import { mermaid } from "@streamdown/mermaid"
 import { Streamdown } from "streamdown"
 import { readFileBase64 } from "@/lib/api"
+import { normalizeMathDelimiters } from "@/components/ai-elements/message"
 import { defineMonacoThemes, useMonacoThemeSync } from "@/lib/monaco-themes"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import "@/lib/monaco-local"
 
 const math = createMathPlugin({ singleDollarTextMath: true })
@@ -692,7 +694,7 @@ function DiffFileList({
           </p>
         )}
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="py-1">
           {diffOutline.files.map((file) => (
             <ContextMenu key={file.key}>
@@ -742,7 +744,7 @@ function DiffFileList({
             </ContextMenu>
           ))}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   )
 }
@@ -1354,9 +1356,8 @@ export function FileWorkspacePanel() {
     const relativeFileDir = activeFileTab.path?.includes("/")
       ? activeFileTab.path.replace(/\/[^/]*$/, "")
       : ""
-    const preprocessedContent = preprocessMarkdownPaths(
-      renderedContent,
-      relativeFileDir
+    const preprocessedContent = normalizeMathDelimiters(
+      preprocessMarkdownPaths(renderedContent, relativeFileDir)
     )
 
     return (

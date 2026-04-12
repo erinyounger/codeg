@@ -26,9 +26,7 @@ remote development from any browser — with conversation aggregation, parallel 
 development, MCP/Skills management, chat channel interactions (Telegram, Lark, iLink, etc.),
 and integrated Git/file/terminal workflows.
 
-## Communication Flow
-
-![Communication Flow](./docs/images/communication-flow.svg)
+![gallery](./docs/images/gallery.svg)
 
 ## Main Interface
 ![Codeg Light](./docs/images/main-light.png#gh-light-mode-only)
@@ -308,6 +306,11 @@ Next.js 16 (Static Export) + React 19
 - Network access happens only on user-triggered actions
 - System proxy support for enterprise environments
 - Web service mode uses token-based authentication
+
+## Acknowledgments
+
+- [LinuxDO](https://linux.do) — the community where it all began
+- [ACP](https://agentclientprotocol.com) — the Agent Client Protocol (ACP) is the foundation that enables Codeg to connect with multiple agents
 
 ## License
 

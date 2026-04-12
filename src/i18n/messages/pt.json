@@ -94,7 +94,8 @@
       "system": "Sistema",
       "chat_channels": "Canais de chat",
       "web_service": "Serviço Web",
-      "model_providers": "Provedores de Modelos"
+      "model_providers": "Provedores de Modelos",
+      "experts": "Especialistas"
     }
   },
   "AppearanceSettings": {
@@ -110,7 +111,35 @@
       "light": "Claro",
       "dark": "Escuro",
       "unknown": "--"
-    }
+    },
+    "themeColor": {
+      "sectionTitle": "Cor do tema",
+      "sectionDescription": "Escolha uma paleta de cores para acentos, botões e destaques.",
+      "current": "Cor atual: {color}",
+      "options": {
+        "neutral": "Neutral",
+        "zinc": "Zinc",
+        "slate": "Slate",
+        "stone": "Stone",
+        "gray": "Gray",
+        "red": "Red",
+        "rose": "Rose",
+        "orange": "Orange",
+        "green": "Green",
+        "blue": "Blue",
+        "yellow": "Yellow",
+        "violet": "Violet"
+      }
+    },
+    "zoomLevel": {
+      "sectionTitle": "Zoom da janela",
+      "sectionDescription": "Dimensiona toda a interface. Aplica imediatamente e é salvo por dispositivo.",
+      "placeholder": "Selecione o nível de zoom",
+      "default": "Padrão",
+      "current": "Zoom atual: {zoom}%"
+    },
+    "resetToDefaults": "Restaurar padrões",
+    "resetHint": "Restaura a cor do tema e o zoom da janela para os padrões."
   },
   "SystemSettings": {
     "loading": "Carregando...",
@@ -514,6 +543,8 @@
       "selectReasoningEffort": "Selecionar Reasoning Effort",
       "enableWebsocket": "Habilitar WebSocket",
       "enableWebsocketAria": "Habilitar WebSocket para Codex Provider",
+      "enableSkills": "Habilitar Skills",
+      "enableSkillsAria": "Habilitar Skills para Codex",
       "authJsonNative": "auth.json (nativo)",
       "configTomlNative": "config.toml (nativo)"
     },
@@ -654,6 +685,22 @@
     },
     "cline": {
       "configDescription": "Configure o provedor de API e as credenciais do Cline. As configurações são salvas em ~/.cline/data/."
+    },
+    "opencodePlugins": {
+      "title": "Plugins do OpenCode",
+      "declared": "Plugins declarados",
+      "noPlugins": "Nenhum plugin declarado em opencode.json",
+      "status": {
+        "installed": "Instalado",
+        "missing": "Não instalado"
+      },
+      "installAll": "Instalar todos os ausentes",
+      "pinVersions": "Fixar versões @latest",
+      "install": "Instalar",
+      "uninstall": "Desinstalar",
+      "refresh": "Atualizar",
+      "success": "Todos os plugins foram instalados com sucesso",
+      "failed": "Operação do plugin falhou"
     }
   },
   "SettingsPages": {
@@ -820,7 +867,6 @@
       "connection": {
         "connected": "Conectado",
         "connecting": "Conectando...",
-        "downloading": "Baixando...",
         "prompting": "Respondendo...",
         "error": "Erro de conexão",
         "disconnected": "Desconectado",
@@ -1391,11 +1437,13 @@
           "unavailable": "{agent} está indisponível na plataforma atual.",
           "sdkMissing": "O SDK de {agent} não está instalado"
         },
+        "backendErrors": {
+          "initializeTimeout": "O handshake de conexão de {agent} expirou (sem resposta após 60 segundos). Abra Configurações para verificar a configuração do agente e da rede.",
+          "processExited": "O processo de {agent} encerrou inesperadamente.",
+          "spawnFailed": "Falha ao iniciar {agent}: {message}",
+          "downloadFailed": "Falha no download de {agent}: {message}"
+        },
         "unableReadAgentConfig": "Não foi possível ler a configuração do agente: {message}",
-        "autoLinkFailedTitle": "Falha no vínculo automático de {agent}",
-        "preflightCheckFailedDefault": "As verificações de pré-voo falharam. Verifique as configurações de agentes.",
-        "preflightFailedTitle": "Pré-voo de {agent} falhou",
-        "autoLinkPreflightFailed": "Pré-voo do vínculo automático falhou: {message}",
         "connectFailedTitle": "Falha na conexão de {agent}",
         "toolFallbackTitle": "Ferramenta",
         "eventErrorTitle": "Erro do agente",
@@ -1438,7 +1486,9 @@
         "cancel": "Cancelar",
         "send": "Enviar",
         "forkAndSend": "Fork & Enviar",
-        "slashCommands": "Comandos de barra"
+        "slashCommands": "Comandos de barra",
+        "expertSkills": "Habilidades de especialistas",
+        "expertsEmptyForAgent": "Este agente não tem especialistas ativados. Ative-os em Configurações > Especialistas."
       },
       "messageQueue": {
         "addToQueue": "Adicionar à fila",
@@ -1857,5 +1907,50 @@
     "delete": "Excluir",
     "create": "Criar",
     "save": "Salvar"
+  },
+  "ExpertsSettings": {
+    "title": "Habilidades de Especialista",
+    "description": "Ative fluxos de trabalho de habilidades selecionados e comprovados em campo para seus agentes de codificação de IA. Cada especialista é uma habilidade independente do projeto superpowers — o codeg gerencia a cópia central e a vincula aos agentes escolhidos.",
+    "loading": "Carregando especialistas…",
+    "loadingContent": "Carregando conteúdo…",
+    "emptyExperts": "Nenhum especialista disponível. Verifique os logs da aplicação.",
+    "emptySelection": "Selecione um especialista para ver seu conteúdo e gerenciar a ativação.",
+    "emptySearch": "Nenhum especialista corresponde à pesquisa atual.",
+    "searchPlaceholder": "Pesquisar especialistas por nome, ID ou descrição",
+    "enableForAgents": "Ativar para agentes",
+    "noAgents": "Nenhum agente ACP detectado.",
+    "copyModeWarning": "Copiado (não vinculado). Reative após as atualizações do codeg para obter a versão mais recente.",
+    "previewTitle": "Prévia do SKILL.md",
+    "categories": {
+      "discovery": "Descoberta e Design",
+      "planning": "Planejamento",
+      "execution": "Execução",
+      "quality": "Qualidade e Testes",
+      "debugging": "Depuração",
+      "review": "Revisão e Integração",
+      "meta": "Meta"
+    },
+    "states": {
+      "not_linked": "Não ativado",
+      "linked_to_codeg": "Ativado",
+      "linked_elsewhere": "Bloqueado — outro vínculo existe",
+      "blocked_by_real_directory": "Bloqueado — uma habilidade personalizada ocupa este nome",
+      "broken": "Vínculo quebrado"
+    },
+    "badges": {
+      "userModified": "Modificado pelo usuário"
+    },
+    "actions": {
+      "openCentralDir": "Abrir pasta central",
+      "refresh": "Atualizar"
+    },
+    "toasts": {
+      "loadFailed": "Falha ao carregar detalhes do especialista",
+      "enabled": "Especialista ativado para este agente",
+      "disabled": "Especialista desativado para este agente",
+      "enableFailed": "Falha ao ativar o especialista",
+      "disableFailed": "Falha ao desativar o especialista",
+      "openFolderFailed": "Falha ao abrir a pasta"
+    }
   }
 }

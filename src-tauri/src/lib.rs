@@ -2,7 +2,7 @@ mod acp;
 mod app_error;
 pub mod app_state;
 pub mod chat_channel;
-mod commands;
+pub mod commands;
 pub mod db;
 pub mod git_credential;
 pub mod keyring_store;
@@ -20,9 +20,9 @@ mod tauri_app {
     use crate::acp::manager::ConnectionManager;
     use crate::chat_channel::manager::ChatChannelManager;
     use crate::commands::{
-        acp as acp_commands, chat_channel as chat_channel_commands, conversations, folder_commands,
-        folders, mcp as mcp_commands, model_provider as model_provider_commands, notification,
-        project_boot, system_settings,
+        acp as acp_commands, chat_channel as chat_channel_commands, conversations,
+        experts as experts_commands, folder_commands, folders, mcp as mcp_commands,
+        model_provider as model_provider_commands, notification, project_boot, system_settings,
         terminal as terminal_commands, version_control, windows,
     };
     use crate::terminal::manager::TerminalManager;
@@ -83,6 +83,27 @@ mod tauri_app {
                     }
                 }
 
+                // Install bundled expert skills into the central store
+                // (`~/.codeg/skills/`). Runs in the background and does
+                // not block startup; failures are logged but non-fatal.
+                tauri::async_runtime::spawn(async move {
+                    let report = crate::commands::experts::ensure_central_experts_installed().await;
+                    if !report.errors.is_empty() {
+                        eprintln!(
+                            "[Experts] install finished with {} error(s): {:?}",
+                            report.errors.len(),
+                            report.errors
+                        );
+                    } else {
+                        eprintln!(
+                            "[Experts] install ok: installed={} updated={} pending_review={}",
+                            report.installed_count,
+                            report.updated_count,
+                            report.pending_user_review.len()
+                        );
+                    }
+                });
+
                 // Start chat channel background tasks
                 {
                     let ccm = app.state::<ChatChannelManager>();
@@ -115,7 +136,9 @@ mod tauri_app {
                             .title(&entry.name)
                             .inner_size(1260.0, 860.0)
                             .min_inner_size(900.0, 600.0);
-                        let _ = windows::apply_platform_window_style(builder).build();
+                        if let Ok(w) = windows::apply_platform_window_style(builder).build() {
+                            windows::post_window_setup(&w);
+                        }
                     }
                 }
 
@@ -313,6 +336,7 @@ mod tauri_app {
                 windows::open_stash_window,
                 windows::open_push_window,
                 windows::open_project_boot_window,
+                windows::update_traffic_light_position,
                 project_boot::detect_package_manager,
                 project_boot::create_shadcn_project,
                 system_settings::get_system_proxy_settings,
@@ -354,6 +378,16 @@ mod tauri_app {
                 acp_commands::acp_read_agent_skill,
                 acp_commands::acp_save_agent_skill,
                 acp_commands::acp_delete_agent_skill,
+                acp_commands::opencode_list_plugins,
+                acp_commands::opencode_install_plugins,
+                acp_commands::opencode_uninstall_plugin,
+                experts_commands::experts_list,
+                experts_commands::experts_list_for_agent,
+                experts_commands::experts_get_install_status,
+                experts_commands::experts_link_to_agent,
+                experts_commands::experts_unlink_from_agent,
+                experts_commands::experts_read_content,
+                experts_commands::experts_open_central_dir,
                 folder_commands::list_folder_commands,
                 folder_commands::create_folder_command,
                 folder_commands::update_folder_command,

@@ -73,7 +73,7 @@ export function VirtualizedMessageThread<T>({
   return (
     <MessageThreadContent
       className={cn("mx-0 max-w-none p-0", contentClassName)}
-      scrollClassName="[overflow-anchor:none]"
+      scrollClassName="scrollbar-thin [overflow-anchor:none]"
       {...contentProps}
     >
       {items.length === 0 ? (

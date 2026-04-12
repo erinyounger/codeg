@@ -94,7 +94,8 @@
       "system": "System",
       "chat_channels": "Chat Channels",
       "web_service": "Web Service",
-      "model_providers": "Model Providers"
+      "model_providers": "Model Providers",
+      "experts": "Experts"
     }
   },
   "AppearanceSettings": {
@@ -110,7 +111,35 @@
       "light": "Light",
       "dark": "Dark",
       "unknown": "--"
-    }
+    },
+    "themeColor": {
+      "sectionTitle": "Theme color",
+      "sectionDescription": "Pick a color palette for accents, buttons, and highlights.",
+      "current": "Current color: {color}",
+      "options": {
+        "neutral": "Neutral",
+        "zinc": "Zinc",
+        "slate": "Slate",
+        "stone": "Stone",
+        "gray": "Gray",
+        "red": "Red",
+        "rose": "Rose",
+        "orange": "Orange",
+        "green": "Green",
+        "blue": "Blue",
+        "yellow": "Yellow",
+        "violet": "Violet"
+      }
+    },
+    "zoomLevel": {
+      "sectionTitle": "Window zoom",
+      "sectionDescription": "Scale the entire interface. Applies immediately and persists per device.",
+      "placeholder": "Select zoom level",
+      "default": "Default",
+      "current": "Current zoom: {zoom}%"
+    },
+    "resetToDefaults": "Reset to defaults",
+    "resetHint": "Reset theme color and window zoom to defaults."
   },
   "SystemSettings": {
     "loading": "Loading...",
@@ -514,6 +543,8 @@
       "selectReasoningEffort": "Select Reasoning Effort",
       "enableWebsocket": "Enable WebSocket",
       "enableWebsocketAria": "Enable WebSocket for Codex Provider",
+      "enableSkills": "Enable Skills",
+      "enableSkillsAria": "Enable Skills for Codex",
       "authJsonNative": "auth.json (native)",
       "configTomlNative": "config.toml (native)"
     },
@@ -654,6 +685,22 @@
     },
     "cline": {
       "configDescription": "Configure Cline API provider and credentials. Settings are saved to ~/.cline/data/."
+    },
+    "opencodePlugins": {
+      "title": "OpenCode Plugins",
+      "declared": "Declared Plugins",
+      "noPlugins": "No plugins declared.",
+      "status": {
+        "installed": "Installed",
+        "missing": "Missing"
+      },
+      "installAll": "Install All Missing",
+      "pinVersions": "Pin @latest Versions",
+      "install": "Install",
+      "uninstall": "Uninstall",
+      "refresh": "Refresh",
+      "success": "All plugins installed successfully.",
+      "failed": "Installation failed"
     }
   },
   "SettingsPages": {
@@ -820,7 +867,6 @@
       "connection": {
         "connected": "Connected",
         "connecting": "Connecting...",
-        "downloading": "Downloading...",
         "prompting": "Responding...",
         "error": "Connection error",
         "disconnected": "Disconnected",
@@ -1391,11 +1437,13 @@
           "unavailable": "{agent} is unavailable on the current platform.",
           "sdkMissing": "{agent} SDK is not installed"
         },
+        "backendErrors": {
+          "initializeTimeout": "{agent} connection handshake timed out after 60 seconds. Please open Settings to check Agent configuration and network settings.",
+          "processExited": "{agent} process exited unexpectedly.",
+          "spawnFailed": "Failed to start {agent}: {message}",
+          "downloadFailed": "{agent} download failed: {message}"
+        },
         "unableReadAgentConfig": "Unable to read Agent config: {message}",
-        "autoLinkFailedTitle": "{agent} auto-link failed",
-        "preflightCheckFailedDefault": "Preflight checks failed. Check Agent settings.",
-        "preflightFailedTitle": "{agent} preflight failed",
-        "autoLinkPreflightFailed": "Auto-link preflight failed: {message}",
         "connectFailedTitle": "{agent} connection failed",
         "toolFallbackTitle": "Tool",
         "eventErrorTitle": "Agent Error",
@@ -1438,7 +1486,9 @@
         "cancel": "Cancel",
         "send": "Send",
         "forkAndSend": "Fork & Send",
-        "slashCommands": "Slash commands"
+        "slashCommands": "Slash commands",
+        "expertSkills": "Expert skills",
+        "expertsEmptyForAgent": "This agent has no enabled experts. Enable them in Settings > Experts."
       },
       "messageQueue": {
         "addToQueue": "Queue message",
@@ -1857,5 +1907,50 @@
     "delete": "Delete",
     "create": "Create",
     "save": "Save"
+  },
+  "ExpertsSettings": {
+    "title": "Expert Skills",
+    "description": "Enable curated, battle-tested skill workflows for your AI coding agents. Each expert is a standalone skill from the superpowers project — codeg manages the central copy and links it into the agents you choose.",
+    "loading": "Loading experts…",
+    "loadingContent": "Loading content…",
+    "emptyExperts": "No experts available. Check the application logs.",
+    "emptySelection": "Select an expert to see its content and manage activation.",
+    "emptySearch": "No experts match the current search.",
+    "searchPlaceholder": "Search experts by name, id, or description",
+    "enableForAgents": "Enable for agents",
+    "noAgents": "No ACP agents detected.",
+    "copyModeWarning": "Copied (not linked). Re-enable after codeg updates to get the latest version.",
+    "previewTitle": "SKILL.md preview",
+    "categories": {
+      "discovery": "Discovery & Design",
+      "planning": "Planning",
+      "execution": "Execution",
+      "quality": "Quality & Testing",
+      "debugging": "Debugging",
+      "review": "Review & Integration",
+      "meta": "Meta"
+    },
+    "states": {
+      "not_linked": "Not enabled",
+      "linked_to_codeg": "Enabled",
+      "linked_elsewhere": "Blocked — another link exists",
+      "blocked_by_real_directory": "Blocked — a custom skill occupies this name",
+      "broken": "Broken link"
+    },
+    "badges": {
+      "userModified": "User modified"
+    },
+    "actions": {
+      "openCentralDir": "Open central folder",
+      "refresh": "Refresh"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load expert details",
+      "enabled": "Expert enabled for this agent",
+      "disabled": "Expert disabled for this agent",
+      "enableFailed": "Failed to enable expert",
+      "disableFailed": "Failed to disable expert",
+      "openFolderFailed": "Failed to open folder"
+    }
   }
 }

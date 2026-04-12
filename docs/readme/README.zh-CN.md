@@ -24,9 +24,7 @@ Codeg（Code Generation）是一个企业级多 Agent 编码工作台。
 OpenClaw、Cline 等）统一到桌面应用、独立服务器或 Docker 容器中——通过浏览器即可远程开发——支持对话聚合、
 并行 `git worktree` 开发、MCP/Skills 管理、消息渠道交互（Telegram、飞书、iLink 等），以及集成的 Git/文件/终端工作流。
 
-## 通信流程
-
-![通信流程](../images/communication-flow.svg)
+![gallery](../images/gallery.svg)
 
 ## 主界面
 ![Codeg Light](../images/main-light.png#gh-light-mode-only)
@@ -306,6 +304,11 @@ Next.js 16 (Static Export) + React 19
 - 仅在用户主动触发时才访问网络
 - 支持系统代理，适配企业网络环境
 - Web 服务模式使用基于令牌的身份认证
+
+## 鸣谢
+
+- [LinuxDO](https://linux.do)：起源社区
+- [ACP](https://agentclientprotocol.com)：智能体客户端协议 (ACP) 是 codeg 实现多智能体连接的基础
 
 ## 许可证
 

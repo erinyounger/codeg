@@ -86,7 +86,7 @@
     "preferences": "偏好设置",
     "nav": {
       "appearance": "外观",
-      "agents": "Agents",
+      "agents": "智能体",
       "mcp": "MCP",
       "skills": "Skills",
       "shortcuts": "快捷键",
@@ -94,7 +94,8 @@
       "system": "系统",
       "chat_channels": "消息渠道",
       "web_service": "Web 服务",
-      "model_providers": "模型供应商"
+      "model_providers": "模型供应商",
+      "experts": "专家"
     }
   },
   "AppearanceSettings": {
@@ -110,7 +111,35 @@
       "light": "浅色",
       "dark": "深色",
       "unknown": "未知"
-    }
+    },
+    "themeColor": {
+      "sectionTitle": "主题颜色",
+      "sectionDescription": "选择按钮、强调色和高亮使用的色调。",
+      "current": "当前颜色：{color}",
+      "options": {
+        "neutral": "Neutral",
+        "zinc": "Zinc",
+        "slate": "Slate",
+        "stone": "Stone",
+        "gray": "Gray",
+        "red": "Red",
+        "rose": "Rose",
+        "orange": "Orange",
+        "green": "Green",
+        "blue": "Blue",
+        "yellow": "Yellow",
+        "violet": "Violet"
+      }
+    },
+    "zoomLevel": {
+      "sectionTitle": "窗口缩放",
+      "sectionDescription": "整体放大或缩小界面，立即生效，按设备分别保存。",
+      "placeholder": "请选择缩放档位",
+      "default": "默认",
+      "current": "当前缩放：{zoom}%"
+    },
+    "resetToDefaults": "恢复默认",
+    "resetHint": "将主题颜色和窗口缩放恢复到默认值。"
   },
   "SystemSettings": {
     "loading": "加载中...",
@@ -514,6 +543,8 @@
       "selectReasoningEffort": "选择 Reasoning Effort",
       "enableWebsocket": "启用 WebSocket",
       "enableWebsocketAria": "Codex Provider 启用 WebSocket",
+      "enableSkills": "启用 Skills",
+      "enableSkillsAria": "Codex 启用 Skills",
       "authJsonNative": "auth.json（原生）",
       "configTomlNative": "config.toml（原生）"
     },
@@ -654,6 +685,22 @@
     },
     "cline": {
       "configDescription": "配置 Cline API 提供商和凭证。设置将保存到 ~/.cline/data/。"
+    },
+    "opencodePlugins": {
+      "title": "OpenCode 插件",
+      "declared": "已声明的插件",
+      "noPlugins": "opencode.json 中未声明任何插件",
+      "status": {
+        "installed": "已安装",
+        "missing": "未安装"
+      },
+      "installAll": "安装全部缺失插件",
+      "pinVersions": "固定 @latest 版本",
+      "install": "安装",
+      "uninstall": "卸载",
+      "refresh": "刷新",
+      "success": "所有插件安装成功",
+      "failed": "插件操作失败"
     }
   },
   "SettingsPages": {
@@ -820,7 +867,6 @@
       "connection": {
         "connected": "已连接",
         "connecting": "连接中...",
-        "downloading": "下载中...",
         "prompting": "响应中...",
         "error": "连接异常",
         "disconnected": "未连接",
@@ -1391,11 +1437,13 @@
           "unavailable": "{agent} 当前平台不可用。",
           "sdkMissing": "{agent} SDK 尚未安装"
         },
+        "backendErrors": {
+          "initializeTimeout": "{agent} 连接握手超时（60 秒未响应），请前往设置页面检查智能体和网络配置。",
+          "processExited": "{agent} 进程意外退出。",
+          "spawnFailed": "启动 {agent} 失败：{message}",
+          "downloadFailed": "{agent} 下载失败：{message}"
+        },
         "unableReadAgentConfig": "无法读取 Agent 配置：{message}",
-        "autoLinkFailedTitle": "{agent} 自动链接失败",
-        "preflightCheckFailedDefault": "预检查未通过，请检查 Agent 配置。",
-        "preflightFailedTitle": "{agent} 预检查失败",
-        "autoLinkPreflightFailed": "自动链接预检查失败：{message}",
         "connectFailedTitle": "{agent} 连接失败",
         "toolFallbackTitle": "工具",
         "eventErrorTitle": "Agent 错误",
@@ -1438,7 +1486,9 @@
         "cancel": "取消",
         "send": "发送",
         "forkAndSend": "分叉发送",
-        "slashCommands": "斜杠命令"
+        "slashCommands": "斜杠命令",
+        "expertSkills": "专家技能",
+        "expertsEmptyForAgent": "该智能体没有启用任何专家。请在「设置 > 专家」中启用。"
       },
       "messageQueue": {
         "addToQueue": "加入队列",
@@ -1857,5 +1907,50 @@
     "delete": "删除",
     "create": "创建",
     "save": "保存"
+  },
+  "ExpertsSettings": {
+    "title": "专家技能",
+    "description": "为 AI 编码代理启用精心挑选、经过实战验证的技能工作流。每个专家都是 superpowers 项目中的独立技能 —— codeg 维护中央副本，并将其软链接到你选择的代理目录。",
+    "loading": "正在加载专家列表…",
+    "loadingContent": "正在加载内容…",
+    "emptyExperts": "当前没有可用的专家，请查看应用日志。",
+    "emptySelection": "从左侧选择一个专家以查看内容并管理启用状态。",
+    "emptySearch": "没有匹配当前搜索条件的专家。",
+    "searchPlaceholder": "按名称、ID 或描述搜索专家",
+    "enableForAgents": "为代理启用",
+    "noAgents": "未检测到 ACP 代理。",
+    "copyModeWarning": "已复制(非软链接)。codeg 更新后需要重新启用以获取最新版本。",
+    "previewTitle": "SKILL.md 预览",
+    "categories": {
+      "discovery": "发现与设计",
+      "planning": "规划",
+      "execution": "执行",
+      "quality": "质量与测试",
+      "debugging": "调试",
+      "review": "评审与集成",
+      "meta": "元技能"
+    },
+    "states": {
+      "not_linked": "未启用",
+      "linked_to_codeg": "已启用",
+      "linked_elsewhere": "冲突 — 已有其他链接",
+      "blocked_by_real_directory": "冲突 — 已有同名的自定义 skill 占用",
+      "broken": "链接损坏"
+    },
+    "badges": {
+      "userModified": "用户修改过"
+    },
+    "actions": {
+      "openCentralDir": "打开中央目录",
+      "refresh": "刷新"
+    },
+    "toasts": {
+      "loadFailed": "加载专家详情失败",
+      "enabled": "已为该代理启用专家",
+      "disabled": "已为该代理禁用专家",
+      "enableFailed": "启用专家失败",
+      "disableFailed": "禁用专家失败",
+      "openFolderFailed": "打开目录失败"
+    }
   }
 }

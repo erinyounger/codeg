@@ -94,7 +94,8 @@
       "system": "النظام",
       "chat_channels": "قنوات المحادثة",
       "web_service": "خدمة الويب",
-      "model_providers": "مزودو النماذج"
+      "model_providers": "مزودو النماذج",
+      "experts": "الخبراء"
     }
   },
   "AppearanceSettings": {
@@ -110,7 +111,35 @@
       "light": "فاتح",
       "dark": "داكن",
       "unknown": "--"
-    }
+    },
+    "themeColor": {
+      "sectionTitle": "لون السمة",
+      "sectionDescription": "اختر لوحة ألوان للتمييزات والأزرار والإبرازات.",
+      "current": "اللون الحالي: {color}",
+      "options": {
+        "neutral": "Neutral",
+        "zinc": "Zinc",
+        "slate": "Slate",
+        "stone": "Stone",
+        "gray": "Gray",
+        "red": "Red",
+        "rose": "Rose",
+        "orange": "Orange",
+        "green": "Green",
+        "blue": "Blue",
+        "yellow": "Yellow",
+        "violet": "Violet"
+      }
+    },
+    "zoomLevel": {
+      "sectionTitle": "تكبير النافذة",
+      "sectionDescription": "تكبير أو تصغير الواجهة بالكامل. يتم تطبيقه فوراً ويُحفظ لكل جهاز على حدة.",
+      "placeholder": "اختر مستوى التكبير",
+      "default": "افتراضي",
+      "current": "التكبير الحالي: {zoom}%"
+    },
+    "resetToDefaults": "إعادة الضبط",
+    "resetHint": "إعادة ضبط لون السمة وتكبير النافذة إلى الإعدادات الافتراضية."
   },
   "SystemSettings": {
     "loading": "جارٍ التحميل...",
@@ -514,6 +543,8 @@
       "selectReasoningEffort": "اختر Reasoning Effort",
       "enableWebsocket": "تفعيل WebSocket",
       "enableWebsocketAria": "تفعيل WebSocket لـ Codex Provider",
+      "enableSkills": "تفعيل Skills",
+      "enableSkillsAria": "تفعيل Skills لـ Codex",
       "authJsonNative": "auth.json (أصلي)",
       "configTomlNative": "config.toml (أصلي)"
     },
@@ -654,6 +685,22 @@
     },
     "cline": {
       "configDescription": "تكوين مزود واجهة برمجة التطبيقات وبيانات اعتماد Cline. يتم حفظ الإعدادات في ~/.cline/data/."
+    },
+    "opencodePlugins": {
+      "title": "إضافات OpenCode",
+      "declared": "الإضافات المعلنة",
+      "noPlugins": "لا توجد إضافات معلنة في opencode.json",
+      "status": {
+        "installed": "مثبّت",
+        "missing": "غير مثبّت"
+      },
+      "installAll": "تثبيت جميع الإضافات المفقودة",
+      "pinVersions": "تثبيت إصدارات @latest",
+      "install": "تثبيت",
+      "uninstall": "إزالة",
+      "refresh": "تحديث",
+      "success": "تم تثبيت جميع الإضافات بنجاح",
+      "failed": "فشلت عملية الإضافة"
     }
   },
   "SettingsPages": {
@@ -820,7 +867,6 @@
       "connection": {
         "connected": "متصل",
         "connecting": "جارٍ الاتصال...",
-        "downloading": "جارٍ التنزيل...",
         "prompting": "جارٍ الرد...",
         "error": "خطأ في الاتصال",
         "disconnected": "غير متصل",
@@ -1391,11 +1437,13 @@
           "unavailable": "{agent} غير متاح على المنصة الحالية.",
           "sdkMissing": "لم يتم تثبيت SDK الخاص بـ {agent}"
         },
+        "backendErrors": {
+          "initializeTimeout": "انتهت مهلة مصافحة اتصال {agent} (لا استجابة بعد 60 ثانية). افتح الإعدادات للتحقق من إعدادات الوكيل والشبكة.",
+          "processExited": "انتهت عملية {agent} بشكل غير متوقع.",
+          "spawnFailed": "تعذر بدء تشغيل {agent}: {message}",
+          "downloadFailed": "فشل تنزيل {agent}: {message}"
+        },
         "unableReadAgentConfig": "تعذر قراءة إعدادات الوكيل: {message}",
-        "autoLinkFailedTitle": "فشل الربط التلقائي لـ {agent}",
-        "preflightCheckFailedDefault": "فشلت فحوصات ما قبل التشغيل. تحقق من إعدادات الوكلاء.",
-        "preflightFailedTitle": "فشل فحص ما قبل التشغيل لـ {agent}",
-        "autoLinkPreflightFailed": "فشل فحص ما قبل التشغيل للربط التلقائي: {message}",
         "connectFailedTitle": "فشل اتصال {agent}",
         "toolFallbackTitle": "أداة",
         "eventErrorTitle": "خطأ الوكيل",
@@ -1438,7 +1486,9 @@
         "cancel": "إلغاء",
         "send": "إرسال",
         "forkAndSend": "تفريع وإرسال",
-        "slashCommands": "أوامر الشرطة المائلة"
+        "slashCommands": "أوامر الشرطة المائلة",
+        "expertSkills": "مهارات الخبراء",
+        "expertsEmptyForAgent": "لا يحتوي هذا العميل على خبراء مفعّلين. فعّلهم من الإعدادات > الخبراء."
       },
       "messageQueue": {
         "addToQueue": "إضافة للقائمة",
@@ -1857,5 +1907,50 @@
     "delete": "حذف",
     "create": "إنشاء",
     "save": "حفظ"
+  },
+  "ExpertsSettings": {
+    "title": "مهارات الخبراء",
+    "description": "فعّل سير عمل المهارات المختارة بعناية والمختبرة ميدانيًا لوكلاء البرمجة بالذكاء الاصطناعي. كل خبير هو مهارة مستقلة من مشروع superpowers — يدير codeg النسخة المركزية ويربطها بالوكلاء الذين تختارهم.",
+    "loading": "جاري تحميل الخبراء…",
+    "loadingContent": "جاري تحميل المحتوى…",
+    "emptyExperts": "لا يوجد خبراء متاحون. تحقق من سجلات التطبيق.",
+    "emptySelection": "اختر خبيرًا لرؤية محتواه وإدارة تفعيله.",
+    "emptySearch": "لا يوجد خبراء يطابقون البحث الحالي.",
+    "searchPlaceholder": "ابحث عن الخبراء بالاسم أو المعرّف أو الوصف",
+    "enableForAgents": "تفعيل للوكلاء",
+    "noAgents": "لم يتم اكتشاف وكلاء ACP.",
+    "copyModeWarning": "تم النسخ (غير مرتبط). أعد التفعيل بعد تحديثات codeg للحصول على أحدث إصدار.",
+    "previewTitle": "معاينة SKILL.md",
+    "categories": {
+      "discovery": "الاكتشاف والتصميم",
+      "planning": "التخطيط",
+      "execution": "التنفيذ",
+      "quality": "الجودة والاختبار",
+      "debugging": "التصحيح",
+      "review": "المراجعة والدمج",
+      "meta": "ميتا"
+    },
+    "states": {
+      "not_linked": "غير مُفعَّل",
+      "linked_to_codeg": "مُفعَّل",
+      "linked_elsewhere": "محظور — يوجد رابط آخر",
+      "blocked_by_real_directory": "محظور — مهارة مخصصة تشغل هذا الاسم",
+      "broken": "رابط معطوب"
+    },
+    "badges": {
+      "userModified": "عُدِّل من قبل المستخدم"
+    },
+    "actions": {
+      "openCentralDir": "فتح المجلد المركزي",
+      "refresh": "تحديث"
+    },
+    "toasts": {
+      "loadFailed": "فشل تحميل تفاصيل الخبير",
+      "enabled": "تم تفعيل الخبير لهذا الوكيل",
+      "disabled": "تم تعطيل الخبير لهذا الوكيل",
+      "enableFailed": "فشل تفعيل الخبير",
+      "disableFailed": "فشل تعطيل الخبير",
+      "openFolderFailed": "فشل فتح المجلد"
+    }
   }
 }

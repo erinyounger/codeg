@@ -18,6 +18,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
 function isRemovedFileDiff(diff: string | null): boolean {
@@ -103,7 +104,7 @@ function SessionFilesContent({ conversationId }: { conversationId: number }) {
   }
 
   return (
-    <div className="space-y-3 p-3">
+    <div className="space-y-3 px-1 py-3">
       {groups.map((group, groupIndex) => {
         const groupKey = `${group.userTurnId}-${group.timestamp}-${groupIndex}`
         const isOpen = openGroups[groupKey] ?? false
@@ -290,9 +291,9 @@ export function SessionFilesTab() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <ScrollArea className="flex-1 min-h-0 px-2">
         <SessionFilesContent conversationId={conversationId} />
-      </div>
+      </ScrollArea>
     </div>
   )
 }

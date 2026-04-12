@@ -94,7 +94,8 @@
       "system": "Système",
       "chat_channels": "Canaux de chat",
       "web_service": "Service Web",
-      "model_providers": "Fournisseurs de Modèles"
+      "model_providers": "Fournisseurs de Modèles",
+      "experts": "Experts"
     }
   },
   "AppearanceSettings": {
@@ -110,7 +111,35 @@
       "light": "Clair",
       "dark": "Sombre",
       "unknown": "--"
-    }
+    },
+    "themeColor": {
+      "sectionTitle": "Couleur du thème",
+      "sectionDescription": "Choisissez une palette pour les accents, les boutons et les surlignages.",
+      "current": "Couleur actuelle : {color}",
+      "options": {
+        "neutral": "Neutral",
+        "zinc": "Zinc",
+        "slate": "Slate",
+        "stone": "Stone",
+        "gray": "Gray",
+        "red": "Red",
+        "rose": "Rose",
+        "orange": "Orange",
+        "green": "Green",
+        "blue": "Blue",
+        "yellow": "Yellow",
+        "violet": "Violet"
+      }
+    },
+    "zoomLevel": {
+      "sectionTitle": "Zoom de la fenêtre",
+      "sectionDescription": "Met à l'échelle toute l'interface. S'applique immédiatement et est enregistré par appareil.",
+      "placeholder": "Sélectionnez le niveau de zoom",
+      "default": "Par défaut",
+      "current": "Zoom actuel : {zoom}%"
+    },
+    "resetToDefaults": "Réinitialiser",
+    "resetHint": "Réinitialise la couleur du thème et le zoom de la fenêtre."
   },
   "SystemSettings": {
     "loading": "Chargement...",
@@ -514,6 +543,8 @@
       "selectReasoningEffort": "Sélectionner Reasoning Effort",
       "enableWebsocket": "Activer WebSocket",
       "enableWebsocketAria": "Activer WebSocket pour Codex Provider",
+      "enableSkills": "Activer Skills",
+      "enableSkillsAria": "Activer Skills pour Codex",
       "authJsonNative": "auth.json (natif)",
       "configTomlNative": "config.toml (natif)"
     },
@@ -654,6 +685,22 @@
     },
     "cline": {
       "configDescription": "Configurez le fournisseur API et les identifiants Cline. Les paramètres sont enregistrés dans ~/.cline/data/."
+    },
+    "opencodePlugins": {
+      "title": "Plugins OpenCode",
+      "declared": "Plugins déclarés",
+      "noPlugins": "Aucun plugin déclaré dans opencode.json",
+      "status": {
+        "installed": "Installé",
+        "missing": "Non installé"
+      },
+      "installAll": "Installer tous les manquants",
+      "pinVersions": "Fixer les versions @latest",
+      "install": "Installer",
+      "uninstall": "Désinstaller",
+      "refresh": "Actualiser",
+      "success": "Tous les plugins ont été installés avec succès",
+      "failed": "L'opération du plugin a échoué"
     }
   },
   "SettingsPages": {
@@ -820,7 +867,6 @@
       "connection": {
         "connected": "Connecté",
         "connecting": "Connexion...",
-        "downloading": "Téléchargement...",
         "prompting": "Réponse...",
         "error": "Erreur de connexion",
         "disconnected": "Déconnecté",
@@ -1391,11 +1437,13 @@
           "unavailable": "{agent} n'est pas disponible sur la plateforme actuelle.",
           "sdkMissing": "Le SDK de {agent} n'est pas installé"
         },
+        "backendErrors": {
+          "initializeTimeout": "Le handshake de connexion de {agent} a expiré (aucune réponse après 60 secondes). Ouvrez Paramètres pour vérifier la configuration de l'agent et du réseau.",
+          "processExited": "Le processus {agent} s'est arrêté de manière inattendue.",
+          "spawnFailed": "Impossible de démarrer {agent} : {message}",
+          "downloadFailed": "Échec du téléchargement de {agent} : {message}"
+        },
         "unableReadAgentConfig": "Impossible de lire la configuration de l'agent : {message}",
-        "autoLinkFailedTitle": "Échec de l'auto-liaison de {agent}",
-        "preflightCheckFailedDefault": "Les vérifications préalables ont échoué. Vérifiez les paramètres des agents.",
-        "preflightFailedTitle": "Échec de la vérification préalable de {agent}",
-        "autoLinkPreflightFailed": "Échec de la vérification préalable de l'auto-liaison : {message}",
         "connectFailedTitle": "Échec de la connexion de {agent}",
         "toolFallbackTitle": "Outil",
         "eventErrorTitle": "Erreur de l'agent",
@@ -1438,7 +1486,9 @@
         "cancel": "Annuler",
         "send": "Envoyer",
         "forkAndSend": "Fork & Envoyer",
-        "slashCommands": "Commandes slash"
+        "slashCommands": "Commandes slash",
+        "expertSkills": "Compétences d'expert",
+        "expertsEmptyForAgent": "Cet agent n'a aucun expert activé. Activez-les dans Paramètres > Experts."
       },
       "messageQueue": {
         "addToQueue": "Mettre en file",
@@ -1857,5 +1907,50 @@
     "delete": "Supprimer",
     "create": "Créer",
     "save": "Enregistrer"
+  },
+  "ExpertsSettings": {
+    "title": "Compétences d'experts",
+    "description": "Activez des workflows de compétences soigneusement sélectionnés et éprouvés pour vos agents de codage IA. Chaque expert est une compétence autonome du projet superpowers — codeg gère la copie centrale et la lie aux agents que vous choisissez.",
+    "loading": "Chargement des experts…",
+    "loadingContent": "Chargement du contenu…",
+    "emptyExperts": "Aucun expert disponible. Vérifiez les journaux de l'application.",
+    "emptySelection": "Sélectionnez un expert pour voir son contenu et gérer son activation.",
+    "emptySearch": "Aucun expert ne correspond à la recherche actuelle.",
+    "searchPlaceholder": "Rechercher des experts par nom, ID ou description",
+    "enableForAgents": "Activer pour les agents",
+    "noAgents": "Aucun agent ACP détecté.",
+    "copyModeWarning": "Copié (non lié). Réactivez après les mises à jour de codeg pour obtenir la dernière version.",
+    "previewTitle": "Aperçu de SKILL.md",
+    "categories": {
+      "discovery": "Découverte et conception",
+      "planning": "Planification",
+      "execution": "Exécution",
+      "quality": "Qualité et tests",
+      "debugging": "Débogage",
+      "review": "Révision et intégration",
+      "meta": "Meta"
+    },
+    "states": {
+      "not_linked": "Non activé",
+      "linked_to_codeg": "Activé",
+      "linked_elsewhere": "Bloqué — un autre lien existe",
+      "blocked_by_real_directory": "Bloqué — une compétence personnalisée occupe ce nom",
+      "broken": "Lien cassé"
+    },
+    "badges": {
+      "userModified": "Modifié par l'utilisateur"
+    },
+    "actions": {
+      "openCentralDir": "Ouvrir le dossier central",
+      "refresh": "Actualiser"
+    },
+    "toasts": {
+      "loadFailed": "Échec du chargement des détails de l'expert",
+      "enabled": "Expert activé pour cet agent",
+      "disabled": "Expert désactivé pour cet agent",
+      "enableFailed": "Échec de l'activation de l'expert",
+      "disableFailed": "Échec de la désactivation de l'expert",
+      "openFolderFailed": "Échec de l'ouverture du dossier"
+    }
   }
 }
