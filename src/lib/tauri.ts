@@ -27,6 +27,7 @@ import type {
   GitPushInfo,
   GitMergeResult,
   GitRebaseResult,
+  GitResetMode,
   GitConflictFileVersions,
   GitCommitResult,
   GitRemote,
@@ -40,6 +41,7 @@ import type {
   FilePreviewContent,
   FileEditContent,
   FileSaveResult,
+  WorkspaceSnapshotResponse,
   GitLogResult,
   SystemLanguageSettings,
   SystemProxySettings,
@@ -452,6 +454,10 @@ export async function mcpRemoveServer(
 
 export async function updateTrafficLightPosition(zoom: number): Promise<void> {
   return invoke("update_traffic_light_position", { zoom: zoom as number })
+}
+
+export async function updateAppearanceMode(mode: string): Promise<void> {
+  return invoke("update_appearance_mode", { mode })
 }
 
 // Folder history commands
@@ -1006,12 +1012,26 @@ export async function getFileTree(
   return invoke("get_file_tree", { path, maxDepth: maxDepth ?? null })
 }
 
-export async function startFileTreeWatch(rootPath: string): Promise<void> {
-  return invoke("start_file_tree_watch", { rootPath })
+export async function startWorkspaceStateStream(
+  rootPath: string
+): Promise<WorkspaceSnapshotResponse> {
+  return invoke("start_workspace_state_stream", { rootPath })
 }
 
-export async function stopFileTreeWatch(rootPath: string): Promise<void> {
-  return invoke("stop_file_tree_watch", { rootPath })
+export async function stopWorkspaceStateStream(
+  rootPath: string
+): Promise<void> {
+  return invoke("stop_workspace_state_stream", { rootPath })
+}
+
+export async function getWorkspaceSnapshot(
+  rootPath: string,
+  sinceSeq?: number
+): Promise<WorkspaceSnapshotResponse> {
+  return invoke("get_workspace_snapshot", {
+    rootPath,
+    sinceSeq: sinceSeq ?? null,
+  })
 }
 
 export async function readFileBase64(
@@ -1104,6 +1124,14 @@ export async function gitCommitBranches(
   commit: string
 ): Promise<string[]> {
   return invoke("git_commit_branches", { path, commit })
+}
+
+export async function gitReset(
+  path: string,
+  commit: string,
+  mode: GitResetMode
+): Promise<void> {
+  return invoke("git_reset", { path, commit, mode })
 }
 
 // Terminal commands

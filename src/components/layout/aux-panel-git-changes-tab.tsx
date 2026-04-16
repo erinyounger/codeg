@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react"
-import { subscribe } from "@/lib/platform"
 import { ChevronsDownUp, ChevronsUpDown } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
@@ -35,20 +34,20 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useAuxPanelContext } from "@/contexts/aux-panel-context"
 import { useFolderContext } from "@/contexts/folder-context"
+import { useTabContext } from "@/contexts/tab-context"
 import { useWorkspaceContext } from "@/contexts/workspace-context"
+import { useWorkspaceStateStore } from "@/hooks/use-workspace-state-store"
 import {
   deleteFileTreeEntry,
-  gitDiff,
   gitAddFiles,
   gitRollbackFile,
   gitStatus,
   openCommitWindow,
-  startFileTreeWatch,
-  stopFileTreeWatch,
 } from "@/lib/api"
-import type { FileTreeChangedEvent, GitStatusEntry } from "@/lib/types"
+import { joinFsPath } from "@/lib/path-utils"
+import { emitAttachFileToSession } from "@/lib/session-attachment-events"
+import type { GitStatusEntry } from "@/lib/types"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -228,52 +227,6 @@ function filterDirectoryGitCandidates(
   })
 }
 
-function normalizeDiffPath(rawPath: string): string | null {
-  const trimmed = rawPath.trim().replace(/^"|"$/g, "")
-  if (!trimmed || trimmed === "/dev/null") return null
-  if (trimmed.startsWith("a/") || trimmed.startsWith("b/")) {
-    return trimmed.slice(2).replace(/\\/g, "/")
-  }
-  return trimmed.replace(/\\/g, "/")
-}
-
-function parsePathFromDiffGitLine(line: string): string | null {
-  if (!line.startsWith("diff --git ")) return null
-  const match = line.match(/^diff --git\s+(.+?)\s+(.+)$/)
-  if (!match) return null
-  return normalizeDiffPath(match[2]) ?? normalizeDiffPath(match[1])
-}
-
-function parseDiffStatsMap(
-  diffText: string
-): Map<string, { additions: number; deletions: number }> {
-  const stats = new Map<string, { additions: number; deletions: number }>()
-  let currentPath: string | null = null
-
-  for (const line of diffText.split("\n")) {
-    const nextPath = parsePathFromDiffGitLine(line)
-    if (nextPath) {
-      currentPath = nextPath
-      if (!stats.has(currentPath)) {
-        stats.set(currentPath, { additions: 0, deletions: 0 })
-      }
-      continue
-    }
-
-    if (!currentPath) continue
-    const current = stats.get(currentPath)
-    if (!current) continue
-
-    if (line.startsWith("+") && !line.startsWith("+++")) {
-      current.additions += 1
-    } else if (line.startsWith("-") && !line.startsWith("---")) {
-      current.deletions += 1
-    }
-  }
-
-  return stats
-}
-
 function toSortedTreeNodes(dir: MutableChangeTreeDirNode): ChangeTreeNode[] {
   return Array.from(dir.children.values())
     .map<ChangeTreeNode>((node) => {
@@ -420,47 +373,14 @@ function canOpenFile(status: string): boolean {
   return !status.trim().toUpperCase().includes("D")
 }
 
-function shouldRefreshFromEvent(event: FileTreeChangedEvent): boolean {
-  const shouldRefreshGitStatus = event.refresh_git_status ?? true
-  if (!shouldRefreshGitStatus) return false
-  if (event.kind === "access") return false
-  return true
-}
-
-function toWorkingTreeChanges(
-  entries: GitStatusEntry[],
-  diffText: string
-): WorkingTreeChange[] {
-  const stats = parseDiffStatsMap(diffText)
-
-  return entries
-    .map((entry) => {
-      const path = normalizeGitStatusPath(entry.file)
-      if (!path) return null
-      const diffStat = stats.get(path)
-      return {
-        path,
-        status: entry.status.trim() || "M",
-        additions: diffStat?.additions ?? 0,
-        deletions: diffStat?.deletions ?? 0,
-      }
-    })
-    .filter((change): change is WorkingTreeChange => change !== null)
-    .sort((left, right) =>
-      left.path.localeCompare(right.path, undefined, { sensitivity: "base" })
-    )
-}
-
 export function GitChangesTab() {
   const t = useTranslations("Folder.gitChangesTab")
   const tCommon = useTranslations("Folder.common")
+  const tFileTree = useTranslations("Folder.fileTreeTab")
   const { folder } = useFolderContext()
-  const { activeTab } = useAuxPanelContext()
+  const { tabs, activeTabId } = useTabContext()
   const { openFilePreview, openWorkingTreeDiff } = useWorkspaceContext()
-
-  const [changes, setChanges] = useState<WorkingTreeChange[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const workspaceState = useWorkspaceStateStore(folder?.path ?? null)
 
   const [expandedTrackedPaths, setExpandedTrackedPaths] = useState<Set<string>>(
     new Set()
@@ -492,15 +412,38 @@ export function GitChangesTab() {
 
   const hasHydratedTrackedPaths = useRef(false)
   const hasHydratedUntrackedPaths = useRef(false)
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const isChangesTabActive = activeTab === "changes"
 
   const folderName = useMemo(() => {
     const path = folder?.path ?? ""
     const parts = path.split(/[\\/]/).filter(Boolean)
     return (parts[parts.length - 1] ?? path) || t("workspace")
   }, [folder?.path, t])
+  const activeSessionTabId = useMemo(() => {
+    const activeTab = tabs.find((tab) => tab.id === activeTabId)
+    if (!activeTab || activeTab.kind !== "conversation") return null
+    return activeTab.id
+  }, [activeTabId, tabs])
+  const canAttachToSession = Boolean(activeSessionTabId && folder?.path)
+
+  const changes = useMemo<WorkingTreeChange[]>(() => {
+    return [...workspaceState.git]
+      .map((entry) => ({
+        path: entry.path,
+        status: entry.status,
+        additions: entry.additions,
+        deletions: entry.deletions,
+      }))
+      .sort((left, right) =>
+        left.path.localeCompare(right.path, undefined, { sensitivity: "base" })
+      )
+  }, [workspaceState.git])
+
+  const loading = useMemo(
+    () => workspaceState.health === "resyncing" && workspaceState.seq === 0,
+    [workspaceState.health, workspaceState.seq]
+  )
+  const error =
+    workspaceState.health === "degraded" ? workspaceState.error : null
 
   const trackedChanges = useMemo(
     () => changes.filter((change) => !isUntrackedStatus(change.status)),
@@ -570,99 +513,6 @@ export function GitChangesTab() {
     })
   }, [allUntrackedDirectoryPaths, untrackedChanges.length])
 
-  const fetchChanges = useCallback(
-    async (options?: { inline?: boolean }) => {
-      if (!folder?.path) {
-        setLoading(false)
-        setError(null)
-        setChanges([])
-        return
-      }
-
-      const inline = options?.inline ?? false
-      if (!inline) {
-        setLoading(true)
-      }
-      setError(null)
-
-      try {
-        const statusEntries = await gitStatus(folder.path, true)
-        const hasTrackedEntries = statusEntries.some(
-          (entry) => !isUntrackedStatus(entry.status)
-        )
-        const diffText = hasTrackedEntries
-          ? await gitDiff(folder.path).catch(() => "")
-          : ""
-        setChanges(toWorkingTreeChanges(statusEntries, diffText))
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err))
-      } finally {
-        if (!inline) {
-          setLoading(false)
-        }
-      }
-    },
-    [folder?.path]
-  )
-
-  useEffect(() => {
-    if (!isChangesTabActive) return
-    void fetchChanges()
-  }, [fetchChanges, isChangesTabActive])
-
-  useEffect(() => {
-    const rootPath = folder?.path
-    if (!rootPath || !isChangesTabActive) return
-
-    let unlisten: (() => void) | null = null
-    const normalizedRootPath = normalizeComparePath(rootPath)
-
-    const scheduleRefresh = () => {
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current)
-      }
-      refreshTimerRef.current = setTimeout(() => {
-        void fetchChanges({ inline: true })
-      }, 220)
-    }
-
-    const setup = async () => {
-      try {
-        await startFileTreeWatch(rootPath)
-      } catch {
-        // ignore watch startup errors
-      }
-
-      try {
-        unlisten = await subscribe<FileTreeChangedEvent>(
-          "folder://file-tree-changed",
-          (payload) => {
-            if (
-              normalizeComparePath(payload.root_path) !== normalizedRootPath
-            ) {
-              return
-            }
-            if (!shouldRefreshFromEvent(payload)) return
-            scheduleRefresh()
-          }
-        )
-      } catch {
-        // ignore listen errors
-      }
-    }
-
-    void setup()
-
-    return () => {
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current)
-        refreshTimerRef.current = null
-      }
-      unlisten?.()
-      void stopFileTreeWatch(rootPath)
-    }
-  }, [fetchChanges, folder?.path, isChangesTabActive])
-
   const trackedCanExpand = useMemo(() => {
     if (trackedTreeNodes.length === 0) return false
     for (const path of allTrackedDirectoryPaths) {
@@ -718,6 +568,16 @@ export function GitChangesTab() {
       })
     })
   }, [folder, t])
+  const handleAttachToSession = useCallback(
+    (relativePath: string) => {
+      if (!activeSessionTabId || !folder?.path) return
+      emitAttachFileToSession({
+        tabId: activeSessionTabId,
+        path: joinFsPath(folder.path, relativePath),
+      })
+    },
+    [activeSessionTabId, folder?.path]
+  )
 
   const resetDirectoryGitActionDialog = useCallback(() => {
     setDirectoryGitActionType(null)
@@ -796,13 +656,13 @@ export function GitChangesTab() {
       try {
         await gitAddFiles(folder.path, [target.path])
         toast.success(t("toasts.addedToVcs", { name: target.name }))
-        await fetchChanges({ inline: true })
+        await workspaceState.requestResync("git_action:add")
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         toast.error(t("toasts.addToVcsFailed"), { description: message })
       }
     },
-    [fetchChanges, folder?.path, openDirectoryGitActionDialog, t]
+    [folder?.path, openDirectoryGitActionDialog, t, workspaceState]
   )
 
   const handleRollbackConfirm = useCallback(async () => {
@@ -813,14 +673,14 @@ export function GitChangesTab() {
       await gitRollbackFile(folder.path, rollbackTarget.path)
       toast.success(t("toasts.rolledBack", { name: rollbackTarget.name }))
       setRollbackTarget(null)
-      await fetchChanges({ inline: true })
+      await workspaceState.requestResync("git_action:rollback")
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       toast.error(t("toasts.rollbackFailed"), { description: message })
     } finally {
       setRollingBack(false)
     }
-  }, [fetchChanges, folder?.path, rollbackTarget, t])
+  }, [folder?.path, rollbackTarget, t, workspaceState])
 
   const handleRequestDelete = useCallback(
     (target: GitActionTarget, scope: "tracked" | "untracked") => {
@@ -844,14 +704,14 @@ export function GitChangesTab() {
       await deleteFileTreeEntry(folder.path, deleteTarget.path)
       toast.success(t("toasts.deleted", { name: deleteTarget.name }))
       setDeleteTarget(null)
-      await fetchChanges({ inline: true })
+      await workspaceState.requestResync("git_action:delete")
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       toast.error(t("toasts.deleteFailed"), { description: message })
     } finally {
       setDeleting(false)
     }
-  }, [deleteTarget, fetchChanges, folder?.path, t])
+  }, [deleteTarget, folder?.path, t, workspaceState])
 
   const directoryGitAllFilePaths = useMemo(
     () => directoryGitCandidates.map((entry) => entry.path),
@@ -929,7 +789,7 @@ export function GitChangesTab() {
       }
 
       resetDirectoryGitActionDialog()
-      await fetchChanges({ inline: true })
+      await workspaceState.requestResync("git_action:batch")
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       setDirectoryGitError(message)
@@ -949,10 +809,10 @@ export function GitChangesTab() {
   }, [
     directoryGitActionType,
     directoryGitSelectedPaths,
-    fetchChanges,
     folder?.path,
     resetDirectoryGitActionDialog,
     t,
+    workspaceState,
   ])
 
   useEffect(() => {
@@ -999,14 +859,22 @@ export function GitChangesTab() {
               </ContextMenuItem>
               <ContextMenuItem
                 onSelect={() => {
+                  handleAttachToSession(node.path)
+                }}
+                disabled={!canAttachToSession}
+              >
+                {tFileTree("attachToCurrentSession")}
+              </ContextMenuItem>
+              <ContextMenuItem disabled>
+                {t("actions.addToVcs")}
+              </ContextMenuItem>
+              <ContextMenuItem
+                onSelect={() => {
                   handleRequestRollback(target)
                 }}
                 variant="destructive"
               >
                 {t("actions.rollback")}
-              </ContextMenuItem>
-              <ContextMenuItem disabled>
-                {t("actions.addToVcs")}
               </ContextMenuItem>
               <ContextMenuItem
                 onSelect={() => {
@@ -1083,13 +951,21 @@ export function GitChangesTab() {
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() => {
+                handleAttachToSession(file.path)
+              }}
+              disabled={!canAttachToSession}
+            >
+              {tFileTree("attachToCurrentSession")}
+            </ContextMenuItem>
+            <ContextMenuItem disabled>{t("actions.addToVcs")}</ContextMenuItem>
+            <ContextMenuItem
+              onSelect={() => {
                 handleRequestRollback(target)
               }}
               variant="destructive"
             >
               {t("actions.rollback")}
             </ContextMenuItem>
-            <ContextMenuItem disabled>{t("actions.addToVcs")}</ContextMenuItem>
             <ContextMenuItem
               onSelect={() => {
                 handleRequestDelete(target, "tracked")
@@ -1103,6 +979,8 @@ export function GitChangesTab() {
       )
     },
     [
+      canAttachToSession,
+      handleAttachToSession,
       handleOpenCommitWindow,
       handleRequestDelete,
       handleRequestRollback,
@@ -1110,6 +988,7 @@ export function GitChangesTab() {
       openWorkingTreeDiff,
       t,
       tCommon,
+      tFileTree,
     ]
   )
 
@@ -1152,11 +1031,11 @@ export function GitChangesTab() {
               </ContextMenuItem>
               <ContextMenuItem
                 onSelect={() => {
-                  handleRequestRollback(target)
+                  handleAttachToSession(node.path)
                 }}
-                variant="destructive"
+                disabled={!canAttachToSession}
               >
-                {t("actions.rollback")}
+                {tFileTree("attachToCurrentSession")}
               </ContextMenuItem>
               <ContextMenuItem
                 onSelect={() => {
@@ -1164,6 +1043,14 @@ export function GitChangesTab() {
                 }}
               >
                 {t("actions.addToVcs")}
+              </ContextMenuItem>
+              <ContextMenuItem
+                onSelect={() => {
+                  handleRequestRollback(target)
+                }}
+                variant="destructive"
+              >
+                {t("actions.rollback")}
               </ContextMenuItem>
               <ContextMenuItem
                 onSelect={() => {
@@ -1230,11 +1117,11 @@ export function GitChangesTab() {
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() => {
-                handleRequestRollback(target)
+                handleAttachToSession(file.path)
               }}
-              variant="destructive"
+              disabled={!canAttachToSession}
             >
-              {t("actions.rollback")}
+              {tFileTree("attachToCurrentSession")}
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() => {
@@ -1242,6 +1129,14 @@ export function GitChangesTab() {
               }}
             >
               {t("actions.addToVcs")}
+            </ContextMenuItem>
+            <ContextMenuItem
+              onSelect={() => {
+                handleRequestRollback(target)
+              }}
+              variant="destructive"
+            >
+              {t("actions.rollback")}
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() => {
@@ -1256,6 +1151,8 @@ export function GitChangesTab() {
       )
     },
     [
+      canAttachToSession,
+      handleAttachToSession,
       handleOpenCommitWindow,
       handleAddToVcs,
       handleRequestDelete,
@@ -1264,6 +1161,7 @@ export function GitChangesTab() {
       openWorkingTreeDiff,
       t,
       tCommon,
+      tFileTree,
     ]
   )
 
@@ -1363,6 +1261,17 @@ export function GitChangesTab() {
                       </ContextMenuItem>
                       <ContextMenuItem
                         onSelect={() => {
+                          handleAttachToSession("")
+                        }}
+                        disabled={!canAttachToSession}
+                      >
+                        {tFileTree("attachToCurrentSession")}
+                      </ContextMenuItem>
+                      <ContextMenuItem disabled>
+                        {t("actions.addToVcs")}
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onSelect={() => {
                           handleRequestRollback({
                             kind: "dir",
                             path: "",
@@ -1372,9 +1281,6 @@ export function GitChangesTab() {
                         variant="destructive"
                       >
                         {t("actions.rollback")}
-                      </ContextMenuItem>
-                      <ContextMenuItem disabled>
-                        {t("actions.addToVcs")}
                       </ContextMenuItem>
 
                       <ContextMenuItem
@@ -1464,15 +1370,11 @@ export function GitChangesTab() {
                       </ContextMenuItem>
                       <ContextMenuItem
                         onSelect={() => {
-                          handleRequestRollback({
-                            kind: "dir",
-                            path: "",
-                            name: folderName,
-                          })
+                          handleAttachToSession("")
                         }}
-                        variant="destructive"
+                        disabled={!canAttachToSession}
                       >
-                        {t("actions.rollback")}
+                        {tFileTree("attachToCurrentSession")}
                       </ContextMenuItem>
                       <ContextMenuItem
                         onSelect={() => {
@@ -1484,6 +1386,18 @@ export function GitChangesTab() {
                         }}
                       >
                         {t("actions.addToVcs")}
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onSelect={() => {
+                          handleRequestRollback({
+                            kind: "dir",
+                            path: "",
+                            name: folderName,
+                          })
+                        }}
+                        variant="destructive"
+                      >
+                        {t("actions.rollback")}
                       </ContextMenuItem>
                       <ContextMenuItem
                         onSelect={() => {

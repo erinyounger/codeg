@@ -172,6 +172,7 @@
     "checking": "Comprobando...",
     "checkUpdate": "Buscar actualizaciones",
     "updating": "Instalando...",
+    "downloading": "Descargando...",
     "upgradeTo": "Actualizar a v{version}",
     "foundUpdate": "Nueva versión v{version} encontrada",
     "alreadyLatest": "Ya tienes la versión más reciente",
@@ -347,6 +348,14 @@
     "emptyContentHint": "Aún no hay contenido. Haz clic en \"Editar\" para empezar.",
     "loadingSkill": "Cargando Skill...",
     "emptyNoAgents": "No hay agentes disponibles.",
+    "noSelectionHint": "Selecciona un Skill a la izquierda o haz clic en \"Nuevo Skill\" para crear uno.",
+    "scope": {
+      "global": "Global",
+      "folder": "Carpeta",
+      "selectFolderPlaceholder": "Seleccionar una carpeta",
+      "noFolders": "No se encontraron carpetas",
+      "pickFolderHint": "Selecciona una carpeta para ver sus Skills."
+    },
     "actions": {
       "preview": "Vista previa",
       "edit": "Editar",
@@ -545,8 +554,24 @@
       "enableWebsocketAria": "Habilitar WebSocket para Codex Provider",
       "enableSkills": "Habilitar Skills",
       "enableSkillsAria": "Habilitar Skills para Codex",
+      "enableFast": "Habilitar Fast",
+      "enableFastAria": "Habilitar nivel de servicio Fast para Codex",
       "authJsonNative": "auth.json (nativo)",
-      "configTomlNative": "config.toml (nativo)"
+      "configTomlNative": "config.toml (nativo)",
+      "loginButton": "Iniciar sesión con ChatGPT",
+      "loginRequesting": "Solicitando código de inicio de sesión...",
+      "loginStep1": "Abre la siguiente URL en tu navegador:",
+      "loginStep2": "Introduce el siguiente código:",
+      "loginPolling": "Esperando autorización...",
+      "loginCancel": "Cancelar",
+      "loginSuccess": "¡Inicio de sesión exitoso, configuración guardada!",
+      "loginFailed": "Error de inicio de sesión: {message}",
+      "loginRetry": "Reintentar",
+      "loginCodeCopied": "Código copiado",
+      "loggedIn": "Cuenta conectada",
+      "loginRelogin": "Reconectar / Cambiar cuenta",
+      "loginTimeout": "Tiempo de inicio de sesión agotado, inténtalo de nuevo",
+      "loginSaveFailed": "Inicio de sesión exitoso pero falló al guardar la configuración"
     },
     "gemini": {
       "authConfig": "Configuración de autenticación de Gemini",
@@ -615,7 +640,13 @@
       "reasoningModel": "Modelo de razonamiento (thinking)",
       "haikuDefaultModel": "Modelo Haiku predeterminado",
       "sonnetDefaultModel": "Modelo Sonnet predeterminado",
-      "opusDefaultModel": "Modelo Opus predeterminado"
+      "opusDefaultModel": "Modelo Opus predeterminado",
+      "effortLevel": "Nivel de razonamiento",
+      "effortLevelDefault": "Nivel predeterminado",
+      "effortLevel_low": "Bajo",
+      "effortLevel_medium": "Medio",
+      "effortLevel_high": "Alto",
+      "effortLevelMax": "Máximo (solo Opus)"
     },
     "dialogs": {
       "confirmDeleteProvider": "¿Eliminar proveedor {providerId}?",
@@ -1180,6 +1211,8 @@
       "loadingBranches": "Cargando ramas...",
       "noContainingBranches": "No se encontraron ramas contenedoras.",
       "newBranch": "Nueva rama...",
+      "resetToHere": "Resetear aquí",
+      "resetDisabledReasonNotCurrentBranchView": "Disponible solo al ver la rama actual",
       "viewCommitDiffAria": "Ver diff del commit {hash}",
       "copyFullCommitHashAria": "Copiar hash completo del commit {hash}",
       "pushStatus": {
@@ -1198,7 +1231,10 @@
         "createdAndSwitchedNewBranch": "Nueva rama creada y activada",
         "newBranchFromCommit": "{name} (desde {shortHash})",
         "createBranchFailed": "No se pudo crear la rama",
-        "openPushWindowFailed": "No se pudo abrir la ventana de envío"
+        "openPushWindowFailed": "No se pudo abrir la ventana de envío",
+        "resetSuccess": "Reset completado",
+        "resetSuccessDescription": "{branch} se reseteó a {shortHash} con {mode}",
+        "resetFailed": "Falló el reset"
       },
       "branchSelector": {
         "selectBranchPlaceholder": "Seleccionar rama...",
@@ -1210,7 +1246,33 @@
       "dialogs": {
         "newBranchTitle": "Nueva rama",
         "newBranchDescription": "Crea una nueva rama con el commit {shortHash} como último commit.",
-        "branchNamePlaceholder": "Nombre de la rama"
+        "branchNamePlaceholder": "Nombre de la rama",
+        "reset": {
+          "title": "Resetear la rama actual hasta aquí",
+          "branchLabel": "Rama",
+          "targetLabel": "Commit objetivo",
+          "messageLabel": "Mensaje",
+          "modeLabel": "Modo de reset",
+          "confirmButton": "Resetear",
+          "modes": {
+            "soft": {
+              "label": "--soft",
+              "description": "Mueve HEAD y el puntero de la rama actual al commit objetivo.\nMantiene Index y Working Tree sin cambios.\nLos cambios de los commits retirados permanecen en estado staged."
+            },
+            "mixed": {
+              "label": "--mixed (predeterminado)",
+              "description": "Mueve HEAD al commit objetivo.\nResetea Index al commit objetivo y mantiene los cambios en Working Tree.\nLos cambios pasan de staged a unstaged."
+            },
+            "hard": {
+              "label": "--hard",
+              "description": "Mueve HEAD y resetea tanto Index como Working Tree al commit objetivo.\nSe descartan los cambios locales rastreados posteriores al commit objetivo.\nEs una operación destructiva."
+            },
+            "keep": {
+              "label": "--keep",
+              "description": "Mueve HEAD al commit objetivo e intenta conservar los cambios locales.\nSolo se conservan cambios que no entren en conflicto.\nSi hay conflictos, el reset se aborta para proteger tu trabajo."
+            }
+          }
+        }
       }
     },
     "gitChangesTab": {
@@ -1281,7 +1343,7 @@
       "openInFileManager": "Abrir en el gestor de archivos",
       "openInFinder": "Abrir en Finder",
       "openInExplorer": "Abrir en Explorer",
-      "attachToCurrentSession": "Adjuntar a la sesión actual",
+      "attachToCurrentSession": "Agregar a la sesión",
       "compareWithBranch": "Comparar con rama...",
       "reloadFromDisk": "Recargar desde disco",
       "new": "Nuevo",
@@ -1448,7 +1510,17 @@
         "toolFallbackTitle": "Herramienta",
         "eventErrorTitle": "Error del agente",
         "notificationTurnComplete": "{agent} ha terminado de responder",
-        "notificationError": "{agent} error: {message}"
+        "notificationError": "{agent} error: {message}",
+        "claudeApiRetry": {
+          "fallbackError": "authentication_failed",
+          "retryingWithMax": "reintentando {attempt}/{max}",
+          "retryingAttempt": "reintentando intento {attempt}",
+          "retrying": "reintentando",
+          "nextRetryIn": "siguiente en {seconds}s",
+          "line": "{error}{status} · {retry}",
+          "lineWithDelay": "{error}{status} · {retry}, {delay}",
+          "httpStatus": " (HTTP {status})"
+        }
       },
       "connectionLifecycle": {
         "tasks": {
@@ -1551,9 +1623,24 @@
         "running": "En ejecución"
       },
       "reasoning": {
-        "thinking": "Pensando",
+        "thinking": "Pensando…",
         "thoughtForFewSeconds": "Pensamiento",
         "thoughtForSeconds": "Pensamiento"
+      },
+      "linkSafety": {
+        "localFileTitle": "¿Abrir archivo local?",
+        "externalLinkTitle": "¿Abrir enlace externo?",
+        "localFileDescription": "Está a punto de abrir un archivo local en el panel de archivos.",
+        "externalLinkDescription": "Está a punto de visitar un sitio web externo.",
+        "cancel": "Cancelar",
+        "opening": "Abriendo…",
+        "openFile": "Abrir archivo",
+        "openLink": "Abrir enlace",
+        "errorCannotOpen": "No se puede abrir el archivo local",
+        "errorNoWorkspace": "No hay ninguna carpeta de espacio de trabajo activa.",
+        "errorOutsideWorkspace": "El archivo está fuera de la carpeta del espacio de trabajo actual.",
+        "errorFailedOpen": "Error al abrir el archivo local",
+        "errorFailedLink": "Error al abrir el enlace"
       },
       "messageList": {
         "attachedResources": "Recursos adjuntos",

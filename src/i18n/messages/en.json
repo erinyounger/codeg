@@ -172,6 +172,7 @@
     "checking": "Checking...",
     "checkUpdate": "Check for updates",
     "updating": "Installing...",
+    "downloading": "Downloading...",
     "upgradeTo": "Upgrade to v{version}",
     "foundUpdate": "New version v{version} found",
     "alreadyLatest": "You're on the latest version",
@@ -347,6 +348,14 @@
     "emptyContentHint": "No content yet. Click \"Edit\" to start.",
     "loadingSkill": "Loading skill...",
     "emptyNoAgents": "No available agent.",
+    "noSelectionHint": "Select a skill on the left, or click \"New Skill\" to create one.",
+    "scope": {
+      "global": "Global",
+      "folder": "Folder",
+      "selectFolderPlaceholder": "Select a folder",
+      "noFolders": "No folders found",
+      "pickFolderHint": "Select a folder to view its skills."
+    },
     "actions": {
       "preview": "Preview",
       "edit": "Edit",
@@ -545,8 +554,24 @@
       "enableWebsocketAria": "Enable WebSocket for Codex Provider",
       "enableSkills": "Enable Skills",
       "enableSkillsAria": "Enable Skills for Codex",
+      "enableFast": "Enable Fast",
+      "enableFastAria": "Enable Fast service tier for Codex",
       "authJsonNative": "auth.json (native)",
-      "configTomlNative": "config.toml (native)"
+      "configTomlNative": "config.toml (native)",
+      "loginButton": "Log in with ChatGPT",
+      "loginRequesting": "Requesting login code...",
+      "loginStep1": "Open the following URL in your browser:",
+      "loginStep2": "Enter the code below:",
+      "loginPolling": "Waiting for authorization...",
+      "loginCancel": "Cancel",
+      "loginSuccess": "Logged in successfully, config saved!",
+      "loginFailed": "Login failed: {message}",
+      "loginRetry": "Retry",
+      "loginCodeCopied": "Code copied",
+      "loggedIn": "Account logged in",
+      "loginRelogin": "Re-login / Switch account",
+      "loginTimeout": "Login timed out, please try again",
+      "loginSaveFailed": "Login succeeded but failed to save config"
     },
     "gemini": {
       "authConfig": "Gemini Auth Config",
@@ -615,7 +640,13 @@
       "reasoningModel": "Reasoning Model (thinking)",
       "haikuDefaultModel": "Default Haiku Model",
       "sonnetDefaultModel": "Default Sonnet Model",
-      "opusDefaultModel": "Default Opus Model"
+      "opusDefaultModel": "Default Opus Model",
+      "effortLevel": "Reasoning Effort Level",
+      "effortLevelDefault": "Default Level",
+      "effortLevel_low": "Low",
+      "effortLevel_medium": "Medium",
+      "effortLevel_high": "High",
+      "effortLevelMax": "Max (Opus only)"
     },
     "dialogs": {
       "confirmDeleteProvider": "Delete Provider {providerId}?",
@@ -1180,6 +1211,8 @@
       "loadingBranches": "Loading branches...",
       "noContainingBranches": "No containing branches found.",
       "newBranch": "New branch...",
+      "resetToHere": "Reset to Here",
+      "resetDisabledReasonNotCurrentBranchView": "Available only when viewing current branch",
       "viewCommitDiffAria": "View diff for commit {hash}",
       "copyFullCommitHashAria": "Copy full commit hash {hash}",
       "pushStatus": {
@@ -1198,7 +1231,10 @@
         "createdAndSwitchedNewBranch": "Created and switched to new branch",
         "newBranchFromCommit": "{name} (from {shortHash})",
         "createBranchFailed": "Failed to create branch",
-        "openPushWindowFailed": "Failed to open push window"
+        "openPushWindowFailed": "Failed to open push window",
+        "resetSuccess": "Reset successful",
+        "resetSuccessDescription": "{branch} reset to {shortHash} with {mode}",
+        "resetFailed": "Reset failed"
       },
       "branchSelector": {
         "selectBranchPlaceholder": "Select branch...",
@@ -1210,7 +1246,33 @@
       "dialogs": {
         "newBranchTitle": "New branch",
         "newBranchDescription": "Create a new branch with commit {shortHash} as the latest commit.",
-        "branchNamePlaceholder": "Branch name"
+        "branchNamePlaceholder": "Branch name",
+        "reset": {
+          "title": "Reset Current Branch to Here",
+          "branchLabel": "Branch",
+          "targetLabel": "Target",
+          "messageLabel": "Message",
+          "modeLabel": "Reset mode",
+          "confirmButton": "Reset",
+          "modes": {
+            "soft": {
+              "label": "--soft",
+              "description": "Move HEAD and the current branch pointer to the target commit.\nKeep Index and Working Tree unchanged.\nChanges from the removed commits stay staged."
+            },
+            "mixed": {
+              "label": "--mixed (default)",
+              "description": "Move HEAD to the target commit.\nReset Index to the target commit while keeping Working Tree changes.\nThose changes become unstaged."
+            },
+            "hard": {
+              "label": "--hard",
+              "description": "Move HEAD and reset both Index and Working Tree to the target commit.\nLocal tracked changes after the target commit are discarded.\nThis is a destructive operation."
+            },
+            "keep": {
+              "label": "--keep",
+              "description": "Move HEAD to the target commit and keep local changes when possible.\nOnly non-conflicting local changes are preserved.\nIf conflicts are detected, reset aborts to protect your work."
+            }
+          }
+        }
       }
     },
     "gitChangesTab": {
@@ -1281,7 +1343,7 @@
       "openInFileManager": "Open in file manager",
       "openInFinder": "Open in Finder",
       "openInExplorer": "Open in Explorer",
-      "attachToCurrentSession": "Attach to current session",
+      "attachToCurrentSession": "Add to session",
       "compareWithBranch": "Compare with branch...",
       "reloadFromDisk": "Reload from disk",
       "new": "New",
@@ -1448,7 +1510,17 @@
         "toolFallbackTitle": "Tool",
         "eventErrorTitle": "Agent Error",
         "notificationTurnComplete": "{agent} has finished responding",
-        "notificationError": "{agent} error: {message}"
+        "notificationError": "{agent} error: {message}",
+        "claudeApiRetry": {
+          "fallbackError": "authentication_failed",
+          "retryingWithMax": "retrying {attempt}/{max}",
+          "retryingAttempt": "retrying attempt {attempt}",
+          "retrying": "retrying",
+          "nextRetryIn": "next in {seconds}s",
+          "line": "{error}{status} · {retry}",
+          "lineWithDelay": "{error}{status} · {retry}, {delay}",
+          "httpStatus": " (HTTP {status})"
+        }
       },
       "connectionLifecycle": {
         "tasks": {
@@ -1551,9 +1623,24 @@
         "running": "Running"
       },
       "reasoning": {
-        "thinking": "Thinking",
+        "thinking": "Thinking…",
         "thoughtForFewSeconds": "Thought",
         "thoughtForSeconds": "Thought"
+      },
+      "linkSafety": {
+        "localFileTitle": "Open local file?",
+        "externalLinkTitle": "Open external link?",
+        "localFileDescription": "You're about to open a local file in the Files panel.",
+        "externalLinkDescription": "You're about to visit an external website.",
+        "cancel": "Cancel",
+        "opening": "Opening...",
+        "openFile": "Open file",
+        "openLink": "Open link",
+        "errorCannotOpen": "Cannot open local file",
+        "errorNoWorkspace": "No workspace folder is currently active.",
+        "errorOutsideWorkspace": "The file is outside the current workspace folder.",
+        "errorFailedOpen": "Failed to open local file",
+        "errorFailedLink": "Failed to open link"
       },
       "messageList": {
         "attachedResources": "Attached resources",

@@ -29,6 +29,7 @@ import type {
   GitPushInfo,
   GitMergeResult,
   GitRebaseResult,
+  GitResetMode,
   GitConflictFileVersions,
   GitCommitResult,
   GitRemote,
@@ -42,6 +43,7 @@ import type {
   FilePreviewContent,
   FileEditContent,
   FileSaveResult,
+  WorkspaceSnapshotResponse,
   GitLogResult,
   SystemLanguageSettings,
   SystemProxySettings,
@@ -273,6 +275,32 @@ export async function acpUpdateAgentConfig(
 
 export async function acpReorderAgents(agentTypes: AgentType[]): Promise<void> {
   return getTransport().call("acp_reorder_agents", { agentTypes })
+}
+
+export async function codexRequestDeviceCode(): Promise<{
+  userCode: string
+  verificationUrl: string
+  deviceAuthId: string
+  interval: number
+}> {
+  return getTransport().call("codex_request_device_code", {})
+}
+
+export async function codexPollDeviceCode(params: {
+  deviceAuthId: string
+  userCode: string
+}): Promise<{
+  status: "pending" | "success" | "error"
+  message?: string
+  idToken?: string
+  accessToken?: string
+  refreshToken?: string
+  accountId?: string
+}> {
+  return getTransport().call("codex_poll_device_code", {
+    deviceAuthId: params.deviceAuthId,
+    userCode: params.userCode,
+  })
 }
 
 export async function acpPreflight(
@@ -1267,12 +1295,26 @@ export async function getFileTree(
   })
 }
 
-export async function startFileTreeWatch(rootPath: string): Promise<void> {
-  return getTransport().call("start_file_tree_watch", { rootPath })
+export async function startWorkspaceStateStream(
+  rootPath: string
+): Promise<WorkspaceSnapshotResponse> {
+  return getTransport().call("start_workspace_state_stream", { rootPath })
 }
 
-export async function stopFileTreeWatch(rootPath: string): Promise<void> {
-  return getTransport().call("stop_file_tree_watch", { rootPath })
+export async function stopWorkspaceStateStream(
+  rootPath: string
+): Promise<void> {
+  return getTransport().call("stop_workspace_state_stream", { rootPath })
+}
+
+export async function getWorkspaceSnapshot(
+  rootPath: string,
+  sinceSeq?: number
+): Promise<WorkspaceSnapshotResponse> {
+  return getTransport().call("get_workspace_snapshot", {
+    rootPath,
+    sinceSeq: sinceSeq ?? null,
+  })
 }
 
 export async function readFileBase64(
@@ -1377,6 +1419,14 @@ export async function gitCommitBranches(
   commit: string
 ): Promise<string[]> {
   return getTransport().call("git_commit_branches", { path, commit })
+}
+
+export async function gitReset(
+  path: string,
+  commit: string,
+  mode: GitResetMode
+): Promise<void> {
+  return getTransport().call("git_reset", { path, commit, mode })
 }
 
 // Terminal commands

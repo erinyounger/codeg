@@ -12,6 +12,7 @@ mod parsers;
 pub mod process;
 mod terminal;
 pub mod web;
+pub mod workspace_state;
 
 #[cfg(feature = "tauri-runtime")]
 mod tauri_app {
@@ -24,6 +25,7 @@ mod tauri_app {
         experts as experts_commands, folder_commands, folders, mcp as mcp_commands,
         model_provider as model_provider_commands, notification, project_boot, system_settings,
         terminal as terminal_commands, version_control, windows,
+        workspace_state as workspace_state_commands,
     };
     use crate::terminal::manager::TerminalManager;
     use crate::{db, network, process, web};
@@ -61,7 +63,9 @@ mod tauri_app {
             .manage(windows::CommitWindowState::new())
             .manage(windows::MergeWindowState::new())
             .manage(web::WebServerState::new())
-            .manage(std::sync::Arc::new(web::event_bridge::WebEventBroadcaster::new()))
+            .manage(std::sync::Arc::new(
+                web::event_bridge::WebEventBroadcaster::new(),
+            ))
             .setup(|app| {
                 let app_data_dir = app.path().app_data_dir()?;
                 let app_version = env!("CARGO_PKG_VERSION");
@@ -82,6 +86,10 @@ mod tauri_app {
                         eprintln!("[Settings] failed to load system proxy settings: {err}");
                     }
                 }
+
+                // Load saved appearance settings before any window is created.
+                tauri::async_runtime::block_on(windows::load_saved_zoom(&db.conn));
+                tauri::async_runtime::block_on(windows::load_saved_appearance_mode(&db.conn));
 
                 // Install bundled expert skills into the central store
                 // (`~/.codeg/skills/`). Runs in the background and does
@@ -107,8 +115,8 @@ mod tauri_app {
                 // Start chat channel background tasks
                 {
                     let ccm = app.state::<ChatChannelManager>();
-                    let broadcaster = app
-                        .state::<std::sync::Arc<web::event_bridge::WebEventBroadcaster>>();
+                    let broadcaster =
+                        app.state::<std::sync::Arc<web::event_bridge::WebEventBroadcaster>>();
                     let db_conn = app.state::<db::AppDatabase>().conn.clone();
                     let ccm_ref = ccm.clone_ref();
                     let br = broadcaster.inner().clone();
@@ -210,8 +218,9 @@ mod tauri_app {
                     if label.starts_with("folder-") {
                         let app = window.app_handle();
                         if let Some(cm) = app.try_state::<ConnectionManager>() {
-                            let disconnected =
-                                tauri::async_runtime::block_on(cm.disconnect_by_owner_window(&label));
+                            let disconnected = tauri::async_runtime::block_on(
+                                cm.disconnect_by_owner_window(&label),
+                            );
                             eprintln!(
                                 "[ACP] folder window closing label={} disconnected_connections={}",
                                 label, disconnected
@@ -279,6 +288,7 @@ mod tauri_app {
                 folders::git_new_branch,
                 folders::git_worktree_add,
                 folders::git_checkout,
+                folders::git_reset,
                 folders::git_list_branches,
                 folders::git_stash_push,
                 folders::git_stash_pop,
@@ -312,8 +322,9 @@ mod tauri_app {
                 folders::git_abort_operation,
                 folders::git_continue_operation,
                 folders::save_folder_opened_conversations,
-                folders::start_file_tree_watch,
-                folders::stop_file_tree_watch,
+                workspace_state_commands::start_workspace_state_stream,
+                workspace_state_commands::stop_workspace_state_stream,
+                workspace_state_commands::get_workspace_snapshot,
                 folders::get_home_directory,
                 folders::list_directory_entries,
                 folders::get_file_tree,
@@ -337,6 +348,7 @@ mod tauri_app {
                 windows::open_push_window,
                 windows::open_project_boot_window,
                 windows::update_traffic_light_position,
+                windows::update_appearance_mode,
                 project_boot::detect_package_manager,
                 project_boot::create_shadcn_project,
                 system_settings::get_system_proxy_settings,
@@ -381,6 +393,8 @@ mod tauri_app {
                 acp_commands::opencode_list_plugins,
                 acp_commands::opencode_install_plugins,
                 acp_commands::opencode_uninstall_plugin,
+                acp_commands::codex_request_device_code,
+                acp_commands::codex_poll_device_code,
                 experts_commands::experts_list,
                 experts_commands::experts_list_for_agent,
                 experts_commands::experts_get_install_status,

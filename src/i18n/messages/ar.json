@@ -172,6 +172,7 @@
     "checking": "جارٍ التحقق...",
     "checkUpdate": "التحقق من التحديثات",
     "updating": "جارٍ التثبيت...",
+    "downloading": "جارٍ التنزيل...",
     "upgradeTo": "الترقية إلى v{version}",
     "foundUpdate": "تم العثور على إصدار جديد v{version}",
     "alreadyLatest": "أنت على أحدث إصدار",
@@ -347,6 +348,14 @@
     "emptyContentHint": "لا يوجد محتوى بعد. انقر \"تحرير\" للبدء.",
     "loadingSkill": "جارٍ تحميل Skill...",
     "emptyNoAgents": "لا يوجد وكيل متاح.",
+    "noSelectionHint": "اختر Skill من اليسار، أو انقر على \"Skill جديد\" لإنشاء واحد.",
+    "scope": {
+      "global": "عام",
+      "folder": "مجلد",
+      "selectFolderPlaceholder": "اختر مجلدًا",
+      "noFolders": "لم يتم العثور على مجلدات",
+      "pickFolderHint": "اختر مجلدًا لعرض مهاراته."
+    },
     "actions": {
       "preview": "معاينة",
       "edit": "تحرير",
@@ -545,8 +554,24 @@
       "enableWebsocketAria": "تفعيل WebSocket لـ Codex Provider",
       "enableSkills": "تفعيل Skills",
       "enableSkillsAria": "تفعيل Skills لـ Codex",
+      "enableFast": "تفعيل Fast",
+      "enableFastAria": "تفعيل مستوى خدمة Fast لـ Codex",
       "authJsonNative": "auth.json (أصلي)",
-      "configTomlNative": "config.toml (أصلي)"
+      "configTomlNative": "config.toml (أصلي)",
+      "loginButton": "تسجيل الدخول باستخدام ChatGPT",
+      "loginRequesting": "جارٍ طلب رمز تسجيل الدخول...",
+      "loginStep1": "افتح الرابط التالي في متصفحك:",
+      "loginStep2": "أدخل الرمز أدناه:",
+      "loginPolling": "في انتظار التفويض...",
+      "loginCancel": "إلغاء",
+      "loginSuccess": "تم تسجيل الدخول بنجاح، تم حفظ الإعدادات!",
+      "loginFailed": "فشل تسجيل الدخول: {message}",
+      "loginRetry": "إعادة المحاولة",
+      "loginCodeCopied": "تم نسخ الرمز",
+      "loggedIn": "تم تسجيل الدخول",
+      "loginRelogin": "إعادة تسجيل الدخول / تبديل الحساب",
+      "loginTimeout": "انتهت مهلة تسجيل الدخول، يرجى المحاولة مرة أخرى",
+      "loginSaveFailed": "تم تسجيل الدخول بنجاح ولكن فشل حفظ الإعدادات"
     },
     "gemini": {
       "authConfig": "إعداد مصادقة Gemini",
@@ -615,7 +640,13 @@
       "reasoningModel": "نموذج الاستدلال (thinking)",
       "haikuDefaultModel": "نموذج Haiku الافتراضي",
       "sonnetDefaultModel": "نموذج Sonnet الافتراضي",
-      "opusDefaultModel": "نموذج Opus الافتراضي"
+      "opusDefaultModel": "نموذج Opus الافتراضي",
+      "effortLevel": "مستوى الاستدلال",
+      "effortLevelDefault": "المستوى الافتراضي",
+      "effortLevel_low": "منخفض",
+      "effortLevel_medium": "متوسط",
+      "effortLevel_high": "مرتفع",
+      "effortLevelMax": "الأقصى (Opus فقط)"
     },
     "dialogs": {
       "confirmDeleteProvider": "حذف المزود {providerId}؟",
@@ -1180,6 +1211,8 @@
       "loadingBranches": "جارٍ تحميل الفروع...",
       "noContainingBranches": "لم يتم العثور على فروع تحتوي هذا الالتزام.",
       "newBranch": "فرع جديد...",
+      "resetToHere": "إعادة الضبط إلى هنا",
+      "resetDisabledReasonNotCurrentBranchView": "متاح فقط عند عرض الفرع الحالي",
       "viewCommitDiffAria": "عرض diff للالتزام {hash}",
       "copyFullCommitHashAria": "نسخ hash الكامل للالتزام {hash}",
       "pushStatus": {
@@ -1198,7 +1231,10 @@
         "createdAndSwitchedNewBranch": "تم إنشاء فرع جديد والتبديل إليه",
         "newBranchFromCommit": "{name} (من {shortHash})",
         "createBranchFailed": "فشل إنشاء الفرع",
-        "openPushWindowFailed": "فشل فتح نافذة الدفع"
+        "openPushWindowFailed": "فشل فتح نافذة الدفع",
+        "resetSuccess": "تمت إعادة الضبط بنجاح",
+        "resetSuccessDescription": "تمت إعادة ضبط {branch} إلى {shortHash} باستخدام {mode}",
+        "resetFailed": "فشلت إعادة الضبط"
       },
       "branchSelector": {
         "selectBranchPlaceholder": "اختر فرعًا...",
@@ -1210,7 +1246,33 @@
       "dialogs": {
         "newBranchTitle": "فرع جديد",
         "newBranchDescription": "إنشاء فرع جديد مع الالتزام {shortHash} كأحدث التزام.",
-        "branchNamePlaceholder": "اسم الفرع"
+        "branchNamePlaceholder": "اسم الفرع",
+        "reset": {
+          "title": "إعادة ضبط الفرع الحالي إلى هذا الالتزام",
+          "branchLabel": "الفرع",
+          "targetLabel": "الالتزام الهدف",
+          "messageLabel": "الرسالة",
+          "modeLabel": "وضع إعادة الضبط",
+          "confirmButton": "إعادة الضبط",
+          "modes": {
+            "soft": {
+              "label": "--soft",
+              "description": "ينقل HEAD ومؤشر الفرع الحالي إلى الالتزام الهدف.\nيبقي Index و Working Tree بدون تغيير.\nتظل تغييرات الالتزامات التي تمت إزالتها في حالة staged."
+            },
+            "mixed": {
+              "label": "--mixed (الافتراضي)",
+              "description": "ينقل HEAD إلى الالتزام الهدف.\nيعيد ضبط Index إلى الالتزام الهدف مع الإبقاء على تغييرات Working Tree.\nتتحول التغييرات من staged إلى unstaged."
+            },
+            "hard": {
+              "label": "--hard",
+              "description": "ينقل HEAD ويعيد ضبط كل من Index و Working Tree إلى الالتزام الهدف.\nسيتم حذف التغييرات المحلية المتتبعة بعد الالتزام الهدف.\nهذه عملية تدميرية."
+            },
+            "keep": {
+              "label": "--keep",
+              "description": "ينقل HEAD إلى الالتزام الهدف مع محاولة الاحتفاظ بالتغييرات المحلية.\nيتم الاحتفاظ فقط بالتغييرات غير المتعارضة.\nعند وجود تعارض، يتم إيقاف العملية لحماية عملك."
+            }
+          }
+        }
       }
     },
     "gitChangesTab": {
@@ -1281,7 +1343,7 @@
       "openInFileManager": "فتح في مدير الملفات",
       "openInFinder": "فتح في Finder",
       "openInExplorer": "فتح في Explorer",
-      "attachToCurrentSession": "إرفاق بالجلسة الحالية",
+      "attachToCurrentSession": "إضافة إلى الجلسة",
       "compareWithBranch": "المقارنة مع الفرع...",
       "reloadFromDisk": "إعادة التحميل من القرص",
       "new": "جديد",
@@ -1448,7 +1510,17 @@
         "toolFallbackTitle": "أداة",
         "eventErrorTitle": "خطأ الوكيل",
         "notificationTurnComplete": "{agent} أنهى الاستجابة",
-        "notificationError": "{agent} خطأ: {message}"
+        "notificationError": "{agent} خطأ: {message}",
+        "claudeApiRetry": {
+          "fallbackError": "authentication_failed",
+          "retryingWithMax": "إعادة المحاولة {attempt}/{max}",
+          "retryingAttempt": "إعادة المحاولة رقم {attempt}",
+          "retrying": "جاري إعادة المحاولة",
+          "nextRetryIn": "المحاولة التالية خلال {seconds}ث",
+          "line": "{error}{status} · {retry}",
+          "lineWithDelay": "{error}{status} · {retry}، {delay}",
+          "httpStatus": " (HTTP {status})"
+        }
       },
       "connectionLifecycle": {
         "tasks": {
@@ -1551,9 +1623,24 @@
         "running": "قيد التشغيل"
       },
       "reasoning": {
-        "thinking": "جارٍ التفكير",
+        "thinking": "جارٍ التفكير…",
         "thoughtForFewSeconds": "تفكير",
         "thoughtForSeconds": "تفكير"
+      },
+      "linkSafety": {
+        "localFileTitle": "فتح ملف محلي؟",
+        "externalLinkTitle": "فتح رابط خارجي؟",
+        "localFileDescription": "أنت على وشك فتح ملف محلي في لوحة الملفات.",
+        "externalLinkDescription": "أنت على وشك زيارة موقع ويب خارجي.",
+        "cancel": "إلغاء",
+        "opening": "جارٍ الفتح…",
+        "openFile": "فتح الملف",
+        "openLink": "فتح الرابط",
+        "errorCannotOpen": "تعذر فتح الملف المحلي",
+        "errorNoWorkspace": "لا يوجد مجلد مساحة عمل نشط حالياً.",
+        "errorOutsideWorkspace": "الملف خارج مجلد مساحة العمل الحالي.",
+        "errorFailedOpen": "فشل فتح الملف المحلي",
+        "errorFailedLink": "فشل فتح الرابط"
       },
       "messageList": {
         "attachedResources": "الموارد المرفقة",

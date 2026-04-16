@@ -4,6 +4,7 @@ import { Monitor, Moon, RotateCcw, Sun, Type } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -47,7 +48,7 @@ export function AppearanceSettings() {
   }
 
   return (
-    <div className="h-full overflow-auto">
+    <ScrollArea className="h-full">
       <div className="w-full space-y-4">
         {/* ===== Theme Mode (existing) ===== */}
         <section className="rounded-xl border bg-card p-4 space-y-4">
@@ -66,7 +67,18 @@ export function AppearanceSettings() {
             </label>
             <Select
               value={theme ?? "system"}
-              onValueChange={(value) => setTheme(value as ThemeMode)}
+              onValueChange={(value) => {
+                setTheme(value as ThemeMode)
+                // Persist to Tauri DB so native window background matches on next open
+                if (
+                  typeof window !== "undefined" &&
+                  "__TAURI_INTERNALS__" in window
+                ) {
+                  import("@/lib/tauri").then((t) =>
+                    t.updateAppearanceMode(value).catch(() => {})
+                  )
+                }
+              }}
             >
               <SelectTrigger className="w-56">
                 <SelectValue placeholder={t("placeholder")} />
@@ -207,6 +219,6 @@ export function AppearanceSettings() {
           </Button>
         </div>
       </div>
-    </div>
+    </ScrollArea>
   )
 }

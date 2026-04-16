@@ -172,6 +172,7 @@
     "checking": "Verificando...",
     "checkUpdate": "Verificar atualizações",
     "updating": "Instalando...",
+    "downloading": "Baixando...",
     "upgradeTo": "Atualizar para v{version}",
     "foundUpdate": "Nova versão v{version} encontrada",
     "alreadyLatest": "Você já está na versão mais recente",
@@ -347,6 +348,14 @@
     "emptyContentHint": "Ainda não há conteúdo. Clique em \"Editar\" para começar.",
     "loadingSkill": "Carregando Skill...",
     "emptyNoAgents": "Nenhum agente disponível.",
+    "noSelectionHint": "Selecione um Skill à esquerda ou clique em \"Novo Skill\" para criar um.",
+    "scope": {
+      "global": "Global",
+      "folder": "Pasta",
+      "selectFolderPlaceholder": "Selecionar uma pasta",
+      "noFolders": "Nenhuma pasta encontrada",
+      "pickFolderHint": "Selecione uma pasta para ver suas Skills."
+    },
     "actions": {
       "preview": "Prévia",
       "edit": "Editar",
@@ -545,8 +554,24 @@
       "enableWebsocketAria": "Habilitar WebSocket para Codex Provider",
       "enableSkills": "Habilitar Skills",
       "enableSkillsAria": "Habilitar Skills para Codex",
+      "enableFast": "Habilitar Fast",
+      "enableFastAria": "Habilitar nível de serviço Fast para Codex",
       "authJsonNative": "auth.json (nativo)",
-      "configTomlNative": "config.toml (nativo)"
+      "configTomlNative": "config.toml (nativo)",
+      "loginButton": "Entrar com ChatGPT",
+      "loginRequesting": "Solicitando código de login...",
+      "loginStep1": "Abra a seguinte URL no seu navegador:",
+      "loginStep2": "Digite o código abaixo:",
+      "loginPolling": "Aguardando autorização...",
+      "loginCancel": "Cancelar",
+      "loginSuccess": "Login realizado com sucesso, configuração salva!",
+      "loginFailed": "Falha no login: {message}",
+      "loginRetry": "Tentar novamente",
+      "loginCodeCopied": "Código copiado",
+      "loggedIn": "Conta conectada",
+      "loginRelogin": "Reconectar / Trocar conta",
+      "loginTimeout": "Login expirou, tente novamente",
+      "loginSaveFailed": "Login realizado com sucesso, mas falha ao salvar configuração"
     },
     "gemini": {
       "authConfig": "Configuração de autenticação do Gemini",
@@ -615,7 +640,13 @@
       "reasoningModel": "Modelo de raciocínio (thinking)",
       "haikuDefaultModel": "Modelo Haiku padrão",
       "sonnetDefaultModel": "Modelo Sonnet padrão",
-      "opusDefaultModel": "Modelo Opus padrão"
+      "opusDefaultModel": "Modelo Opus padrão",
+      "effortLevel": "Nível de raciocínio",
+      "effortLevelDefault": "Nível padrão",
+      "effortLevel_low": "Baixo",
+      "effortLevel_medium": "Médio",
+      "effortLevel_high": "Alto",
+      "effortLevelMax": "Máximo (apenas Opus)"
     },
     "dialogs": {
       "confirmDeleteProvider": "Excluir o provedor {providerId}?",
@@ -1180,6 +1211,8 @@
       "loadingBranches": "Carregando branches...",
       "noContainingBranches": "Nenhuma branch contendo este commit foi encontrada.",
       "newBranch": "Nova branch...",
+      "resetToHere": "Resetar para aqui",
+      "resetDisabledReasonNotCurrentBranchView": "Disponível somente ao visualizar a branch atual",
       "viewCommitDiffAria": "Ver diff do commit {hash}",
       "copyFullCommitHashAria": "Copiar hash completo do commit {hash}",
       "pushStatus": {
@@ -1198,7 +1231,10 @@
         "createdAndSwitchedNewBranch": "Nova branch criada e selecionada",
         "newBranchFromCommit": "{name} (de {shortHash})",
         "createBranchFailed": "Falha ao criar branch",
-        "openPushWindowFailed": "Falha ao abrir a janela de push"
+        "openPushWindowFailed": "Falha ao abrir a janela de push",
+        "resetSuccess": "Reset concluído",
+        "resetSuccessDescription": "{branch} foi resetada para {shortHash} com {mode}",
+        "resetFailed": "Falha no reset"
       },
       "branchSelector": {
         "selectBranchPlaceholder": "Selecionar branch...",
@@ -1210,7 +1246,33 @@
       "dialogs": {
         "newBranchTitle": "Nova branch",
         "newBranchDescription": "Criar uma nova branch com o commit {shortHash} como commit mais recente.",
-        "branchNamePlaceholder": "Nome da branch"
+        "branchNamePlaceholder": "Nome da branch",
+        "reset": {
+          "title": "Resetar a branch atual para este commit",
+          "branchLabel": "Branch",
+          "targetLabel": "Commit alvo",
+          "messageLabel": "Mensagem",
+          "modeLabel": "Modo de reset",
+          "confirmButton": "Resetar",
+          "modes": {
+            "soft": {
+              "label": "--soft",
+              "description": "Move o HEAD e o ponteiro da branch atual para o commit alvo.\nMantém Index e Working Tree sem alterações.\nAs mudanças dos commits removidos permanecem staged."
+            },
+            "mixed": {
+              "label": "--mixed (padrão)",
+              "description": "Move o HEAD para o commit alvo.\nReseta o Index para o commit alvo e mantém as mudanças no Working Tree.\nAs mudanças passam de staged para unstaged."
+            },
+            "hard": {
+              "label": "--hard",
+              "description": "Move o HEAD e reseta tanto Index quanto Working Tree para o commit alvo.\nAs mudanças locais rastreadas após o commit alvo são descartadas.\nEsta é uma operação destrutiva."
+            },
+            "keep": {
+              "label": "--keep",
+              "description": "Move o HEAD para o commit alvo e tenta preservar alterações locais.\nSomente alterações sem conflito são mantidas.\nSe houver conflito, o reset é abortado para proteger seu trabalho."
+            }
+          }
+        }
       }
     },
     "gitChangesTab": {
@@ -1281,7 +1343,7 @@
       "openInFileManager": "Abrir no gerenciador de arquivos",
       "openInFinder": "Abrir no Finder",
       "openInExplorer": "Abrir no Explorer",
-      "attachToCurrentSession": "Anexar à sessão atual",
+      "attachToCurrentSession": "Adicionar à sessão",
       "compareWithBranch": "Comparar com branch...",
       "reloadFromDisk": "Recarregar do disco",
       "new": "Novo",
@@ -1448,7 +1510,17 @@
         "toolFallbackTitle": "Ferramenta",
         "eventErrorTitle": "Erro do agente",
         "notificationTurnComplete": "{agent} terminou de responder",
-        "notificationError": "{agent} erro: {message}"
+        "notificationError": "{agent} erro: {message}",
+        "claudeApiRetry": {
+          "fallbackError": "authentication_failed",
+          "retryingWithMax": "tentando novamente {attempt}/{max}",
+          "retryingAttempt": "tentando novamente tentativa {attempt}",
+          "retrying": "tentando novamente",
+          "nextRetryIn": "próxima em {seconds}s",
+          "line": "{error}{status} · {retry}",
+          "lineWithDelay": "{error}{status} · {retry}, {delay}",
+          "httpStatus": " (HTTP {status})"
+        }
       },
       "connectionLifecycle": {
         "tasks": {
@@ -1551,9 +1623,24 @@
         "running": "Em execução"
       },
       "reasoning": {
-        "thinking": "Pensando",
+        "thinking": "Pensando…",
         "thoughtForFewSeconds": "Pensamento",
         "thoughtForSeconds": "Pensamento"
+      },
+      "linkSafety": {
+        "localFileTitle": "Abrir arquivo local?",
+        "externalLinkTitle": "Abrir link externo?",
+        "localFileDescription": "Você está prestes a abrir um arquivo local no painel de arquivos.",
+        "externalLinkDescription": "Você está prestes a visitar um site externo.",
+        "cancel": "Cancelar",
+        "opening": "Abrindo…",
+        "openFile": "Abrir arquivo",
+        "openLink": "Abrir link",
+        "errorCannotOpen": "Não é possível abrir o arquivo local",
+        "errorNoWorkspace": "Nenhuma pasta de espaço de trabalho está ativa no momento.",
+        "errorOutsideWorkspace": "O arquivo está fora da pasta do espaço de trabalho atual.",
+        "errorFailedOpen": "Falha ao abrir o arquivo local",
+        "errorFailedLink": "Falha ao abrir o link"
       },
       "messageList": {
         "attachedResources": "Recursos anexados",

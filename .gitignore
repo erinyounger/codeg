@@ -34,5 +34,5 @@ public/vs
 
 # Agent
 .claude
-.playwright-mcp
 .docs
+docs/superpowers

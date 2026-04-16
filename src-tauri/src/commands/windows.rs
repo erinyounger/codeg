@@ -1,29 +1,80 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU8, Ordering as AtomicOrdering};
 #[cfg(target_os = "macos")]
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::AtomicU32;
 
+use sea_orm::DatabaseConnection;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::app_error::AppCommandError;
 use crate::db::AppDatabase;
+use crate::db::service::app_metadata_service;
 use crate::models::FolderHistoryEntry;
 
 /// Base traffic-light position (logical px) at 100 % zoom.
 #[cfg(target_os = "macos")]
 const TRAFFIC_LIGHT_X: f64 = 12.0;
 #[cfg(target_os = "macos")]
-const TRAFFIC_LIGHT_Y: f64 = 18.0;
+const TRAFFIC_LIGHT_Y: f64 = 14.0;
 
 #[cfg(target_os = "macos")]
 static CURRENT_ZOOM: AtomicU32 = AtomicU32::new(100);
 
 #[cfg(target_os = "macos")]
 fn traffic_light_position() -> tauri::LogicalPosition<f64> {
-    let zoom = CURRENT_ZOOM.load(Ordering::Relaxed) as f64;
+    let zoom = CURRENT_ZOOM.load(AtomicOrdering::Relaxed) as f64;
     // Only Y scales with zoom: overlay content shifts vertically with
     // font-size changes, but the horizontal inset remains constant.
     tauri::LogicalPosition::new(TRAFFIC_LIGHT_X, TRAFFIC_LIGHT_Y * zoom / 100.0)
+}
+
+const ZOOM_LEVEL_DB_KEY: &str = "appearance_zoom_level";
+
+/// Load saved zoom level from DB and initialize CURRENT_ZOOM.
+/// Called once at startup before any window is created.
+pub async fn load_saved_zoom(conn: &DatabaseConnection) {
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(Some(raw)) = app_metadata_service::get_value(conn, ZOOM_LEVEL_DB_KEY).await {
+            if let Ok(zoom) = raw.parse::<u32>() {
+                let clamped = zoom.clamp(50, 300);
+                CURRENT_ZOOM.store(clamped, AtomicOrdering::Relaxed);
+            }
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = conn;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Appearance mode persistence (dark / light / system)
+// ---------------------------------------------------------------------------
+
+const APPEARANCE_MODE_DB_KEY: &str = "appearance_mode";
+
+/// Encoded appearance mode: 0 = system (default), 1 = dark, 2 = light.
+static CACHED_APPEARANCE_MODE: AtomicU8 = AtomicU8::new(0);
+
+const MODE_SYSTEM: u8 = 0;
+const MODE_DARK: u8 = 1;
+const MODE_LIGHT: u8 = 2;
+
+fn mode_from_str(s: &str) -> u8 {
+    match s {
+        "dark" => MODE_DARK,
+        "light" => MODE_LIGHT,
+        _ => MODE_SYSTEM,
+    }
+}
+
+/// Load saved appearance mode from DB. Called once at startup.
+pub async fn load_saved_appearance_mode(conn: &DatabaseConnection) {
+    if let Ok(Some(raw)) = app_metadata_service::get_value(conn, APPEARANCE_MODE_DB_KEY).await {
+        CACHED_APPEARANCE_MODE.store(mode_from_str(&raw), AtomicOrdering::Relaxed);
+    }
 }
 
 pub struct SettingsWindowState {
@@ -38,6 +89,109 @@ pub fn folder_window_label(folder_id: i32) -> String {
     format!("folder-{folder_id}")
 }
 
+/// Detect macOS system dark mode via `defaults read`.
+/// Result is cached for the process lifetime via `OnceLock`.
+#[cfg(target_os = "macos")]
+fn is_system_dark_mode() -> bool {
+    use std::sync::OnceLock;
+    static CACHED: OnceLock<bool> = OnceLock::new();
+    *CACHED.get_or_init(|| {
+        crate::process::std_command("defaults")
+            .args(["read", "-g", "AppleInterfaceStyle"])
+            .output()
+            .map(|o| o.status.success()) // key exists only in dark mode
+            .unwrap_or(false)
+    })
+}
+
+/// Detect Windows system dark mode via registry query.
+/// `AppsUseLightTheme`: 0 = dark, 1 = light.
+/// Uses `crate::process::std_command` to avoid flashing a console window.
+/// On pre-1809 Windows where the key is absent, defaults to light mode.
+#[cfg(target_os = "windows")]
+fn is_system_dark_mode() -> bool {
+    use std::sync::OnceLock;
+    static CACHED: OnceLock<bool> = OnceLock::new();
+    *CACHED.get_or_init(|| {
+        crate::process::std_command("reg")
+            .args([
+                "query",
+                r"HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "/v",
+                "AppsUseLightTheme",
+            ])
+            .output()
+            .ok()
+            .and_then(|o| {
+                let stdout = String::from_utf8_lossy(&o.stdout);
+                // Output: "    AppsUseLightTheme    REG_DWORD    0x0"
+                // Extract the last token on the matching line to avoid
+                // substring false-positives (e.g. "0x00000001" contains "0x0").
+                stdout.lines().find(|l| l.contains("AppsUseLightTheme")).map(|line| {
+                    line.split_whitespace()
+                        .last()
+                        .map(|val| val == "0x0" || val == "0x00000000")
+                        .unwrap_or(false)
+                })
+            })
+            .unwrap_or(false)
+    })
+}
+
+/// Detect Linux system dark mode via desktop environment settings.
+/// Covers GNOME (gsettings) and KDE Plasma (kreadconfig5/6).
+/// Falls back to light mode on unsupported desktops (XFCE, etc.).
+#[cfg(target_os = "linux")]
+fn is_system_dark_mode() -> bool {
+    use std::sync::OnceLock;
+    static CACHED: OnceLock<bool> = OnceLock::new();
+    *CACHED.get_or_init(|| {
+        // GNOME 42+: color-scheme = 'prefer-dark'
+        if let Ok(output) = crate::process::std_command("gsettings")
+            .args(["get", "org.gnome.desktop.interface", "color-scheme"])
+            .output()
+        {
+            let s = String::from_utf8_lossy(&output.stdout);
+            if s.contains("prefer-dark") {
+                return true;
+            }
+        }
+        // Older GNOME / GTK: theme name contains "dark"
+        if let Ok(output) = crate::process::std_command("gsettings")
+            .args(["get", "org.gnome.desktop.interface", "gtk-theme"])
+            .output()
+        {
+            let s = String::from_utf8_lossy(&output.stdout).to_lowercase();
+            if s.contains("dark") {
+                return true;
+            }
+        }
+        // KDE Plasma 5/6: ColorScheme name contains "dark"
+        for cmd in ["kreadconfig6", "kreadconfig5"] {
+            if let Ok(output) = crate::process::std_command(cmd)
+                .args(["--group", "General", "--key", "ColorScheme"])
+                .output()
+            {
+                let s = String::from_utf8_lossy(&output.stdout).to_lowercase();
+                if s.contains("dark") {
+                    return true;
+                }
+            }
+        }
+        false
+    })
+}
+
+/// Determine whether the window should use a dark background, considering
+/// both the user's explicit preference (from DB) and the OS appearance.
+fn should_use_dark_background() -> bool {
+    match CACHED_APPEARANCE_MODE.load(AtomicOrdering::Relaxed) {
+        MODE_DARK => true,
+        MODE_LIGHT => false,
+        _ => is_system_dark_mode(), // "system" or unknown — follow OS
+    }
+}
+
 pub(crate) fn apply_platform_window_style<'a, R, M>(
     builder: WebviewWindowBuilder<'a, R, M>,
 ) -> WebviewWindowBuilder<'a, R, M>
@@ -47,6 +201,12 @@ where
 {
     #[cfg(target_os = "macos")]
     {
+        let builder = if should_use_dark_background() {
+            // oklch(0.145 0 0) ≈ rgb(9,9,11) — matches CSS --background in dark mode
+            builder.background_color(tauri::window::Color(9, 9, 11, 255))
+        } else {
+            builder
+        };
         builder
             .hidden_title(true)
             .title_bar_style(tauri::TitleBarStyle::Overlay)
@@ -55,12 +215,21 @@ where
 
     #[cfg(target_os = "windows")]
     {
+        let builder = if should_use_dark_background() {
+            builder.background_color(tauri::window::Color(9, 9, 11, 255))
+        } else {
+            builder
+        };
         return builder.decorations(false);
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
-        builder
+        if should_use_dark_background() {
+            builder.background_color(tauri::window::Color(9, 9, 11, 255))
+        } else {
+            builder
+        }
     }
 }
 
@@ -687,14 +856,51 @@ pub async fn open_project_boot_window(
     Ok(())
 }
 
-/// Store the current zoom level so that newly created windows use the correct
-/// traffic-light position.  Existing windows are NOT repositioned at runtime.
+/// Store the current zoom level and persist it to DB so the next launch
+/// creates windows with the correct traffic-light position.
+/// Existing windows are NOT repositioned at runtime.
 #[cfg(feature = "tauri-runtime")]
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
-pub async fn update_traffic_light_position(app: AppHandle, zoom: f64) -> Result<(), AppCommandError> {
+pub async fn update_traffic_light_position(
+    app: AppHandle,
+    db: tauri::State<'_, AppDatabase>,
+    zoom: f64,
+) -> Result<(), AppCommandError> {
+    let clamped = zoom.clamp(50.0, 300.0) as u32;
+
     #[cfg(target_os = "macos")]
-    CURRENT_ZOOM.store(zoom.clamp(50.0, 300.0) as u32, Ordering::Relaxed);
-    let _ = (app, zoom);
+    CURRENT_ZOOM.store(clamped, AtomicOrdering::Relaxed);
+
+    // Persist to DB so the next launch reads the correct value.
+    let _ = app_metadata_service::upsert_value(
+        &db.conn,
+        ZOOM_LEVEL_DB_KEY,
+        &clamped.to_string(),
+    )
+    .await;
+
+    let _ = app;
+    Ok(())
+}
+
+/// Persist the user's appearance mode ("dark" / "light" / "system") to DB
+/// and update the in-memory cache so that subsequent window creations use the
+/// correct native background color.
+#[cfg(feature = "tauri-runtime")]
+#[cfg_attr(feature = "tauri-runtime", tauri::command)]
+pub async fn update_appearance_mode(
+    db: tauri::State<'_, AppDatabase>,
+    mode: String,
+) -> Result<(), AppCommandError> {
+    CACHED_APPEARANCE_MODE.store(mode_from_str(&mode), AtomicOrdering::Relaxed);
+
+    let _ = app_metadata_service::upsert_value(
+        &db.conn,
+        APPEARANCE_MODE_DB_KEY,
+        &mode,
+    )
+    .await;
+
     Ok(())
 }
 

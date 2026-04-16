@@ -172,6 +172,7 @@
     "checking": "检查中...",
     "checkUpdate": "检查更新",
     "updating": "升级中...",
+    "downloading": "下载中...",
     "upgradeTo": "升级到 v{version}",
     "foundUpdate": "发现新版本 v{version}",
     "alreadyLatest": "当前已经是最新版本",
@@ -347,6 +348,14 @@
     "emptyContentHint": "暂无内容。点击“编辑”开始输入。",
     "loadingSkill": "正在加载 Skill...",
     "emptyNoAgents": "暂无可用 Agent。",
+    "noSelectionHint": "从左侧选择一个 Skill，或点击“新建 Skill”创建。",
+    "scope": {
+      "global": "全局",
+      "folder": "文件夹",
+      "selectFolderPlaceholder": "选择文件夹",
+      "noFolders": "未找到任何文件夹",
+      "pickFolderHint": "选择一个文件夹以查看其 Skills。"
+    },
     "actions": {
       "preview": "预览",
       "edit": "编辑",
@@ -545,8 +554,24 @@
       "enableWebsocketAria": "Codex Provider 启用 WebSocket",
       "enableSkills": "启用 Skills",
       "enableSkillsAria": "Codex 启用 Skills",
+      "enableFast": "启用 Fast",
+      "enableFastAria": "Codex 启用 Fast 服务等级",
       "authJsonNative": "auth.json（原生）",
-      "configTomlNative": "config.toml（原生）"
+      "configTomlNative": "config.toml（原生）",
+      "loginButton": "使用 ChatGPT 登录",
+      "loginRequesting": "正在请求登录码...",
+      "loginStep1": "在浏览器中打开以下链接：",
+      "loginStep2": "输入以下代码：",
+      "loginPolling": "等待授权中...",
+      "loginCancel": "取消",
+      "loginSuccess": "登录成功，配置已保存！",
+      "loginFailed": "登录失败：{message}",
+      "loginRetry": "重试",
+      "loginCodeCopied": "已复制代码",
+      "loggedIn": "账号已登录",
+      "loginRelogin": "重新登录 / 切换账号",
+      "loginTimeout": "登录超时，请重试",
+      "loginSaveFailed": "登录成功但配置保存失败"
     },
     "gemini": {
       "authConfig": "Gemini 认证配置",
@@ -615,7 +640,13 @@
       "reasoningModel": "推理模型（thinking）",
       "haikuDefaultModel": "Haiku 默认模型",
       "sonnetDefaultModel": "Sonnet 默认模型",
-      "opusDefaultModel": "Opus 默认模型"
+      "opusDefaultModel": "Opus 默认模型",
+      "effortLevel": "推理级别",
+      "effortLevelDefault": "默认级别",
+      "effortLevel_low": "低",
+      "effortLevel_medium": "中",
+      "effortLevel_high": "高",
+      "effortLevelMax": "最高（仅 Opus 支持）"
     },
     "dialogs": {
       "confirmDeleteProvider": "确认删除 Provider {providerId}？",
@@ -1180,6 +1211,8 @@
       "loadingBranches": "正在加载分支...",
       "noContainingBranches": "未找到包含此提交的分支。",
       "newBranch": "新建分支...",
+      "resetToHere": "重置到此处",
+      "resetDisabledReasonNotCurrentBranchView": "仅在查看当前分支时可用",
       "viewCommitDiffAria": "查看提交 {hash} 的差异",
       "copyFullCommitHashAria": "复制完整提交哈希 {hash}",
       "pushStatus": {
@@ -1198,7 +1231,10 @@
         "createdAndSwitchedNewBranch": "已创建并切换到新分支",
         "newBranchFromCommit": "{name}（来自 {shortHash}）",
         "createBranchFailed": "新建分支失败",
-        "openPushWindowFailed": "打开推送窗口失败"
+        "openPushWindowFailed": "打开推送窗口失败",
+        "resetSuccess": "重置成功",
+        "resetSuccessDescription": "已将 {branch} 以 {mode} 重置到 {shortHash}",
+        "resetFailed": "重置失败"
       },
       "branchSelector": {
         "selectBranchPlaceholder": "选择分支...",
@@ -1210,7 +1246,33 @@
       "dialogs": {
         "newBranchTitle": "新建分支",
         "newBranchDescription": "以提交 {shortHash} 作为最后提交创建新分支。",
-        "branchNamePlaceholder": "分支名称"
+        "branchNamePlaceholder": "分支名称",
+        "reset": {
+          "title": "将当前分支重置到此提交",
+          "branchLabel": "分支",
+          "targetLabel": "目标提交",
+          "messageLabel": "提交信息",
+          "modeLabel": "重置模式",
+          "confirmButton": "重置",
+          "modes": {
+            "soft": {
+              "label": "--soft",
+              "description": "将 HEAD 和当前分支指针移动到目标提交。\n暂存区（Index）和工作区（Working Tree）保持不变。\n被回退提交对应的改动会保留为“已暂存”状态。"
+            },
+            "mixed": {
+              "label": "--mixed（默认）",
+              "description": "将 HEAD 移动到目标提交。\n把暂存区重置为目标提交状态，但保留工作区改动。\n这些改动会从“已暂存”变为“未暂存”。"
+            },
+            "hard": {
+              "label": "--hard",
+              "description": "将 HEAD、暂存区和工作区全部重置到目标提交。\n目标提交之后的本地已跟踪改动会被直接丢弃。\n这是破坏性操作。"
+            },
+            "keep": {
+              "label": "--keep",
+              "description": "将 HEAD 移动到目标提交，并尽量保留本地改动。\n仅当本地改动与目标提交不冲突时才会保留。\n若存在冲突，操作会中止以避免覆盖你的修改。"
+            }
+          }
+        }
       }
     },
     "gitChangesTab": {
@@ -1281,7 +1343,7 @@
       "openInFileManager": "在文件管理器打开",
       "openInFinder": "在访达打开",
       "openInExplorer": "在资源管理器打开",
-      "attachToCurrentSession": "附加到当前会话",
+      "attachToCurrentSession": "添加到会话",
       "compareWithBranch": "与分支比较...",
       "reloadFromDisk": "从磁盘重新加载",
       "new": "新建",
@@ -1448,7 +1510,17 @@
         "toolFallbackTitle": "工具",
         "eventErrorTitle": "Agent 错误",
         "notificationTurnComplete": "{agent} 已完成响应",
-        "notificationError": "{agent} 错误：{message}"
+        "notificationError": "{agent} 错误：{message}",
+        "claudeApiRetry": {
+          "fallbackError": "authentication_failed",
+          "retryingWithMax": "正在重试 {attempt}/{max}",
+          "retryingAttempt": "正在重试（第 {attempt} 次）",
+          "retrying": "正在重试",
+          "nextRetryIn": "{seconds} 秒后重试",
+          "line": "{error}{status} · {retry}",
+          "lineWithDelay": "{error}{status} · {retry}，{delay}",
+          "httpStatus": "（HTTP {status}）"
+        }
       },
       "connectionLifecycle": {
         "tasks": {
@@ -1551,9 +1623,24 @@
         "running": "运行中"
       },
       "reasoning": {
-        "thinking": "思考中",
+        "thinking": "思考中…",
         "thoughtForFewSeconds": "思考",
         "thoughtForSeconds": "思考"
+      },
+      "linkSafety": {
+        "localFileTitle": "打开本地文件？",
+        "externalLinkTitle": "打开外部链接？",
+        "localFileDescription": "即将在文件面板中打开一个本地文件。",
+        "externalLinkDescription": "即将访问一个外部网站。",
+        "cancel": "取消",
+        "opening": "正在打开…",
+        "openFile": "打开文件",
+        "openLink": "打开链接",
+        "errorCannotOpen": "无法打开本地文件",
+        "errorNoWorkspace": "当前没有活跃的工作区文件夹。",
+        "errorOutsideWorkspace": "该文件不在当前工作区文件夹内。",
+        "errorFailedOpen": "打开本地文件失败",
+        "errorFailedLink": "打开链接失败"
       },
       "messageList": {
         "attachedResources": "附加资源",

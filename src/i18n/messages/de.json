@@ -172,6 +172,7 @@
     "checking": "Wird geprüft...",
     "checkUpdate": "Nach Updates suchen",
     "updating": "Wird installiert...",
+    "downloading": "Herunterladen...",
     "upgradeTo": "Auf v{version} aktualisieren",
     "foundUpdate": "Neue Version v{version} gefunden",
     "alreadyLatest": "Du verwendest bereits die neueste Version",
@@ -347,6 +348,14 @@
     "emptyContentHint": "Noch kein Inhalt. Klicke auf „Bearbeiten“, um zu starten.",
     "loadingSkill": "Skill wird geladen...",
     "emptyNoAgents": "Kein verfügbarer Agent.",
+    "noSelectionHint": "Wählen Sie links einen Skill oder klicken Sie auf „Neuer Skill“, um einen zu erstellen.",
+    "scope": {
+      "global": "Global",
+      "folder": "Ordner",
+      "selectFolderPlaceholder": "Ordner auswählen",
+      "noFolders": "Keine Ordner gefunden",
+      "pickFolderHint": "Wählen Sie einen Ordner, um dessen Skills anzuzeigen."
+    },
     "actions": {
       "preview": "Vorschau",
       "edit": "Bearbeiten",
@@ -545,8 +554,24 @@
       "enableWebsocketAria": "WebSocket für Codex Provider aktivieren",
       "enableSkills": "Skills aktivieren",
       "enableSkillsAria": "Skills für Codex aktivieren",
+      "enableFast": "Fast aktivieren",
+      "enableFastAria": "Fast-Servicestufe für Codex aktivieren",
       "authJsonNative": "auth.json (nativ)",
-      "configTomlNative": "config.toml (nativ)"
+      "configTomlNative": "config.toml (nativ)",
+      "loginButton": "Mit ChatGPT anmelden",
+      "loginRequesting": "Login-Code wird angefordert...",
+      "loginStep1": "Öffnen Sie die folgende URL in Ihrem Browser:",
+      "loginStep2": "Geben Sie den folgenden Code ein:",
+      "loginPolling": "Warte auf Autorisierung...",
+      "loginCancel": "Abbrechen",
+      "loginSuccess": "Erfolgreich angemeldet, Konfiguration gespeichert!",
+      "loginFailed": "Anmeldung fehlgeschlagen: {message}",
+      "loginRetry": "Erneut versuchen",
+      "loginCodeCopied": "Code kopiert",
+      "loggedIn": "Konto angemeldet",
+      "loginRelogin": "Erneut anmelden / Konto wechseln",
+      "loginTimeout": "Anmeldung abgelaufen, bitte erneut versuchen",
+      "loginSaveFailed": "Anmeldung erfolgreich, aber Konfiguration konnte nicht gespeichert werden"
     },
     "gemini": {
       "authConfig": "Gemini-Auth-Konfiguration",
@@ -615,7 +640,13 @@
       "reasoningModel": "Reasoning-Modell (thinking)",
       "haikuDefaultModel": "Standard-Haiku-Modell",
       "sonnetDefaultModel": "Standard-Sonnet-Modell",
-      "opusDefaultModel": "Standard-Opus-Modell"
+      "opusDefaultModel": "Standard-Opus-Modell",
+      "effortLevel": "Reasoning-Stufe",
+      "effortLevelDefault": "Standardstufe",
+      "effortLevel_low": "Niedrig",
+      "effortLevel_medium": "Mittel",
+      "effortLevel_high": "Hoch",
+      "effortLevelMax": "Maximum (nur Opus)"
     },
     "dialogs": {
       "confirmDeleteProvider": "Provider {providerId} löschen?",
@@ -1180,6 +1211,8 @@
       "loadingBranches": "Branches werden geladen...",
       "noContainingBranches": "Keine enthaltenen Branches gefunden.",
       "newBranch": "Neuer Branch...",
+      "resetToHere": "Auf diesen Stand zurücksetzen",
+      "resetDisabledReasonNotCurrentBranchView": "Nur in der Ansicht des aktuellen Branches verfügbar",
       "viewCommitDiffAria": "Diff für Commit {hash} anzeigen",
       "copyFullCommitHashAria": "Vollständigen Commit-Hash {hash} kopieren",
       "pushStatus": {
@@ -1198,7 +1231,10 @@
         "createdAndSwitchedNewBranch": "Neuen Branch erstellt und gewechselt",
         "newBranchFromCommit": "{name} (aus {shortHash})",
         "createBranchFailed": "Branch konnte nicht erstellt werden",
-        "openPushWindowFailed": "Push-Fenster konnte nicht geöffnet werden"
+        "openPushWindowFailed": "Push-Fenster konnte nicht geöffnet werden",
+        "resetSuccess": "Zurücksetzen erfolgreich",
+        "resetSuccessDescription": "{branch} wurde mit {mode} auf {shortHash} zurückgesetzt",
+        "resetFailed": "Zurücksetzen fehlgeschlagen"
       },
       "branchSelector": {
         "selectBranchPlaceholder": "Branch auswählen...",
@@ -1210,7 +1246,33 @@
       "dialogs": {
         "newBranchTitle": "Neuer Branch",
         "newBranchDescription": "Erstelle einen neuen Branch mit Commit {shortHash} als letztem Commit.",
-        "branchNamePlaceholder": "Branch-Name"
+        "branchNamePlaceholder": "Branch-Name",
+        "reset": {
+          "title": "Aktuellen Branch auf diesen Commit zurücksetzen",
+          "branchLabel": "Branch",
+          "targetLabel": "Ziel-Commit",
+          "messageLabel": "Nachricht",
+          "modeLabel": "Reset-Modus",
+          "confirmButton": "Zurücksetzen",
+          "modes": {
+            "soft": {
+              "label": "--soft",
+              "description": "Verschiebt HEAD und den Zeiger des aktuellen Branches auf den Ziel-Commit.\nIndex und Working Tree bleiben unverändert.\nÄnderungen aus den entfernten Commits bleiben staged."
+            },
+            "mixed": {
+              "label": "--mixed (Standard)",
+              "description": "Verschiebt HEAD auf den Ziel-Commit.\nSetzt den Index auf den Ziel-Commit zurück und behält Änderungen im Working Tree.\nÄnderungen wechseln von staged zu unstaged."
+            },
+            "hard": {
+              "label": "--hard",
+              "description": "Verschiebt HEAD und setzt sowohl Index als auch Working Tree auf den Ziel-Commit zurück.\nLokale verfolgte Änderungen nach dem Ziel-Commit werden verworfen.\nDies ist eine destruktive Operation."
+            },
+            "keep": {
+              "label": "--keep",
+              "description": "Verschiebt HEAD auf den Ziel-Commit und versucht lokale Änderungen zu behalten.\nNur nicht-konfliktierende Änderungen bleiben erhalten.\nBei Konflikten wird der Reset zum Schutz der Änderungen abgebrochen."
+            }
+          }
+        }
       }
     },
     "gitChangesTab": {
@@ -1281,7 +1343,7 @@
       "openInFileManager": "Im Dateimanager öffnen",
       "openInFinder": "In Finder öffnen",
       "openInExplorer": "In Explorer öffnen",
-      "attachToCurrentSession": "An aktuelle Sitzung anhängen",
+      "attachToCurrentSession": "Zur Sitzung hinzufügen",
       "compareWithBranch": "Mit Branch vergleichen...",
       "reloadFromDisk": "Von Datenträger neu laden",
       "new": "Neu",
@@ -1448,7 +1510,17 @@
         "toolFallbackTitle": "Werkzeug",
         "eventErrorTitle": "Agentenfehler",
         "notificationTurnComplete": "{agent} hat die Antwort abgeschlossen",
-        "notificationError": "{agent} Fehler: {message}"
+        "notificationError": "{agent} Fehler: {message}",
+        "claudeApiRetry": {
+          "fallbackError": "authentication_failed",
+          "retryingWithMax": "erneuter Versuch {attempt}/{max}",
+          "retryingAttempt": "erneuter Versuch {attempt}",
+          "retrying": "erneuter Versuch",
+          "nextRetryIn": "nächster in {seconds}s",
+          "line": "{error}{status} · {retry}",
+          "lineWithDelay": "{error}{status} · {retry}, {delay}",
+          "httpStatus": " (HTTP {status})"
+        }
       },
       "connectionLifecycle": {
         "tasks": {
@@ -1551,9 +1623,24 @@
         "running": "Läuft"
       },
       "reasoning": {
-        "thinking": "Denkt nach",
+        "thinking": "Denkt nach…",
         "thoughtForFewSeconds": "Nachgedacht",
         "thoughtForSeconds": "Nachgedacht"
+      },
+      "linkSafety": {
+        "localFileTitle": "Lokale Datei öffnen?",
+        "externalLinkTitle": "Externen Link öffnen?",
+        "localFileDescription": "Sie sind dabei, eine lokale Datei im Dateipanel zu öffnen.",
+        "externalLinkDescription": "Sie sind dabei, eine externe Website zu besuchen.",
+        "cancel": "Abbrechen",
+        "opening": "Wird geöffnet…",
+        "openFile": "Datei öffnen",
+        "openLink": "Link öffnen",
+        "errorCannotOpen": "Lokale Datei kann nicht geöffnet werden",
+        "errorNoWorkspace": "Es ist kein Arbeitsbereichsordner aktiv.",
+        "errorOutsideWorkspace": "Die Datei befindet sich außerhalb des aktuellen Arbeitsbereichsordners.",
+        "errorFailedOpen": "Lokale Datei konnte nicht geöffnet werden",
+        "errorFailedLink": "Link konnte nicht geöffnet werden"
       },
       "messageList": {
         "attachedResources": "Angehängte Ressourcen",
