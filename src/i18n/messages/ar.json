@@ -646,7 +646,7 @@
       "effortLevel_low": "منخفض",
       "effortLevel_medium": "متوسط",
       "effortLevel_high": "مرتفع",
-      "effortLevelMax": "الأقصى (Opus فقط)"
+      "effortLevel_xhigh": "مرتفع جداً"
     },
     "dialogs": {
       "confirmDeleteProvider": "حذف المزود {providerId}؟",
@@ -1704,6 +1704,13 @@
         "subjectLabel": "الموضوع",
         "taskLabel": "المهمة",
         "nameLabel": "الاسم:",
+        "agentPromptLabel": "المطالبة",
+        "agentModelLabel": "النموذج",
+        "agentStatsBash": "الأوامر",
+        "agentStatsRead": "الملفات المقروءة",
+        "agentStatsSearch": "عمليات البحث",
+        "agentStatsEdit": "التعديلات",
+        "agentStatsOther": "أخرى",
         "field": {
           "file": "ملف",
           "notebook": "دفتر",

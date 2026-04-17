@@ -257,11 +257,11 @@ const CLAUDE_MODEL_ENV_KEYS = {
 
 const CLAUDE_EFFORT_LEVEL_CONFIG_KEY = "effortLevel"
 
-type ClaudeEffortLevel = "" | "low" | "medium" | "high" | "max"
+type ClaudeEffortLevel = "" | "low" | "medium" | "high" | "xhigh"
 
 const CLAUDE_EFFORT_LEVEL_VALUES: ReadonlyArray<
   Exclude<ClaudeEffortLevel, "">
-> = ["low", "medium", "high", "max"]
+> = ["low", "medium", "high", "xhigh"]
 
 function normalizeClaudeEffortLevel(value: unknown): ClaudeEffortLevel {
   if (typeof value !== "string") return ""
@@ -270,7 +270,7 @@ function normalizeClaudeEffortLevel(value: unknown): ClaudeEffortLevel {
     normalized === "low" ||
     normalized === "medium" ||
     normalized === "high" ||
-    normalized === "max"
+    normalized === "xhigh"
   ) {
     return normalized
   }
@@ -7335,7 +7335,7 @@ supports_websockets = true`}
                                   event.target.value
                                 )
                               }}
-                              placeholder="claude-opus-4-6"
+                              placeholder="claude-opus-4.7"
                             />
                           </div>
                           <div className="space-y-1.5">
@@ -7380,7 +7380,7 @@ supports_websockets = true`}
                                   event.target.value
                                 )
                               }}
-                              placeholder="claude-opus-4-6"
+                              placeholder="claude-opus-4.7"
                             />
                           </div>
                         </div>
@@ -7412,9 +7412,7 @@ supports_websockets = true`}
                               </SelectItem>
                               {CLAUDE_EFFORT_LEVEL_VALUES.map((value) => (
                                 <SelectItem key={value} value={value}>
-                                  {value === "max"
-                                    ? t("claude.effortLevelMax")
-                                    : t(`claude.effortLevel_${value}`)}
+                                  {t(`claude.effortLevel_${value}`)}
                                 </SelectItem>
                               ))}
                             </SelectContent>

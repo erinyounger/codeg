@@ -9,9 +9,13 @@ import {
   useRef,
   type ReactNode,
 } from "react"
-import type { LiveMessage } from "@/contexts/acp-connections-context"
+import type {
+  LiveMessage,
+  ToolCallInfo,
+} from "@/contexts/acp-connections-context"
 import { getFolderConversation } from "@/lib/api"
 import type {
+  AgentExecutionStats,
   DbConversationDetail,
   MessageTurn,
   SessionStats,
@@ -185,10 +189,160 @@ function getJoinedChunks(chunks: readonly string[]): string {
   return joined
 }
 
+/**
+ * Clean raw Agent tool output that may be JSON or XML wrapped.
+ *
+ * Streaming Agent results often arrive as raw JSON (e.g. content block
+ * arrays from Claude Code, or status wrappers from Codex) or with
+ * `<task_result>` XML tags (OpenCode). This function extracts the human-
+ * readable text so the Agent card displays clean output.
+ */
+function cleanAgentOutput(output: string | null): string | null {
+  if (!output) return null
+  let text = output.trim()
+  if (!text) return null
+
+  // Step 1: Unwrap JSON containers (no recursion — single-level unwrap)
+  // JSON array of content blocks: [{"type":"text","text":"..."},...]
+  if (text.startsWith("[")) {
+    try {
+      const arr = JSON.parse(text)
+      if (Array.isArray(arr)) {
+        const texts: string[] = []
+        for (const item of arr) {
+          if (
+            item &&
+            typeof item === "object" &&
+            typeof item.text === "string"
+          ) {
+            texts.push(item.text)
+          }
+        }
+        if (texts.length > 0) text = texts.join("\n")
+      }
+    } catch {
+      /* not valid JSON */
+    }
+  } else if (text.startsWith("{")) {
+    // JSON object with common result fields
+    try {
+      const obj = JSON.parse(text) as Record<string, unknown>
+      for (const key of ["result", "output", "text", "content", "completed"]) {
+        if (typeof obj[key] === "string") {
+          text = (obj[key] as string).trim()
+          break
+        }
+      }
+    } catch {
+      /* not valid JSON */
+    }
+  }
+
+  // Step 2: Strip leading session / task_id lines that some agents prepend
+  // before the actual result (e.g. "task_id: ses_xxx (for resuming ...)").
+  text = text.replace(/^task_id:\s*\S+[^\n]*\n+/, "").trim()
+  if (!text) return null
+
+  // Step 3: Extract from <task_result> XML wrapper (OpenCode)
+  const tagStart = text.indexOf("<task_result>")
+  if (tagStart !== -1) {
+    const contentStart = tagStart + "<task_result>".length
+    const contentEnd = text.indexOf("</task_result>", contentStart)
+    const extracted = text
+      .substring(contentStart, contentEnd === -1 ? undefined : contentEnd)
+      .trim()
+    if (extracted) return extracted
+  }
+
+  return text
+}
+
 function buildStreamingTurnsFromLiveMessage(
   conversationId: number,
   liveMessage: LiveMessage
 ): BuiltStreamingTurns {
+  // ── Phase 1: Identify agent → child relationships ──────────────────
+  // Uses meta.claudeCode.parentToolUseId when available (precise), with
+  // position-based fallback for agents that don't provide it.
+  const agentChildren = new Map<
+    string,
+    Array<{ info: ToolCallInfo; toolName: string }>
+  >()
+  const childToolCallIds = new Set<string>()
+
+  // Cache inferred tool names — inferLiveToolName is called per tool_call
+  // in both Phase 1 and Phase 2; caching avoids redundant computation.
+  const inferredNames = new Map<string, string>()
+  const getToolName = (info: ToolCallInfo): string => {
+    const cached = inferredNames.get(info.tool_call_id)
+    if (cached !== undefined) return cached
+    const name = inferLiveToolName({
+      title: info.title,
+      kind: info.kind,
+      rawInput: info.raw_input,
+    })
+    inferredNames.set(info.tool_call_id, name)
+    return name
+  }
+
+  // First pass: register all agent tool_call IDs
+  const agentIds = new Set<string>()
+  for (const block of liveMessage.content) {
+    if (block.type !== "tool_call") continue
+    if (getToolName(block.info) === "agent") {
+      agentIds.add(block.info.tool_call_id)
+      agentChildren.set(block.info.tool_call_id, [])
+    }
+  }
+
+  // Second pass: assign children using parentToolUseId or position fallback.
+  // Positional fallback only captures while the agent is still in-progress;
+  // once it completes/fails, subsequent tool calls are treated as top-level.
+  let positionalAgentId: string | null = null
+
+  for (const block of liveMessage.content) {
+    if (block.type === "tool_call") {
+      const toolName = getToolName(block.info)
+
+      if (toolName === "agent") {
+        const isFinal =
+          block.info.status === "completed" || block.info.status === "failed"
+        // Only capture children while the agent is still running
+        positionalAgentId = isFinal ? null : block.info.tool_call_id
+      } else {
+        // Extract parentToolUseId from ACP meta (Claude Code embeds this
+        // under meta.claudeCode.parentToolUseId). Guard each access level
+        // to avoid crashes on unexpected shapes from other agents.
+        const meta = block.info.meta
+        let parentId: string | undefined
+        if (meta && typeof meta === "object" && "claudeCode" in meta) {
+          const cc = (meta as Record<string, unknown>).claudeCode
+          if (cc && typeof cc === "object" && "parentToolUseId" in cc) {
+            const pid = (cc as Record<string, unknown>).parentToolUseId
+            if (typeof pid === "string") parentId = pid
+          }
+        }
+
+        // Use explicit parentToolUseId when available, positional fallback
+        // only for in-progress agents
+        const resolvedParent =
+          parentId && agentIds.has(parentId) ? parentId : positionalAgentId
+
+        if (resolvedParent) {
+          childToolCallIds.add(block.info.tool_call_id)
+          agentChildren
+            .get(resolvedParent)
+            ?.push({ info: block.info, toolName })
+        }
+      }
+    } else if (positionalAgentId) {
+      // A non-tool block (text/thinking/plan) means the main agent is
+      // producing new content — stop position-based capture.
+      positionalAgentId = null
+    }
+  }
+
+  // ── Phase 2: Build turns, nesting children inside Agent results ────
   // Split streaming content into multiple turns matching the historical
   // pattern: each "round" (text/thinking + tool calls + tool results) is a
   // separate turn. A new turn starts when a text/thinking/plan block appears
@@ -229,11 +383,10 @@ function buildStreamingTurnsFromLiveMessage(
         break
       }
       case "tool_call": {
-        const toolName = inferLiveToolName({
-          title: block.info.title,
-          kind: block.info.kind,
-          rawInput: block.info.raw_input,
-        })
+        // Skip child tool calls — they are nested inside Agent cards
+        if (childToolCallIds.has(block.info.tool_call_id)) break
+
+        const toolName = getToolName(block.info)
         currentBlocks.push({
           type: "tool_use",
           tool_use_id: block.info.tool_call_id,
@@ -250,25 +403,62 @@ function buildStreamingTurnsFromLiveMessage(
           block.info.raw_output_chunks.length > 0
             ? getJoinedChunks(block.info.raw_output_chunks)
             : block.info.content
+
+        // For agent tool calls, build agent_stats from collected children
+        const isAgent = toolName === "agent"
+        const children = isAgent
+          ? (agentChildren.get(block.info.tool_call_id) ?? [])
+          : []
+        // Lazy: only construct agentStats when there are children to show
+        const agentStats: AgentExecutionStats | undefined =
+          isAgent && children.length > 0
+            ? {
+                tool_calls: children.map(({ info: ci, toolName: cn }) => {
+                  const cFinal =
+                    ci.status === "completed" || ci.status === "failed"
+                  const cOutput =
+                    ci.raw_output_chunks.length > 0
+                      ? getJoinedChunks(ci.raw_output_chunks)
+                      : ci.content
+                  return {
+                    tool_name: cn,
+                    input_preview: ci.raw_input?.substring(0, 500) ?? null,
+                    output_preview: cFinal
+                      ? (cOutput?.substring(0, 500) ?? null)
+                      : null,
+                    is_error: ci.status === "failed",
+                  }
+                }),
+              }
+            : undefined
+
         if (isFinalState) {
           currentBlocks.push({
             type: "tool_result",
             tool_use_id: block.info.tool_call_id,
-            output_preview: resolvedOutput,
+            output_preview: isAgent
+              ? cleanAgentOutput(resolvedOutput)
+              : resolvedOutput,
             is_error: block.info.status === "failed",
+            ...(agentStats ? { agent_stats: agentStats } : {}),
           })
           currentGroupHasCompletedTool = true
-        } else if (resolvedOutput) {
-          // In-progress tool that already produced partial output. Emit the
-          // running result so the renderer can display live output, and flag
-          // the tool_call so the adapter keeps state="input-available" (the
-          // spinner/running visual and 24KB tail truncation both depend on
-          // this state).
+        } else if (resolvedOutput || (isAgent && children.length > 0)) {
+          // In-progress tool that already produced partial output (or an
+          // agent with child calls). Emit the running result so the renderer
+          // can display live output / nested tool calls, and flag the
+          // tool_call so the adapter keeps state="input-available".
+          //
+          // For Agents specifically, partial `content` from Claude Code's
+          // Task tool echoes the prompt (and subagent message fragments)
+          // before the real result arrives — suppress it so the Agent card
+          // doesn't duplicate the prompt already shown in the collapsible.
           currentBlocks.push({
             type: "tool_result",
             tool_use_id: block.info.tool_call_id,
-            output_preview: resolvedOutput,
+            output_preview: isAgent ? null : (resolvedOutput ?? null),
             is_error: false,
+            ...(agentStats ? { agent_stats: agentStats } : {}),
           })
           inProgressToolCallIds.add(block.info.tool_call_id)
         }

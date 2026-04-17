@@ -646,7 +646,7 @@
       "effortLevel_low": "Niedrig",
       "effortLevel_medium": "Mittel",
       "effortLevel_high": "Hoch",
-      "effortLevelMax": "Maximum (nur Opus)"
+      "effortLevel_xhigh": "Sehr Hoch"
     },
     "dialogs": {
       "confirmDeleteProvider": "Provider {providerId} löschen?",
@@ -1704,6 +1704,13 @@
         "subjectLabel": "Betreff",
         "taskLabel": "Aufgabe",
         "nameLabel": "Bezeichnung:",
+        "agentPromptLabel": "Eingabe",
+        "agentModelLabel": "Modell",
+        "agentStatsBash": "Befehle",
+        "agentStatsRead": "Dateien gelesen",
+        "agentStatsSearch": "Suchen",
+        "agentStatsEdit": "Bearbeitungen",
+        "agentStatsOther": "Sonstige",
         "field": {
           "file": "Datei",
           "notebook": "Notizbuch",

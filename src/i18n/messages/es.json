@@ -646,7 +646,7 @@
       "effortLevel_low": "Bajo",
       "effortLevel_medium": "Medio",
       "effortLevel_high": "Alto",
-      "effortLevelMax": "Máximo (solo Opus)"
+      "effortLevel_xhigh": "Extra Alto"
     },
     "dialogs": {
       "confirmDeleteProvider": "¿Eliminar proveedor {providerId}?",
@@ -1704,6 +1704,13 @@
         "subjectLabel": "Asunto",
         "taskLabel": "Tarea",
         "nameLabel": "Nombre:",
+        "agentPromptLabel": "Instrucción",
+        "agentModelLabel": "Modelo",
+        "agentStatsBash": "Comandos",
+        "agentStatsRead": "Archivos leídos",
+        "agentStatsSearch": "Búsquedas",
+        "agentStatsEdit": "Ediciones",
+        "agentStatsOther": "Otros",
         "field": {
           "file": "Archivo",
           "notebook": "Cuaderno",

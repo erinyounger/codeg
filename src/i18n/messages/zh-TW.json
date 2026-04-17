@@ -646,7 +646,7 @@
       "effortLevel_low": "低",
       "effortLevel_medium": "中",
       "effortLevel_high": "高",
-      "effortLevelMax": "最高（僅 Opus 支援）"
+      "effortLevel_xhigh": "超高"
     },
     "dialogs": {
       "confirmDeleteProvider": "確認刪除 Provider {providerId}？",
@@ -1704,6 +1704,13 @@
         "subjectLabel": "主題",
         "taskLabel": "任務",
         "nameLabel": "名稱：",
+        "agentPromptLabel": "提示詞",
+        "agentModelLabel": "模型",
+        "agentStatsBash": "命令",
+        "agentStatsRead": "讀取檔案",
+        "agentStatsSearch": "搜尋",
+        "agentStatsEdit": "編輯",
+        "agentStatsOther": "其他",
         "field": {
           "file": "檔案",
           "notebook": "筆記本",

@@ -646,7 +646,7 @@
       "effortLevel_low": "低",
       "effortLevel_medium": "中",
       "effortLevel_high": "高",
-      "effortLevelMax": "最大（Opus のみ対応）"
+      "effortLevel_xhigh": "超高"
     },
     "dialogs": {
       "confirmDeleteProvider": "Provider {providerId} を削除しますか？",
@@ -1704,6 +1704,13 @@
         "subjectLabel": "件名",
         "taskLabel": "タスク",
         "nameLabel": "名前:",
+        "agentPromptLabel": "プロンプト",
+        "agentModelLabel": "モデル",
+        "agentStatsBash": "コマンド",
+        "agentStatsRead": "ファイル読取",
+        "agentStatsSearch": "検索",
+        "agentStatsEdit": "編集",
+        "agentStatsOther": "その他",
         "field": {
           "file": "ファイル",
           "notebook": "ノートブック",
