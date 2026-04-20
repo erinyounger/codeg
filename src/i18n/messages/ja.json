@@ -769,6 +769,12 @@
     "applyRightNonConflicting": "リモートを適用"
   },
   "Folder": {
+    "workspaceStatus": {
+      "degradedTitle": "リアルタイム更新は利用できません",
+      "degradedHint": "ウォッチャーの起動に失敗しました（アクセス権限エラーなど）。最新の変更を反映するには手動で更新してください。",
+      "retry": "再試行",
+      "retrying": "再試行中..."
+    },
     "common": {
       "all": "すべて",
       "cancel": "キャンセル",
@@ -828,6 +834,9 @@
       "reload": "再読み込み",
       "newConversation": "新しい会話",
       "closeConversation": "会話を閉じる",
+      "copyText": "テキストをコピー",
+      "copyTextSuccess": "コピーしました",
+      "copyTextFailed": "コピーに失敗しました",
       "forkSession": "セッションをフォーク",
       "forkSessionSuccess": "セッションのフォークに成功しました",
       "forkSessionFailed": "セッションのフォークに失敗しました：{error}",
@@ -1202,6 +1211,8 @@
       "workspace": "ワークスペース",
       "retry": "再試行",
       "noCommitsFound": "コミットが見つかりません",
+      "notAGitRepoTitle": "Git リポジトリではありません",
+      "notAGitRepoHint": "上のブランチメニューから Git を初期化するか、既存のリポジトリを開いてください。",
       "hash": "ハッシュ",
       "copyHash": "ハッシュをコピー",
       "copyMessage": "メッセージをコピー",
@@ -1278,6 +1289,8 @@
     "gitChangesTab": {
       "workspace": "ワークスペース",
       "noChanges": "ローカルの変更はありません",
+      "notAGitRepoTitle": "Git リポジトリではありません",
+      "notAGitRepoHint": "上のブランチメニューから Git を初期化するか、既存のリポジトリを開いてください。",
       "trackedChanges": "追跡中の変更 ({count})",
       "untrackedFiles": "未追跡ファイル ({count})",
       "expandTracked": "追跡中の変更を展開",
@@ -1706,6 +1719,7 @@
         "nameLabel": "名前:",
         "agentPromptLabel": "プロンプト",
         "agentModelLabel": "モデル",
+        "agentRunning": "実行中...",
         "agentStatsBash": "コマンド",
         "agentStatsRead": "ファイル読取",
         "agentStatsSearch": "検索",
@@ -1854,7 +1868,17 @@
     "copy": "コピー",
     "addressLabel": "アクセスアドレス",
     "tokenLabel": "アクセストークン",
-    "tokenHint": "Webクライアントの初回アクセス時にこのトークンを入力してください"
+    "tokenHint": "Webクライアントの初回アクセス時にこのトークンを入力してください",
+    "tokenPlaceholder": "空欄の場合は自動生成",
+    "regenerate": "再生成",
+    "errors": {
+      "alreadyRunning": "Web サービスはすでに起動しています",
+      "invalidAddress": "ホストまたはポートの形式が無効です",
+      "portInUse": "ポート {port} はすでに使用中です。そのポートを使用しているプロセスを終了するか、別のポートを指定してください",
+      "permissionDenied": "権限が不足しています。1024 以上のポートを使用するか、より高い権限で実行してください",
+      "addressUnavailable": "このアドレスはこの端末では利用できません",
+      "bindFailed": "アドレスのバインドに失敗しました"
+    }
   },
   "DirectoryBrowser": {
     "title": "ディレクトリを参照",

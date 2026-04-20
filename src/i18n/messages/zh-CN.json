@@ -769,6 +769,12 @@
     "applyRightNonConflicting": "应用远程"
   },
   "Folder": {
+    "workspaceStatus": {
+      "degradedTitle": "实时更新不可用",
+      "degradedHint": "监听器启动失败（如目录无读取权限）。请手动刷新以获取最新变更。",
+      "retry": "重试",
+      "retrying": "重试中..."
+    },
     "common": {
       "all": "全部",
       "cancel": "取消",
@@ -828,6 +834,9 @@
       "reload": "重新加载",
       "newConversation": "新建会话",
       "closeConversation": "关闭会话",
+      "copyText": "复制文本",
+      "copyTextSuccess": "已复制",
+      "copyTextFailed": "复制失败",
       "forkSession": "分叉会话",
       "forkSessionSuccess": "会话分叉成功",
       "forkSessionFailed": "会话分叉失败：{error}",
@@ -1202,6 +1211,8 @@
       "workspace": "工作区",
       "retry": "重试",
       "noCommitsFound": "未找到提交记录",
+      "notAGitRepoTitle": "不是 Git 仓库",
+      "notAGitRepoHint": "可从上方分支菜单初始化 Git，或打开已有的 Git 仓库。",
       "hash": "Hash",
       "copyHash": "复制哈希",
       "copyMessage": "复制提交消息",
@@ -1278,6 +1289,8 @@
     "gitChangesTab": {
       "workspace": "工作区",
       "noChanges": "暂无本地改动",
+      "notAGitRepoTitle": "不是 Git 仓库",
+      "notAGitRepoHint": "可从上方分支菜单初始化 Git，或打开已有的 Git 仓库。",
       "trackedChanges": "本地已跟踪改动 ({count})",
       "untrackedFiles": "本地未跟踪文件 ({count})",
       "expandTracked": "展开已跟踪改动",
@@ -1706,6 +1719,7 @@
         "nameLabel": "名称：",
         "agentPromptLabel": "提示词",
         "agentModelLabel": "模型",
+        "agentRunning": "运行中...",
         "agentStatsBash": "命令",
         "agentStatsRead": "读取文件",
         "agentStatsSearch": "搜索",
@@ -1854,7 +1868,17 @@
     "copy": "复制",
     "addressLabel": "访问地址",
     "tokenLabel": "访问 Token",
-    "tokenHint": "Web 客户端首次访问时需输入此 Token"
+    "tokenHint": "Web 客户端首次访问时需输入此 Token",
+    "tokenPlaceholder": "留空则自动生成",
+    "regenerate": "重新生成",
+    "errors": {
+      "alreadyRunning": "Web 服务已在运行",
+      "invalidAddress": "主机或端口格式无效",
+      "portInUse": "端口 {port} 已被占用，请关闭占用该端口的程序或更换其他端口",
+      "permissionDenied": "权限不足，请使用 1024 以上的端口，或以更高权限运行",
+      "addressUnavailable": "该地址在本机不可用",
+      "bindFailed": "绑定地址失败"
+    }
   },
   "DirectoryBrowser": {
     "title": "浏览目录",

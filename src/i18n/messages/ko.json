@@ -769,6 +769,12 @@
     "applyRightNonConflicting": "원격 적용"
   },
   "Folder": {
+    "workspaceStatus": {
+      "degradedTitle": "실시간 업데이트를 사용할 수 없음",
+      "degradedHint": "감시자 시작 실패(권한 거부 등). 최신 변경 사항을 보려면 수동으로 새로 고치세요.",
+      "retry": "다시 시도",
+      "retrying": "다시 시도 중..."
+    },
     "common": {
       "all": "전체",
       "cancel": "취소",
@@ -828,6 +834,9 @@
       "reload": "다시 불러오기",
       "newConversation": "새 대화",
       "closeConversation": "대화 닫기",
+      "copyText": "텍스트 복사",
+      "copyTextSuccess": "복사됨",
+      "copyTextFailed": "복사 실패",
       "forkSession": "세션 포크",
       "forkSessionSuccess": "세션 포크 성공",
       "forkSessionFailed": "세션 포크 실패: {error}",
@@ -1202,6 +1211,8 @@
       "workspace": "작업 공간",
       "retry": "다시 시도",
       "noCommitsFound": "커밋을 찾을 수 없습니다",
+      "notAGitRepoTitle": "Git 저장소가 아닙니다",
+      "notAGitRepoHint": "위의 브랜치 메뉴에서 Git을 초기화하거나 기존 저장소를 여세요.",
       "hash": "해시",
       "copyHash": "해시 복사",
       "copyMessage": "메시지 복사",
@@ -1278,6 +1289,8 @@
     "gitChangesTab": {
       "workspace": "작업 공간",
       "noChanges": "로컬 변경 사항이 없습니다",
+      "notAGitRepoTitle": "Git 저장소가 아닙니다",
+      "notAGitRepoHint": "위의 브랜치 메뉴에서 Git을 초기화하거나 기존 저장소를 여세요.",
       "trackedChanges": "추적된 변경 ({count})",
       "untrackedFiles": "추적되지 않은 파일 ({count})",
       "expandTracked": "추적된 변경 펼치기",
@@ -1706,6 +1719,7 @@
         "nameLabel": "이름:",
         "agentPromptLabel": "프롬프트",
         "agentModelLabel": "모델",
+        "agentRunning": "실행 중...",
         "agentStatsBash": "명령",
         "agentStatsRead": "파일 읽기",
         "agentStatsSearch": "검색",
@@ -1854,7 +1868,17 @@
     "copy": "복사",
     "addressLabel": "접속 주소",
     "tokenLabel": "접속 토큰",
-    "tokenHint": "웹 클라이언트 첫 접속 시 이 토큰을 입력하세요"
+    "tokenHint": "웹 클라이언트 첫 접속 시 이 토큰을 입력하세요",
+    "tokenPlaceholder": "비워두면 자동 생성",
+    "regenerate": "재생성",
+    "errors": {
+      "alreadyRunning": "웹 서비스가 이미 실행 중입니다",
+      "invalidAddress": "호스트 또는 포트 형식이 올바르지 않습니다",
+      "portInUse": "포트 {port}가 이미 사용 중입니다. 해당 포트를 사용 중인 프로세스를 종료하거나 다른 포트를 선택하세요",
+      "permissionDenied": "권한이 부족합니다. 1024 이상의 포트를 사용하거나 더 높은 권한으로 실행하세요",
+      "addressUnavailable": "이 주소는 현재 시스템에서 사용할 수 없습니다",
+      "bindFailed": "주소 바인딩에 실패했습니다"
+    }
   },
   "DirectoryBrowser": {
     "title": "디렉토리 찾아보기",

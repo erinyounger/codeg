@@ -769,6 +769,12 @@
     "applyRightNonConflicting": "Appliquer distant"
   },
   "Folder": {
+    "workspaceStatus": {
+      "degradedTitle": "Mises à jour en temps réel indisponibles",
+      "degradedHint": "L’observateur n’a pas pu démarrer (par ex. permission refusée). Actualisez manuellement pour voir les modifications.",
+      "retry": "Réessayer",
+      "retrying": "Nouvelle tentative..."
+    },
     "common": {
       "all": "Tout",
       "cancel": "Annuler",
@@ -828,6 +834,9 @@
       "reload": "Recharger",
       "newConversation": "Nouvelle conversation",
       "closeConversation": "Fermer la conversation",
+      "copyText": "Copier le texte",
+      "copyTextSuccess": "Copié",
+      "copyTextFailed": "Échec de la copie",
       "forkSession": "Dupliquer la session",
       "forkSessionSuccess": "Session dupliquée avec succès",
       "forkSessionFailed": "Échec de la duplication de la session : {error}",
@@ -1202,6 +1211,8 @@
       "workspace": "espace de travail",
       "retry": "Réessayer",
       "noCommitsFound": "Aucun commit trouvé",
+      "notAGitRepoTitle": "Pas un dépôt Git",
+      "notAGitRepoHint": "Initialisez Git depuis le menu des branches ci-dessus, ou ouvrez un dépôt existant.",
       "hash": "Empreinte",
       "copyHash": "Copier le hash",
       "copyMessage": "Copier le message",
@@ -1278,6 +1289,8 @@
     "gitChangesTab": {
       "workspace": "espace de travail",
       "noChanges": "Aucun changement local",
+      "notAGitRepoTitle": "Pas un dépôt Git",
+      "notAGitRepoHint": "Initialisez Git depuis le menu des branches ci-dessus, ou ouvrez un dépôt existant.",
       "trackedChanges": "Changements suivis ({count})",
       "untrackedFiles": "Fichiers non suivis ({count})",
       "expandTracked": "Développer les changements suivis",
@@ -1706,6 +1719,7 @@
         "nameLabel": "Nom :",
         "agentPromptLabel": "Instruction",
         "agentModelLabel": "Modèle",
+        "agentRunning": "En cours...",
         "agentStatsBash": "Commandes",
         "agentStatsRead": "Fichiers lus",
         "agentStatsSearch": "Recherches",
@@ -1854,7 +1868,17 @@
     "copy": "Copier",
     "addressLabel": "Adresse d'accès",
     "tokenLabel": "Token d'accès",
-    "tokenHint": "Entrez ce token lors du premier accès au client Web"
+    "tokenHint": "Entrez ce token lors du premier accès au client Web",
+    "tokenPlaceholder": "Laisser vide pour générer automatiquement",
+    "regenerate": "Régénérer",
+    "errors": {
+      "alreadyRunning": "Le service Web est déjà en cours d'exécution",
+      "invalidAddress": "Format d'hôte ou de port non valide",
+      "portInUse": "Le port {port} est déjà utilisé. Fermez le processus qui l'utilise ou choisissez un autre port.",
+      "permissionDenied": "Permission refusée. Utilisez un port supérieur à 1024 ou exécutez avec des privilèges plus élevés.",
+      "addressUnavailable": "Cette adresse n'est pas disponible sur cette machine",
+      "bindFailed": "Échec de la liaison à l'adresse"
+    }
   },
   "DirectoryBrowser": {
     "title": "Parcourir le répertoire",

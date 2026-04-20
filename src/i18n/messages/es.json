@@ -769,6 +769,12 @@
     "applyRightNonConflicting": "Aplicar remoto"
   },
   "Folder": {
+    "workspaceStatus": {
+      "degradedTitle": "Actualizaciones en vivo no disponibles",
+      "degradedHint": "El observador no pudo iniciarse (por ejemplo, permiso denegado). Actualiza manualmente para ver los cambios.",
+      "retry": "Reintentar",
+      "retrying": "Reintentando..."
+    },
     "common": {
       "all": "Todo",
       "cancel": "Cancelar",
@@ -828,6 +834,9 @@
       "reload": "Recargar",
       "newConversation": "Nueva conversación",
       "closeConversation": "Cerrar conversación",
+      "copyText": "Copiar texto",
+      "copyTextSuccess": "Copiado",
+      "copyTextFailed": "Error al copiar",
       "forkSession": "Bifurcar sesión",
       "forkSessionSuccess": "Sesión bifurcada exitosamente",
       "forkSessionFailed": "Error al bifurcar la sesión: {error}",
@@ -1202,6 +1211,8 @@
       "workspace": "espacio de trabajo",
       "retry": "Reintentar",
       "noCommitsFound": "No se encontraron commits",
+      "notAGitRepoTitle": "No es un repositorio Git",
+      "notAGitRepoHint": "Inicializa Git desde el menú de ramas superior, o abre un repositorio existente.",
       "hash": "Hash del commit",
       "copyHash": "Copiar hash",
       "copyMessage": "Copiar mensaje",
@@ -1278,6 +1289,8 @@
     "gitChangesTab": {
       "workspace": "espacio de trabajo",
       "noChanges": "No hay cambios locales",
+      "notAGitRepoTitle": "No es un repositorio Git",
+      "notAGitRepoHint": "Inicializa Git desde el menú de ramas superior, o abre un repositorio existente.",
       "trackedChanges": "Cambios rastreados ({count})",
       "untrackedFiles": "Archivos no rastreados ({count})",
       "expandTracked": "Expandir cambios rastreados",
@@ -1706,6 +1719,7 @@
         "nameLabel": "Nombre:",
         "agentPromptLabel": "Instrucción",
         "agentModelLabel": "Modelo",
+        "agentRunning": "Ejecutando...",
         "agentStatsBash": "Comandos",
         "agentStatsRead": "Archivos leídos",
         "agentStatsSearch": "Búsquedas",
@@ -1854,7 +1868,17 @@
     "copy": "Copiar",
     "addressLabel": "Dirección de acceso",
     "tokenLabel": "Token de acceso",
-    "tokenHint": "Ingrese este token al acceder al cliente Web por primera vez"
+    "tokenHint": "Ingrese este token al acceder al cliente Web por primera vez",
+    "tokenPlaceholder": "Dejar vacío para generar automáticamente",
+    "regenerate": "Regenerar",
+    "errors": {
+      "alreadyRunning": "El servicio Web ya está en ejecución",
+      "invalidAddress": "Formato de host o puerto no válido",
+      "portInUse": "El puerto {port} ya está en uso. Cierre el proceso que lo usa o elija otro puerto.",
+      "permissionDenied": "Permiso denegado. Utilice un puerto superior a 1024 o ejecute con mayores privilegios.",
+      "addressUnavailable": "La dirección no está disponible en este equipo",
+      "bindFailed": "No se pudo enlazar la dirección"
+    }
   },
   "DirectoryBrowser": {
     "title": "Explorar directorio",

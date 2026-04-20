@@ -769,6 +769,12 @@
     "applyRightNonConflicting": "套用遠端"
   },
   "Folder": {
+    "workspaceStatus": {
+      "degradedTitle": "即時更新不可用",
+      "degradedHint": "監聽器啟動失敗（如目錄無讀取權限）。請手動重新整理以取得最新變更。",
+      "retry": "重試",
+      "retrying": "重試中..."
+    },
     "common": {
       "all": "全部",
       "cancel": "取消",
@@ -828,6 +834,9 @@
       "reload": "重新載入",
       "newConversation": "新增會話",
       "closeConversation": "關閉會話",
+      "copyText": "複製文字",
+      "copyTextSuccess": "已複製",
+      "copyTextFailed": "複製失敗",
       "forkSession": "分叉會話",
       "forkSessionSuccess": "會話分叉成功",
       "forkSessionFailed": "會話分叉失敗：{error}",
@@ -1202,6 +1211,8 @@
       "workspace": "工作區",
       "retry": "重試",
       "noCommitsFound": "未找到提交記錄",
+      "notAGitRepoTitle": "不是 Git 儲存庫",
+      "notAGitRepoHint": "可從上方分支選單初始化 Git，或開啟已有的 Git 儲存庫。",
       "hash": "Hash",
       "copyHash": "複製雜湊",
       "copyMessage": "複製提交訊息",
@@ -1278,6 +1289,8 @@
     "gitChangesTab": {
       "workspace": "工作區",
       "noChanges": "暫無本地變更",
+      "notAGitRepoTitle": "不是 Git 儲存庫",
+      "notAGitRepoHint": "可從上方分支選單初始化 Git，或開啟已有的 Git 儲存庫。",
       "trackedChanges": "本地已追蹤變更 ({count})",
       "untrackedFiles": "本地未追蹤檔案 ({count})",
       "expandTracked": "展開已追蹤變更",
@@ -1706,6 +1719,7 @@
         "nameLabel": "名稱：",
         "agentPromptLabel": "提示詞",
         "agentModelLabel": "模型",
+        "agentRunning": "執行中...",
         "agentStatsBash": "命令",
         "agentStatsRead": "讀取檔案",
         "agentStatsSearch": "搜尋",
@@ -1854,7 +1868,17 @@
     "copy": "複製",
     "addressLabel": "存取位址",
     "tokenLabel": "存取 Token",
-    "tokenHint": "Web 用戶端首次存取時需輸入此 Token"
+    "tokenHint": "Web 用戶端首次存取時需輸入此 Token",
+    "tokenPlaceholder": "留空則自動產生",
+    "regenerate": "重新產生",
+    "errors": {
+      "alreadyRunning": "Web 服務已在執行",
+      "invalidAddress": "主機或連接埠格式無效",
+      "portInUse": "連接埠 {port} 已被佔用，請關閉佔用的程式或改用其他連接埠",
+      "permissionDenied": "權限不足，請使用 1024 以上的連接埠，或以更高權限執行",
+      "addressUnavailable": "該位址在本機不可用",
+      "bindFailed": "綁定位址失敗"
+    }
   },
   "DirectoryBrowser": {
     "title": "瀏覽目錄",

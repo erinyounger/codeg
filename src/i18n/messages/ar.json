@@ -769,6 +769,12 @@
     "applyRightNonConflicting": "تطبيق البعيد"
   },
   "Folder": {
+    "workspaceStatus": {
+      "degradedTitle": "التحديثات الفورية غير متاحة",
+      "degradedHint": "فشل تشغيل المراقب (مثل رفض الإذن). قم بالتحديث يدويًا لرؤية التغييرات.",
+      "retry": "إعادة المحاولة",
+      "retrying": "جارٍ إعادة المحاولة..."
+    },
     "common": {
       "all": "الكل",
       "cancel": "إلغاء",
@@ -828,6 +834,9 @@
       "reload": "إعادة تحميل",
       "newConversation": "محادثة جديدة",
       "closeConversation": "إغلاق المحادثة",
+      "copyText": "نسخ النص",
+      "copyTextSuccess": "تم النسخ",
+      "copyTextFailed": "فشل النسخ",
       "forkSession": "تفريع الجلسة",
       "forkSessionSuccess": "تم تفريع الجلسة بنجاح",
       "forkSessionFailed": "فشل في تفريع الجلسة: {error}",
@@ -1202,6 +1211,8 @@
       "workspace": "مساحة العمل",
       "retry": "إعادة المحاولة",
       "noCommitsFound": "لم يتم العثور على التزامات",
+      "notAGitRepoTitle": "ليس مستودع Git",
+      "notAGitRepoHint": "قم بتهيئة Git من قائمة الفروع أعلاه، أو افتح مستودعًا موجودًا.",
       "hash": "بصمة الالتزام",
       "copyHash": "نسخ الـ hash",
       "copyMessage": "نسخ الرسالة",
@@ -1278,6 +1289,8 @@
     "gitChangesTab": {
       "workspace": "مساحة العمل",
       "noChanges": "لا توجد تغييرات محلية",
+      "notAGitRepoTitle": "ليس مستودع Git",
+      "notAGitRepoHint": "قم بتهيئة Git من قائمة الفروع أعلاه، أو افتح مستودعًا موجودًا.",
       "trackedChanges": "التغييرات المتعقبة ({count})",
       "untrackedFiles": "الملفات غير المتعقبة ({count})",
       "expandTracked": "توسيع التغييرات المتعقبة",
@@ -1706,6 +1719,7 @@
         "nameLabel": "الاسم:",
         "agentPromptLabel": "المطالبة",
         "agentModelLabel": "النموذج",
+        "agentRunning": "قيد التشغيل...",
         "agentStatsBash": "الأوامر",
         "agentStatsRead": "الملفات المقروءة",
         "agentStatsSearch": "عمليات البحث",
@@ -1854,7 +1868,17 @@
     "copy": "نسخ",
     "addressLabel": "عنوان الوصول",
     "tokenLabel": "رمز الوصول",
-    "tokenHint": "أدخل هذا الرمز عند الوصول إلى عميل الويب لأول مرة"
+    "tokenHint": "أدخل هذا الرمز عند الوصول إلى عميل الويب لأول مرة",
+    "tokenPlaceholder": "اتركه فارغاً للتوليد التلقائي",
+    "regenerate": "إعادة التوليد",
+    "errors": {
+      "alreadyRunning": "خدمة الويب قيد التشغيل بالفعل",
+      "invalidAddress": "تنسيق المضيف أو المنفذ غير صالح",
+      "portInUse": "المنفذ {port} مستخدم بالفعل. أغلق العملية التي تستخدمه أو اختر منفذاً آخر.",
+      "permissionDenied": "الصلاحيات غير كافية. استخدم منفذاً أعلى من 1024 أو شغّل التطبيق بصلاحيات أعلى.",
+      "addressUnavailable": "هذا العنوان غير متاح على هذا الجهاز",
+      "bindFailed": "فشل ربط العنوان"
+    }
   },
   "DirectoryBrowser": {
     "title": "تصفح المجلد",

@@ -11,6 +11,7 @@ export type AppErrorCode =
   | "configuration_missing"
   | "configuration_invalid"
   | "not_found"
+  | "not_a_git_repository"
   | "already_exists"
   | "permission_denied"
   | "dependency_missing"
@@ -897,6 +898,8 @@ export interface WorkspaceSnapshotResponse {
   tree_snapshot: FileTreeNode[] | null
   git_snapshot: WorkspaceGitEntry[] | null
   deltas: WorkspaceDeltaEnvelope[]
+  degraded: boolean
+  is_git_repo: boolean
 }
 
 export interface GitLogResult {

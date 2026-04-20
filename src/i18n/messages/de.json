@@ -769,6 +769,12 @@
     "applyRightNonConflicting": "Remote anwenden"
   },
   "Folder": {
+    "workspaceStatus": {
+      "degradedTitle": "Live-Aktualisierungen nicht verfügbar",
+      "degradedHint": "Beobachter konnte nicht gestartet werden (z. B. Berechtigung verweigert). Aktualisiere manuell, um Änderungen zu sehen.",
+      "retry": "Wiederholen",
+      "retrying": "Wird wiederholt..."
+    },
     "common": {
       "all": "Alle",
       "cancel": "Abbrechen",
@@ -828,6 +834,9 @@
       "reload": "Neu laden",
       "newConversation": "Neue Konversation",
       "closeConversation": "Konversation schließen",
+      "copyText": "Text kopieren",
+      "copyTextSuccess": "Kopiert",
+      "copyTextFailed": "Kopieren fehlgeschlagen",
       "forkSession": "Sitzung forken",
       "forkSessionSuccess": "Sitzung erfolgreich geforkt",
       "forkSessionFailed": "Sitzung konnte nicht geforkt werden: {error}",
@@ -1202,6 +1211,8 @@
       "workspace": "Arbeitsbereich",
       "retry": "Erneut versuchen",
       "noCommitsFound": "Keine Commits gefunden",
+      "notAGitRepoTitle": "Kein Git-Repository",
+      "notAGitRepoHint": "Initialisiere Git über das Branch-Menü oben oder öffne ein bestehendes Repository.",
       "hash": "Hash-Wert",
       "copyHash": "Hash kopieren",
       "copyMessage": "Nachricht kopieren",
@@ -1278,6 +1289,8 @@
     "gitChangesTab": {
       "workspace": "Arbeitsbereich",
       "noChanges": "Keine lokalen Änderungen",
+      "notAGitRepoTitle": "Kein Git-Repository",
+      "notAGitRepoHint": "Initialisiere Git über das Branch-Menü oben oder öffne ein bestehendes Repository.",
       "trackedChanges": "Verfolgte Änderungen ({count})",
       "untrackedFiles": "Nicht verfolgte Dateien ({count})",
       "expandTracked": "Verfolgte Änderungen ausklappen",
@@ -1706,6 +1719,7 @@
         "nameLabel": "Bezeichnung:",
         "agentPromptLabel": "Eingabe",
         "agentModelLabel": "Modell",
+        "agentRunning": "Läuft...",
         "agentStatsBash": "Befehle",
         "agentStatsRead": "Dateien gelesen",
         "agentStatsSearch": "Suchen",
@@ -1854,7 +1868,17 @@
     "copy": "Kopieren",
     "addressLabel": "Zugriffsadresse",
     "tokenLabel": "Zugriffstoken",
-    "tokenHint": "Geben Sie dieses Token beim ersten Zugriff auf den Web-Client ein"
+    "tokenHint": "Geben Sie dieses Token beim ersten Zugriff auf den Web-Client ein",
+    "tokenPlaceholder": "Leer lassen für automatische Generierung",
+    "regenerate": "Neu generieren",
+    "errors": {
+      "alreadyRunning": "Der Web-Dienst läuft bereits",
+      "invalidAddress": "Host- oder Portformat ungültig",
+      "portInUse": "Port {port} wird bereits verwendet. Beenden Sie den Prozess oder wählen Sie einen anderen Port.",
+      "permissionDenied": "Zugriff verweigert. Verwenden Sie einen Port über 1024 oder starten Sie mit höheren Rechten.",
+      "addressUnavailable": "Die Adresse ist auf diesem Computer nicht verfügbar",
+      "bindFailed": "Adresse konnte nicht gebunden werden"
+    }
   },
   "DirectoryBrowser": {
     "title": "Verzeichnis durchsuchen",

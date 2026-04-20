@@ -5,6 +5,7 @@ pub mod chat_channel;
 pub mod commands;
 pub mod db;
 pub mod git_credential;
+pub mod git_repo;
 pub mod keyring_store;
 mod models;
 mod network;
@@ -449,6 +450,7 @@ mod tauri_app {
                 web::start_web_server,
                 web::stop_web_server,
                 web::get_web_server_status,
+                web::get_web_service_config,
             ])
             .build(tauri::generate_context!())
             .expect("error while building tauri application")

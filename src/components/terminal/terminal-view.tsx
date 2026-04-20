@@ -8,8 +8,16 @@ import {
   terminalResize,
   terminalKill,
 } from "@/lib/api"
+import { useZoomLevel } from "@/hooks/use-appearance"
+import { detectPlatform } from "@/hooks/use-platform"
 import type { TerminalEvent } from "@/lib/types"
-import type { ITheme } from "@xterm/xterm"
+import type { ITheme, Terminal as XTermTerminal } from "@xterm/xterm"
+
+const TERMINAL_BASE_FONT_SIZE = 13
+
+function computeTerminalFontSize(zoomLevel: number): number {
+  return Math.round((TERMINAL_BASE_FONT_SIZE * zoomLevel) / 100)
+}
 
 const DARK_THEME: ITheme = {
   background: "#1a1a1a",
@@ -108,11 +116,13 @@ export function TerminalView({
 }: TerminalViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fitAddonRef = useRef<{ fit: () => void } | null>(null)
-  const termRef = useRef<{ focus: () => void } | null>(null)
+  const termRef = useRef<XTermTerminal | null>(null)
   const lastResizeRef = useRef<{ cols: number; rows: number } | null>(null)
   const isActiveRef = useRef(isActive)
   const isVisibleRef = useRef(isVisible)
   const onProcessExitedRef = useRef(onProcessExited)
+  const { zoomLevel } = useZoomLevel()
+  const zoomLevelRef = useRef(zoomLevel)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -140,7 +150,7 @@ export function TerminalView({
 
       const term = new Terminal({
         cursorBlink: true,
-        fontSize: 13,
+        fontSize: computeTerminalFontSize(zoomLevelRef.current),
         fontFamily: "Menlo, Monaco, 'Courier New', monospace",
         theme: getTerminalTheme(containerRef.current),
         allowProposedApi: true,
@@ -152,6 +162,43 @@ export function TerminalView({
 
       fitAddonRef.current = fitAddon
       termRef.current = term
+
+      // Shell line-editing shortcuts. Sends readline/zle bindings so they
+      // work regardless of terminfo.
+      //   Alt/Option + ←/→ / Backspace: word-level moves & delete
+      //   macOS Cmd + ←/→ / Backspace : line-level moves & clear
+      // Uses `e.code` (physical key) to be robust against dead-key layouts on
+      // macOS where Option can turn some keys into `key: "Dead"`.
+      // AltGr on Windows/Linux is reported as ctrlKey+altKey and is excluded
+      // by the `!ctrlKey` guard below.
+      const isMac = detectPlatform() === "macos"
+      term.attachCustomKeyEventHandler((e) => {
+        if (e.type !== "keydown") return true
+        // Skip during IME composition to avoid corrupting candidate buffer.
+        if (e.isComposing) return true
+
+        const { code, altKey, metaKey, ctrlKey, shiftKey } = e
+
+        const writeSeq = (seq: string) => {
+          terminalWrite(terminalId, seq).catch(() => {})
+          e.preventDefault()
+          return false
+        }
+
+        if (altKey && !ctrlKey && !metaKey && !shiftKey) {
+          if (code === "ArrowLeft") return writeSeq("\x1bb")
+          if (code === "ArrowRight") return writeSeq("\x1bf")
+          if (code === "Backspace") return writeSeq("\x1b\x7f")
+        }
+
+        if (isMac && metaKey && !altKey && !ctrlKey && !shiftKey) {
+          if (code === "ArrowLeft") return writeSeq("\x01")
+          if (code === "ArrowRight") return writeSeq("\x05")
+          if (code === "Backspace") return writeSeq("\x15")
+        }
+
+        return true
+      })
 
       // Watch <html> class changes for theme switching
       const themeObserver = new MutationObserver(() => {
@@ -291,6 +338,25 @@ export function TerminalView({
       })
     }
   }, [isActive, isVisible])
+
+  // React to zoom level changes. Updates the ref synchronously so async init()
+  // always reads the latest zoom, and pushes the new font size to already-mounted
+  // terminals. Double rAF ensures xterm's renderer has recomputed cell metrics
+  // before we refit.
+  useEffect(() => {
+    zoomLevelRef.current = zoomLevel
+    const term = termRef.current
+    if (!term) return
+    term.options.fontSize = computeTerminalFontSize(zoomLevel)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = containerRef.current
+        if (el && el.clientWidth > 0 && el.clientHeight > 0) {
+          fitAddonRef.current?.fit()
+        }
+      })
+    })
+  }, [zoomLevel])
 
   return (
     <div
