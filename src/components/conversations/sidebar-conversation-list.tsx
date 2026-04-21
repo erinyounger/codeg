@@ -13,10 +13,12 @@ import {
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { Virtualizer, type VirtualizerHandle } from "virtua"
-import { CheckCheck, ChevronRight, Download, Loader2, Plus } from "lucide-react"
-import { useFolderContext } from "@/contexts/folder-context"
+import { ChevronRight, Download, Loader2, Plus, XCircle } from "lucide-react"
+import { useActiveFolder } from "@/contexts/active-folder-context"
+import { useAppWorkspace } from "@/contexts/app-workspace-context"
 import { useTabContext } from "@/contexts/tab-context"
 import { useTaskContext } from "@/contexts/task-context"
+import { useZoomLevel } from "@/hooks/use-appearance"
 import {
   importLocalConversations,
   updateConversationTitle,
@@ -24,7 +26,10 @@ import {
   deleteConversation,
 } from "@/lib/api"
 import type { ConversationStatus, DbConversationSummary } from "@/lib/types"
-import { STATUS_ORDER, STATUS_COLORS } from "@/lib/types"
+import {
+  loadFolderExpanded,
+  saveFolderExpanded,
+} from "@/lib/sidebar-view-mode-storage"
 import { SidebarConversationCard } from "./sidebar-conversation-card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -68,96 +73,150 @@ function compareByUpdatedAtDesc(
   return right.id - left.id
 }
 
+function formatRelative(iso: string): string {
+  const ts = parseTimestamp(iso)
+  if (!ts) return ""
+  const diff = Math.max(0, Date.now() - ts)
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return "now"
+  if (m < 60) return `${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h`
+  const d = Math.floor(h / 24)
+  if (d < 30) return `${d}d`
+  const mo = Math.floor(d / 30)
+  if (mo < 12) return `${mo}mo`
+  const y = Math.floor(mo / 12)
+  return `${y}y`
+}
+
 type FlatItem =
-  | { type: "header"; status: ConversationStatus; count: number }
+  | {
+      type: "folder_header"
+      folderId: number
+      folderName: string
+      count: number
+      expanded: boolean
+    }
   | { type: "conversation"; conversation: DbConversationSummary }
 
-const CARD_HEIGHT = 62
+const CARD_HEIGHT_REM = 2
 
-const GroupHeader = memo(function GroupHeader({
-  status,
+const FolderHeader = memo(function FolderHeader({
+  folderId,
+  folderName,
   count,
-  isOpen,
+  expanded,
   onToggle,
-  tStatus,
-}: {
-  status: ConversationStatus
-  count: number
-  isOpen: boolean
-  onToggle: (status: ConversationStatus) => void
-  tStatus: ReturnType<typeof useTranslations>
-}) {
-  return (
-    <button
-      onClick={() => onToggle(status)}
-      className="flex items-center gap-1.5 w-full px-1.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-    >
-      <ChevronRight
-        className={cn(
-          "h-3.5 w-3.5 shrink-0 transition-transform",
-          isOpen && "rotate-90"
-        )}
-      />
-      <span
-        className={cn("w-2 h-2 rounded-full shrink-0", STATUS_COLORS[status])}
-      />
-      <span>{tStatus(status)}</span>
-      <span className="text-muted-foreground/60 tabular-nums">({count})</span>
-    </button>
-  )
-})
-
-const PendingReviewHeader = memo(function PendingReviewHeader({
-  count,
-  isOpen,
-  onToggle,
-  reviewConversationCount,
-  completingReview,
-  onCompleteReview,
-  tStatus,
+  onFocus,
+  onCloseFolderTabs,
+  onRemoveFromWorkspace,
+  onNewConversation,
   t,
 }: {
+  folderId: number
+  folderName: string
   count: number
-  isOpen: boolean
-  onToggle: (status: ConversationStatus) => void
-  reviewConversationCount: number
-  completingReview: boolean
-  onCompleteReview: () => void
-  tStatus: ReturnType<typeof useTranslations>
+  expanded: boolean
+  onToggle: (folderId: number) => void
+  onFocus: (folderId: number) => void
+  onCloseFolderTabs: (folderId: number) => void
+  onRemoveFromWorkspace: (folderId: number) => void
+  onNewConversation: (folderId: number) => void
   t: ReturnType<typeof useTranslations>
 }) {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <button
-          onClick={() => onToggle("pending_review")}
-          className="flex items-center gap-1.5 w-full px-1.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-        >
-          <ChevronRight
+        <div className="relative h-[2rem]">
+          <div
             className={cn(
-              "h-3.5 w-3.5 shrink-0 transition-transform",
-              isOpen && "rotate-90"
+              "flex h-[1.9375rem] w-full items-center",
+              "rounded-[0.4375rem] border",
+              "transition-[background-color,color,border-color] duration-150",
+              expanded
+                ? "bg-sidebar-primary/15 border-sidebar-primary/25"
+                : "border-transparent hover:bg-[color-mix(in_oklab,var(--sidebar-accent),var(--sidebar-foreground)_2%)]"
             )}
-          />
-          <span
-            className={cn(
-              "w-2 h-2 rounded-full shrink-0",
-              STATUS_COLORS.pending_review
-            )}
-          />
-          <span>{tStatus("pending_review")}</span>
-          <span className="text-muted-foreground/60 tabular-nums">
-            ({count})
-          </span>
-        </button>
+          >
+            <button
+              data-folder-id={folderId}
+              onClick={() => onToggle(folderId)}
+              className={cn(
+                "flex h-full min-w-0 flex-1 items-center gap-[0.5rem] px-2 cursor-pointer outline-none",
+                "text-sidebar-foreground"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-[0.75rem] w-[0.75rem] shrink-0 items-center justify-center text-muted-foreground/75",
+                  "transition-transform duration-[180ms] [transition-timing-function:cubic-bezier(.3,.7,.3,1)]",
+                  expanded ? "rotate-90" : "rotate-0"
+                )}
+              >
+                <ChevronRight className="h-[0.625rem] w-[0.625rem]" />
+              </span>
+              <div className="flex min-w-0 flex-1 items-center gap-[0.375rem]">
+                <span
+                  className={cn(
+                    "min-w-0 flex-shrink truncate text-left text-[0.875rem] font-semibold tracking-[-0.00625rem]",
+                    "transition-colors duration-150",
+                    expanded && "text-sidebar-primary"
+                  )}
+                >
+                  {folderName}
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center justify-center",
+                    "h-[0.9375rem] min-w-[1rem] rounded-[0.3125rem] px-[0.25rem]",
+                    "text-[0.625rem] font-semibold leading-none tabular-nums",
+                    "transition-colors duration-150",
+                    expanded
+                      ? "bg-sidebar-primary/20 text-sidebar-primary"
+                      : "bg-[color-mix(in_oklab,var(--sidebar-accent),var(--sidebar-foreground)_6%)] text-muted-foreground/80"
+                  )}
+                >
+                  {count}
+                </span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onNewConversation(folderId)
+              }}
+              title={t("newConversation")}
+              aria-label={t("newConversation")}
+              className={cn(
+                "mr-[0.25rem] flex h-[1.25rem] w-[1.25rem] shrink-0 items-center justify-center",
+                "rounded-[0.25rem] cursor-pointer outline-none text-muted-foreground/80",
+                "transition-colors duration-150",
+                expanded
+                  ? "hover:text-sidebar-primary"
+                  : "hover:text-sidebar-foreground"
+              )}
+            >
+              <Plus className="h-[0.75rem] w-[0.75rem]" />
+            </button>
+          </div>
+        </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
+        <ContextMenuItem onSelect={() => onFocus(folderId)}>
+          {t("folderHeaderMenu.focus")}
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => onCloseFolderTabs(folderId)}>
+          {t("folderHeaderMenu.closeFolderTabs")}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem
-          disabled={reviewConversationCount === 0 || completingReview}
-          onSelect={onCompleteReview}
+          variant="destructive"
+          onSelect={() => onRemoveFromWorkspace(folderId)}
         >
-          <CheckCheck className="h-4 w-4" />
-          {t("completeAllSessions")}
+          <XCircle className="h-4 w-4" />
+          {t("folderHeaderMenu.removeFromWorkspace")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -170,105 +229,200 @@ export interface SidebarConversationListHandle {
   collapseAll: () => void
 }
 
+export interface SidebarConversationListProps {
+  showCompleted?: boolean
+}
+
 export function SidebarConversationList({
   ref,
-}: {
+  showCompleted = true,
+}: SidebarConversationListProps & {
   ref?: Ref<SidebarConversationListHandle>
 }) {
   const t = useTranslations("Folder.sidebar")
-  const tStatus = useTranslations("Folder.statusLabels")
   const tCommon = useTranslations("Folder.common")
+  const { zoomLevel } = useZoomLevel()
+  const safeZoomLevel =
+    typeof zoomLevel === "number" && Number.isFinite(zoomLevel) && zoomLevel > 0
+      ? zoomLevel
+      : 100
+  const cardHeightPx = Math.max(
+    1,
+    Math.round((CARD_HEIGHT_REM * 16 * safeZoomLevel) / 100)
+  )
   const {
-    folder,
+    allFolders,
     conversations,
-    loading,
-    refreshing,
-    error,
-    selectedConversation,
-    folderId,
+    conversationsLoading: loading,
+    conversationsError: error,
     refreshConversations,
     updateConversationLocal,
-  } = useFolderContext()
+    removeFolderFromWorkspace,
+  } = useAppWorkspace()
+  const refreshing = loading
+  const { activeFolder } = useActiveFolder()
 
-  const { openTab, closeConversationTab, openNewConversationTab } =
-    useTabContext()
+  const {
+    openTab,
+    closeConversationTab,
+    closeTabsByFolder,
+    openNewConversationTab,
+    activeTabId,
+    tabs,
+  } = useTabContext()
   const { addTask, updateTask } = useTaskContext()
 
+  const folderIndex = useMemo(() => {
+    const map = new Map<number, { name: string; path: string }>()
+    for (const f of allFolders) map.set(f.id, { name: f.name, path: f.path })
+    return map
+  }, [allFolders])
+
+  const selectedConversation = useMemo(() => {
+    const activeTab = tabs.find((tab) => tab.id === activeTabId)
+    if (!activeTab || activeTab.conversationId == null) return null
+    return {
+      id: activeTab.conversationId,
+      agentType: activeTab.agentType,
+    }
+  }, [tabs, activeTabId])
+
   const [importing, setImporting] = useState(false)
-  const [completeReviewOpen, setCompleteReviewOpen] = useState(false)
-  const [completingReview, setCompletingReview] = useState(false)
-  const [groupExpanded, setGroupExpanded] = useState<
-    Record<ConversationStatus, boolean>
-  >({
-    in_progress: true,
-    pending_review: true,
-    completed: false,
-    cancelled: false,
-  })
+  const [folderExpanded, setFolderExpanded] = useState<Record<number, boolean>>(
+    {}
+  )
+  const [scrollOffset, setScrollOffset] = useState(0)
+  const [removeConfirm, setRemoveConfirm] = useState<{
+    folderId: number
+    folderName: string
+  } | null>(null)
+
+  useEffect(() => {
+    // Hydrate from localStorage after mount to keep SSR/CSR markup consistent.
+
+    setFolderExpanded(loadFolderExpanded())
+  }, [])
 
   const scrollToActiveRef = useRef<() => void>(() => {})
   const pendingScrollRef = useRef(false)
   const virtualizerRef = useRef<VirtualizerHandle>(null)
+
+  const filteredConversations = useMemo(() => {
+    if (showCompleted) return conversations
+    return conversations.filter(
+      (c) => c.status !== "completed" && c.status !== "cancelled"
+    )
+  }, [conversations, showCompleted])
+
+  const byFolder = useMemo(() => {
+    const map = new Map<number, DbConversationSummary[]>()
+    for (const conv of filteredConversations) {
+      const list = map.get(conv.folder_id)
+      if (list) list.push(conv)
+      else map.set(conv.folder_id, [conv])
+    }
+    for (const list of map.values()) list.sort(compareByUpdatedAtDesc)
+    return map
+  }, [filteredConversations])
+
+  const orderedFolderIds = useMemo(() => {
+    const seen = new Set<number>()
+    const ids: number[] = []
+    for (const f of allFolders) {
+      if (!seen.has(f.id)) {
+        seen.add(f.id)
+        ids.push(f.id)
+      }
+    }
+    for (const id of byFolder.keys()) {
+      if (!seen.has(id)) {
+        seen.add(id)
+        ids.push(id)
+      }
+    }
+    return ids
+  }, [allFolders, byFolder])
+
+  const flatItems = useMemo<FlatItem[]>(() => {
+    const items: FlatItem[] = []
+    for (const folderId of orderedFolderIds) {
+      const list = byFolder.get(folderId) ?? []
+      const folderName = folderIndex.get(folderId)?.name ?? String(folderId)
+      const expanded = folderExpanded[folderId] ?? true
+      items.push({
+        type: "folder_header",
+        folderId,
+        folderName,
+        count: list.length,
+        expanded,
+      })
+      if (!expanded) continue
+      for (const conv of list) {
+        items.push({ type: "conversation", conversation: conv })
+      }
+    }
+    return items
+  }, [orderedFolderIds, byFolder, folderIndex, folderExpanded])
+
+  const stickyState = useMemo<{
+    folder: Extract<FlatItem, { type: "folder_header" }> | null
+    pushOffset: number
+  }>(() => {
+    const vr = virtualizerRef.current
+    const startIdx = vr ? vr.findItemIndex(scrollOffset) : 0
+    let folderIdx = -1
+    for (let i = Math.min(startIdx, flatItems.length - 1); i >= 0; i--) {
+      if (flatItems[i]?.type === "folder_header") {
+        folderIdx = i
+        break
+      }
+    }
+    if (folderIdx < 0) {
+      return { folder: null, pushOffset: 0 }
+    }
+    const folder = flatItems[folderIdx] as Extract<
+      FlatItem,
+      { type: "folder_header" }
+    >
+    let pushOffset = 0
+    if (vr) {
+      const stickyHeight = vr.getItemSize(folderIdx) || cardHeightPx
+      for (let i = folderIdx + 1; i < flatItems.length; i++) {
+        if (flatItems[i].type === "folder_header") {
+          const nextRelativeY = vr.getItemOffset(i) - scrollOffset
+          if (nextRelativeY < stickyHeight) {
+            pushOffset = Math.min(0, nextRelativeY - stickyHeight)
+          }
+          break
+        }
+      }
+    }
+    return { folder, pushOffset }
+  }, [scrollOffset, flatItems, cardHeightPx])
+
+  const stickyFolderItem = stickyState.folder
 
   useImperativeHandle(ref, () => ({
     scrollToActive() {
       scrollToActiveRef.current()
     },
     expandAll() {
-      setGroupExpanded({
-        in_progress: true,
-        pending_review: true,
-        completed: true,
-        cancelled: true,
+      setFolderExpanded((prev) => {
+        const next: Record<number, boolean> = { ...prev }
+        for (const id of orderedFolderIds) next[id] = true
+        saveFolderExpanded(next)
+        return next
       })
     },
     collapseAll() {
-      setGroupExpanded({
-        in_progress: false,
-        pending_review: false,
-        completed: false,
-        cancelled: false,
+      setFolderExpanded((prev) => {
+        const next: Record<number, boolean> = { ...prev }
+        for (const id of orderedFolderIds) next[id] = false
+        saveFolderExpanded(next)
+        return next
       })
     },
   }))
-
-  const grouped = useMemo(() => {
-    const map = new Map<ConversationStatus, DbConversationSummary[]>()
-    for (const conv of conversations) {
-      const status = conv.status as ConversationStatus
-      const list = map.get(status)
-      if (list) {
-        list.push(conv)
-      } else {
-        map.set(status, [conv])
-      }
-    }
-    for (const list of map.values()) {
-      list.sort(compareByUpdatedAtDesc)
-    }
-    return map
-  }, [conversations])
-
-  const flatItems = useMemo<FlatItem[]>(() => {
-    const items: FlatItem[] = []
-    for (const status of STATUS_ORDER) {
-      const list = grouped.get(status)
-      if (!list || list.length === 0) continue
-      items.push({ type: "header", status, count: list.length })
-      if (groupExpanded[status]) {
-        for (const conv of list) {
-          items.push({ type: "conversation", conversation: conv })
-        }
-      }
-    }
-    return items
-  }, [grouped, groupExpanded])
-
-  const reviewConversations = useMemo(
-    () => grouped.get("pending_review") ?? [],
-    [grouped]
-  )
-  const reviewConversationCount = reviewConversations.length
 
   useEffect(() => {
     scrollToActiveRef.current = () => {
@@ -279,9 +433,12 @@ export function SidebarConversationList({
         (c) => c.id === targetId && c.agent_type === targetAgent
       )
       if (!conv) return
-      const status = conv.status as ConversationStatus
-      if (!groupExpanded[status]) {
-        setGroupExpanded((prev) => ({ ...prev, [status]: true }))
+      if (!(folderExpanded[conv.folder_id] ?? true)) {
+        setFolderExpanded((prev) => {
+          const next = { ...prev, [conv.folder_id]: true }
+          saveFolderExpanded(next)
+          return next
+        })
         pendingScrollRef.current = true
         return
       }
@@ -303,29 +460,91 @@ export function SidebarConversationList({
       pendingScrollRef.current = false
       scrollToActiveRef.current()
     }
-  }, [selectedConversation, flatItems, conversations, groupExpanded])
+  }, [selectedConversation, flatItems, conversations, folderExpanded])
 
-  const toggleGroup = useCallback((status: ConversationStatus) => {
-    setGroupExpanded((prev) => ({ ...prev, [status]: !prev[status] }))
+  const toggleFolder = useCallback((folderId: number) => {
+    setFolderExpanded((prev) => {
+      const next = { ...prev, [folderId]: !(prev[folderId] ?? true) }
+      saveFolderExpanded(next)
+      return next
+    })
   }, [])
 
-  const handleOpenCompleteReview = useCallback(
-    () => setCompleteReviewOpen(true),
-    []
+  const focusFolder = useCallback(
+    (folderId: number) => {
+      const idx = flatItems.findIndex(
+        (item) => item.type === "folder_header" && item.folderId === folderId
+      )
+      if (idx >= 0) {
+        virtualizerRef.current?.scrollToIndex(idx, {
+          align: "start",
+          smooth: true,
+        })
+      }
+    },
+    [flatItems]
   )
+
+  const handleCloseFolderTabs = useCallback(
+    (folderId: number) => {
+      closeTabsByFolder(folderId)
+    },
+    [closeTabsByFolder]
+  )
+
+  const handleRemoveFolder = useCallback(
+    (folderId: number) => {
+      const name = folderIndex.get(folderId)?.name ?? String(folderId)
+      setRemoveConfirm({ folderId, folderName: name })
+    },
+    [folderIndex]
+  )
+
+  const handleRemoveFolderConfirm = useCallback(async () => {
+    if (!removeConfirm) return
+    const { folderId, folderName } = removeConfirm
+    try {
+      closeTabsByFolder(folderId)
+      await removeFolderFromWorkspace(folderId)
+      toast.success(t("toasts.folderRemoved", { name: folderName }))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      toast.error(t("toasts.removeFolderFailed", { message: msg }))
+    } finally {
+      setRemoveConfirm(null)
+    }
+  }, [removeConfirm, closeTabsByFolder, removeFolderFromWorkspace, t])
 
   const handleSelect = useCallback(
     (id: number, agentType: string) => {
-      openTab(id, agentType as Parameters<typeof openTab>[1], false)
+      const conv = conversations.find(
+        (c) => c.id === id && c.agent_type === agentType
+      )
+      if (!conv) return
+      openTab(
+        conv.folder_id,
+        id,
+        agentType as Parameters<typeof openTab>[2],
+        false
+      )
     },
-    [openTab]
+    [openTab, conversations]
   )
 
   const handleDoubleClick = useCallback(
     (id: number, agentType: string) => {
-      openTab(id, agentType as Parameters<typeof openTab>[1], true)
+      const conv = conversations.find(
+        (c) => c.id === id && c.agent_type === agentType
+      )
+      if (!conv) return
+      openTab(
+        conv.folder_id,
+        id,
+        agentType as Parameters<typeof openTab>[2],
+        true
+      )
     },
-    [openTab]
+    [openTab, conversations]
   )
 
   const handleRename = useCallback(
@@ -338,11 +557,20 @@ export function SidebarConversationList({
 
   const handleDelete = useCallback(
     async (id: number, agentType: string) => {
+      const conv = conversations.find(
+        (c) => c.id === id && c.agent_type === agentType
+      )
       await deleteConversation(id)
-      closeConversationTab(id, agentType as Parameters<typeof openTab>[1])
+      if (conv) {
+        closeConversationTab(
+          conv.folder_id,
+          id,
+          agentType as Parameters<typeof openTab>[2]
+        )
+      }
       refreshConversations()
     },
-    [closeConversationTab, refreshConversations]
+    [closeConversationTab, refreshConversations, conversations]
   )
 
   const handleStatusChange = useCallback(
@@ -354,18 +582,28 @@ export function SidebarConversationList({
   )
 
   const handleNewConversation = useCallback(() => {
-    if (!folder) return
-    openNewConversationTab(folder.path)
-  }, [folder, openNewConversationTab])
+    if (!activeFolder) return
+    openNewConversationTab(activeFolder.id, activeFolder.path)
+  }, [activeFolder, openNewConversationTab])
+
+  const handleNewConversationForFolder = useCallback(
+    (folderId: number) => {
+      const folder = folderIndex.get(folderId)
+      if (!folder) return
+      openNewConversationTab(folderId, folder.path)
+    },
+    [folderIndex, openNewConversationTab]
+  )
 
   const handleImport = useCallback(async () => {
     if (importing) return
+    if (!activeFolder) return
     setImporting(true)
-    const taskId = `import-${folderId}-${Date.now()}`
+    const taskId = `import-${activeFolder.id}-${Date.now()}`
     addTask(taskId, t("importLocalSessions"))
     updateTask(taskId, { status: "running" })
     try {
-      const result = await importLocalConversations(folderId)
+      const result = await importLocalConversations(activeFolder.id)
       updateTask(taskId, { status: "completed" })
       refreshConversations()
       if (result.imported > 0) {
@@ -385,41 +623,10 @@ export function SidebarConversationList({
     } finally {
       setImporting(false)
     }
-  }, [importing, folderId, addTask, updateTask, refreshConversations, t])
+  }, [importing, activeFolder, addTask, updateTask, refreshConversations, t])
 
-  const handleCompleteAllReview = useCallback(async () => {
-    if (completingReview || reviewConversationCount === 0) return
-    setCompletingReview(true)
-    try {
-      // Optimistic: update all locally first
-      for (const conversation of reviewConversations) {
-        updateConversationLocal(conversation.id, { status: "completed" })
-      }
-      await Promise.all(
-        reviewConversations.map((conversation) =>
-          updateConversationStatus(conversation.id, "completed")
-        )
-      )
-      toast.success(
-        t("toasts.reviewCompleted", { count: reviewConversationCount })
-      )
-      setCompleteReviewOpen(false)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      toast.error(t("toasts.completeReviewFailed", { message: msg }))
-      // Revert on error — refetch from server
-      refreshConversations()
-    } finally {
-      setCompletingReview(false)
-    }
-  }, [
-    completingReview,
-    reviewConversationCount,
-    reviewConversations,
-    refreshConversations,
-    updateConversationLocal,
-    t,
-  ])
+  const emptyAfterFilter =
+    filteredConversations.length === 0 && conversations.length > 0
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0">
@@ -451,7 +658,7 @@ export function SidebarConversationList({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={importing}
+                disabled={importing || !activeFolder}
                 onClick={handleImport}
               >
                 {importing ? (
@@ -464,72 +671,109 @@ export function SidebarConversationList({
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            <ContextMenuItem onSelect={handleNewConversation}>
+            <ContextMenuItem
+              onSelect={handleNewConversation}
+              disabled={!activeFolder}
+            >
               <Plus className="h-4 w-4" />
               {t("newConversation")}
             </ContextMenuItem>
             <ContextMenuSeparator />
-            <ContextMenuItem disabled={importing} onSelect={handleImport}>
+            <ContextMenuItem
+              disabled={importing || !activeFolder}
+              onSelect={handleImport}
+            >
               <Download className="h-4 w-4" />
               {importing ? t("importing") : t("importLocalSessions")}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
+      ) : emptyAfterFilter ? (
+        <div className="flex-1 flex items-center justify-center px-3">
+          <p className="text-muted-foreground text-xs text-center">
+            {t("noMatchingConversations")}
+          </p>
+        </div>
       ) : (
         <ContextMenu>
           <ContextMenuTrigger asChild>
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 relative">
+              {stickyFolderItem && (
+                <div
+                  className="absolute top-0 left-0 right-0 z-10"
+                  style={{
+                    transform: `translateY(${stickyState.pushOffset}px)`,
+                  }}
+                >
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 right-[0.5rem] bg-sidebar"
+                  />
+                  <div className="relative px-2">
+                    <FolderHeader
+                      key={`sticky-${stickyFolderItem.folderId}`}
+                      folderId={stickyFolderItem.folderId}
+                      folderName={stickyFolderItem.folderName}
+                      count={stickyFolderItem.count}
+                      expanded={stickyFolderItem.expanded}
+                      onToggle={toggleFolder}
+                      onFocus={focusFolder}
+                      onCloseFolderTabs={handleCloseFolderTabs}
+                      onRemoveFromWorkspace={handleRemoveFolder}
+                      onNewConversation={handleNewConversationForFolder}
+                      t={t}
+                    />
+                  </div>
+                </div>
+              )}
               <ScrollArea
-                className={cn("h-full min-h-0 px-2", "[overflow-anchor:none]")}
+                className={cn(
+                  "h-full min-h-0 px-2 pb-[1.25rem]",
+                  "[overflow-anchor:none]"
+                )}
               >
-                <Virtualizer ref={virtualizerRef} itemSize={CARD_HEIGHT}>
+                <Virtualizer
+                  ref={virtualizerRef}
+                  itemSize={cardHeightPx}
+                  onScroll={setScrollOffset}
+                >
                   {flatItems.map((item) => {
-                    const key =
-                      item.type === "header"
-                        ? `header-${item.status}`
-                        : `conv-${item.conversation.id}`
+                    if (item.type === "folder_header") {
+                      return (
+                        <FolderHeader
+                          key={`folder-${item.folderId}`}
+                          folderId={item.folderId}
+                          folderName={item.folderName}
+                          count={item.count}
+                          expanded={item.expanded}
+                          onToggle={toggleFolder}
+                          onFocus={focusFolder}
+                          onCloseFolderTabs={handleCloseFolderTabs}
+                          onRemoveFromWorkspace={handleRemoveFolder}
+                          onNewConversation={handleNewConversationForFolder}
+                          t={t}
+                        />
+                      )
+                    }
+                    const conv = item.conversation
                     return (
-                      <div key={key}>
-                        {item.type === "header" ? (
-                          item.status === "pending_review" ? (
-                            <PendingReviewHeader
-                              count={item.count}
-                              isOpen={groupExpanded[item.status]}
-                              onToggle={toggleGroup}
-                              reviewConversationCount={reviewConversationCount}
-                              completingReview={completingReview}
-                              onCompleteReview={handleOpenCompleteReview}
-                              tStatus={tStatus}
-                              t={t}
-                            />
-                          ) : (
-                            <GroupHeader
-                              status={item.status}
-                              count={item.count}
-                              isOpen={groupExpanded[item.status]}
-                              onToggle={toggleGroup}
-                              tStatus={tStatus}
-                            />
-                          )
-                        ) : (
-                          <SidebarConversationCard
-                            conversation={item.conversation}
-                            isSelected={
-                              selectedConversation?.agentType ===
-                                item.conversation.agent_type &&
-                              selectedConversation?.id === item.conversation.id
-                            }
-                            onSelect={handleSelect}
-                            onDoubleClick={handleDoubleClick}
-                            onRename={handleRename}
-                            onDelete={handleDelete}
-                            onStatusChange={handleStatusChange}
-                            onNewConversation={handleNewConversation}
-                            onImport={handleImport}
-                            importing={importing}
-                          />
-                        )}
-                      </div>
+                      <SidebarConversationCard
+                        key={`conv-${conv.id}`}
+                        conversation={conv}
+                        isSelected={
+                          selectedConversation?.agentType === conv.agent_type &&
+                          selectedConversation?.id === conv.id
+                        }
+                        timeLabel={formatRelative(conv.updated_at)}
+                        onSelect={handleSelect}
+                        onDoubleClick={handleDoubleClick}
+                        onRename={handleRename}
+                        onDelete={handleDelete}
+                        onStatusChange={handleStatusChange}
+                        onNewConversation={handleNewConversation}
+                        onImport={handleImport}
+                        importing={importing}
+                      />
                     )
                   })}
                 </Virtualizer>
@@ -537,42 +781,42 @@ export function SidebarConversationList({
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            <ContextMenuItem onSelect={handleNewConversation}>
+            <ContextMenuItem
+              onSelect={handleNewConversation}
+              disabled={!activeFolder}
+            >
               <Plus className="h-4 w-4" />
               {t("newConversation")}
             </ContextMenuItem>
             <ContextMenuSeparator />
-            <ContextMenuItem disabled={importing} onSelect={handleImport}>
+            <ContextMenuItem
+              disabled={importing || !activeFolder}
+              onSelect={handleImport}
+            >
               <Download className="h-4 w-4" />
               {importing ? t("importing") : t("importLocalSessions")}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
       )}
+
       <AlertDialog
-        open={completeReviewOpen}
-        onOpenChange={(open) =>
-          !completingReview && setCompleteReviewOpen(open)
-        }
+        open={removeConfirm !== null}
+        onOpenChange={(open) => !open && setRemoveConfirm(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("completeAllReviewTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("removeFolderConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("completeAllReviewDescription", {
-                count: reviewConversationCount,
+              {t("removeFolderConfirmDescription", {
+                name: removeConfirm?.folderName ?? "",
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={completingReview}>
-              {tCommon("cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={completingReview || reviewConversationCount === 0}
-              onClick={handleCompleteAllReview}
-            >
-              {completingReview ? t("completing") : tCommon("confirm")}
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveFolderConfirm}>
+              {tCommon("confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

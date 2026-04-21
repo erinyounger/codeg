@@ -20,6 +20,8 @@ interface TabItemProps {
   tab: TabItemData
   isActive: boolean
   isTileMode: boolean
+  folderName: string | null
+  folderBranch: string | null
   onSwitch: (tabId: string) => void
   onClose: (tabId: string) => void
   onCloseOthers: (tabId: string) => void
@@ -32,6 +34,8 @@ export const TabItem = memo(function TabItem({
   tab,
   isActive,
   isTileMode,
+  folderName,
+  folderBranch,
   onSwitch,
   onClose,
   onCloseOthers,
@@ -42,6 +46,11 @@ export const TabItem = memo(function TabItem({
   const t = useTranslations("Folder.tabs")
   const isDragging = useRef(false)
   const itemRef = useRef<HTMLDivElement>(null)
+
+  const resolvedFolderName = folderName ?? String(tab.folderId)
+  const tooltip = folderBranch
+    ? `${resolvedFolderName} · ${folderBranch}  —  ${tab.title}`
+    : `${resolvedFolderName}  —  ${tab.title}`
 
   const clearResidualStyles = useCallback(() => {
     const el = itemRef.current
@@ -119,7 +128,7 @@ export const TabItem = memo(function TabItem({
                 "truncate max-w-[140px]",
                 !tab.isPinned && "[font-style:oblique]"
               )}
-              title={tab.title}
+              title={tooltip}
             >
               {tab.title}
             </span>

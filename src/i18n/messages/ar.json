@@ -12,54 +12,6 @@
     "portuguese": "البرتغالية",
     "arabic": "العربية"
   },
-  "WelcomePage": {
-    "title": "مرحبًا بك في Codeg",
-    "openSettings": "فتح الإعدادات",
-    "searchPlaceholder": "ابحث في المجلدات...",
-    "loading": "جارٍ التحميل...",
-    "emptyFolders": "لا توجد مجلدات بعد",
-    "removeFromHistory": "إزالة من السجل",
-    "openFolder": "فتح مجلد",
-    "cloneRepository": "استنساخ المستودع",
-    "projectBoot": "مُنشئ المشروع",
-    "softwareVersion": "الإصدار {version}",
-    "toasts": {
-      "loadFolderHistoryFailed": "فشل تحميل سجل المجلدات",
-      "openFolderFailed": "فشل فتح المجلد",
-      "removeFromHistoryFailed": "فشل إزالة المجلد من السجل",
-      "openSettingsFailed": "فشل فتح الإعدادات",
-      "cloneFailed": "فشل استنساخ المستودع",
-      "openProjectBootFailed": "فشل فتح مُنشئ المشروع"
-    },
-    "errors": {
-      "unknown": "حدث خطأ غير متوقع",
-      "invalidInput": "إدخال غير صالح.",
-      "notFound": "المورد غير موجود.",
-      "alreadyExists": "المورد موجود بالفعل.",
-      "dependencyMissing": "هناك اعتماد مطلوب مفقود.",
-      "databaseError": "فشلت عملية قاعدة البيانات.",
-      "ioError": "فشلت عملية الملف.",
-      "externalCommandFailed": "فشل تنفيذ الأمر الخارجي.",
-      "windowOperationFailed": "فشلت عملية النافذة.",
-      "gitNotInstalled": "Git غير مثبت. يرجى تثبيت Git أولًا.",
-      "targetDirectoryNotEmpty": "مجلد الهدف موجود بالفعل وليس فارغًا.",
-      "repositoryNotFound": "المستودع غير موجود. تحقق من الرابط وصلاحيات الوصول.",
-      "networkUnavailable": "الشبكة غير متاحة. تحقق من الاتصال وحاول مرة أخرى.",
-      "authenticationFailed": "فشلت المصادقة. تحقق من بيانات الاعتماد أو مفتاح SSH.",
-      "permissionDenied": "تم رفض الإذن. تحقق من صلاحيات المجلد."
-    },
-    "cloneDialog": {
-      "title": "استنساخ مستودع",
-      "repositoryUrl": "رابط المستودع",
-      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
-      "directory": "المجلد",
-      "directoryPlaceholder": "اختر مجلد الهدف...",
-      "browseDirectory": "تصفح المجلد",
-      "cancel": "إلغاء",
-      "clone": "استنساخ",
-      "clonePath": "مسار الاستنساخ: {path}"
-    }
-  },
   "GitCredentialDialog": {
     "title": "المصادقة مطلوبة",
     "description": "يتطلب الخادم البعيد بيانات اعتماد. أدخل اسم المستخدم وكلمة المرور (أو رمز الوصول الشخصي).",
@@ -825,7 +777,28 @@
         "noNewSessionsFound": "لم يتم العثور على جلسات جديدة (تم تخطي {skipped})",
         "importFailed": "فشل الاستيراد: {message}",
         "reviewCompleted": "تم وضع علامة مكتمل على {count, plural, one {# جلسة مراجعة} other {# جلسات مراجعة}}",
-        "completeReviewFailed": "فشل إكمال جلسات المراجعة: {message}"
+        "completeReviewFailed": "فشل إكمال جلسات المراجعة: {message}",
+        "folderOpened": "تم فتح المجلد {name}",
+        "folderRemoved": "تمت إزالة المجلد {name}",
+        "openFolderFailed": "فشل فتح المجلد",
+        "removeFolderFailed": "فشل إزالة المجلد: {message}"
+      },
+      "statsLabel": "{folders} مجلدات · {convos} محادثة",
+      "openFolder": "فتح مجلد",
+      "searchPlaceholder": "بحث عن محادثات...",
+      "showCompleted": "عرض المحادثات المكتملة",
+      "moreOptions": "المزيد من الخيارات",
+      "statusRunningBadge": "قيد التشغيل",
+      "statusFailedBadge": "فشل",
+      "conversationCountUnit": "{count} محادثة",
+      "emptyFolderHint": "لا توجد محادثات",
+      "noMatchingConversations": "لا توجد محادثات مطابقة",
+      "removeFolderConfirmTitle": "إزالة المجلد من مساحة العمل؟",
+      "removeFolderConfirmDescription": "إزالة \"{name}\" من مساحة العمل؟ سيتم إغلاق علامات التبويب والمحطات المرتبطة.",
+      "folderHeaderMenu": {
+        "focus": "تركيز",
+        "closeFolderTabs": "إغلاق جميع علامات تبويب هذا المجلد",
+        "removeFromWorkspace": "إزالة من مساحة العمل"
       }
     },
     "conversation": {
@@ -976,7 +949,8 @@
       "close": "إغلاق",
       "closeOthers": "إغلاق البقية",
       "closeAll": "إغلاق الكل",
-      "hideTerminal": "إخفاء الطرفية ({shortcut})"
+      "hideTerminal": "إخفاء الطرفية ({shortcut})",
+      "openFolderFirst": "افتح مجلدا أولا"
     },
     "sessionFiles": {
       "currentResponse": "الاستجابة الحالية",
@@ -1041,32 +1015,31 @@
         "checkoutTo": "Checkout إلى {branchName}",
         "mergeBranch": "دمج {branchName}",
         "rebaseTo": "Rebase إلى {branchName}",
-        "deleteBranch": "حذف الفرع {branchName}",
         "deleteRemoteBranch": "حذف الفرع البعيد {branchName}",
         "initGitRepo": "تهيئة مستودع Git",
         "pullCode": "سحب الكود",
         "fetchInfo": "جلب المعلومات",
         "pushCode": "دفع الكود",
         "stashChanges": "تخزين التغييرات في stash",
-        "stashPop": "استرجاع stash"
+        "stashPop": "استرجاع stash",
+        "deleteBranch": "حذف الفرع {branchName}"
       },
       "confirm": {
         "mergeTitle": "دمج الفرع",
         "rebaseTitle": "Rebase للفرع",
-        "deleteTitle": "حذف الفرع",
         "mergeDescription": "دمج {branchName} في الفرع الحالي {currentBranch}؟",
         "rebaseDescription": "إجراء rebase للفرع الحالي {currentBranch} على {branchName}؟",
+        "deleteRemoteTitle": "حذف الفرع البعيد",
+        "deleteRemoteDescription": "هل تريد حذف الفرع البعيد {branchName}؟ سيؤدي ذلك إلى إزالته من المستودع البعيد ولا يمكن التراجع عن هذا الإجراء.",
+        "deleteTitle": "حذف الفرع",
         "deleteDescription": "حذف الفرع {branchName}؟ لا يمكن التراجع عن هذا الإجراء.",
         "forceDeleteTitle": "حذف الفرع بالقوة",
-        "forceDeleteDescription": "الفرع {branchName} لم يتم دمجه بالكامل. هل أنت متأكد من أنك تريد حذفه بالقوة؟ لا يمكن التراجع عن هذا الإجراء.",
-        "deleteRemoteTitle": "حذف الفرع البعيد",
-        "deleteRemoteDescription": "هل تريد حذف الفرع البعيد {branchName}؟ سيؤدي ذلك إلى إزالته من المستودع البعيد ولا يمكن التراجع عن هذا الإجراء."
+        "forceDeleteDescription": "الفرع {branchName} لم يتم دمجه بالكامل. هل أنت متأكد من أنك تريد حذفه بالقوة؟ لا يمكن التراجع عن هذا الإجراء."
       },
       "current": "الحالي",
       "switchToBranch": "التبديل إلى هذا الفرع",
       "mergeBranchIntoCurrent": "دمج {branchName} في {currentBranch}",
       "rebaseCurrentToBranch": "Rebase لـ {currentBranch} على {branchName}",
-      "deleteBranch": "حذف الفرع",
       "versionControl": "التحكم في الإصدارات",
       "initGitRepo": "تهيئة مستودع Git",
       "pullCode": "سحب الكود",
@@ -1132,7 +1105,8 @@
         "dropSuccess": "تم حذف التخبئة",
         "confirmApply": "تطبيق التخبئة {ref} على دليل العمل؟",
         "cancel": "إلغاء"
-      }
+      },
+      "deleteBranch": "حذف الفرع"
     },
     "commitDialog": {
       "toasts": {
@@ -1794,6 +1768,39 @@
       "hunkLabel": "مقطع {index}",
       "loadingHunk": "جارٍ تحميل hunk...",
       "noDiffData": "لا توجد بيانات diff"
+    },
+    "conversationContextBar": {
+      "searchFolder": "Search folder...",
+      "searchBranch": "Search branch...",
+      "noFolders": "No folders",
+      "noBranches": "No branches",
+      "noBranch": "(no branch)",
+      "openNewFolder": "Open folder from disk...",
+      "cancel": "Cancel",
+      "create": "Create",
+      "commit": "Commit",
+      "push": "Push",
+      "merge": "Merge",
+      "toasts": {
+        "folderChanged": "Switched to {name}",
+        "openFolderFailed": "Failed to open folder",
+        "openStashFailed": "Failed to open stash window",
+        "openMergeFailed": "Failed to open merge window"
+      }
+    },
+    "cloneDialog": {
+      "title": "استنساخ مستودع",
+      "repositoryUrl": "رابط المستودع",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
+      "directory": "المجلد",
+      "directoryPlaceholder": "اختر مجلد الهدف...",
+      "browseDirectory": "تصفح المجلد",
+      "cancel": "إلغاء",
+      "clone": "استنساخ",
+      "clonePath": "مسار الاستنساخ: {path}"
+    },
+    "toasts": {
+      "cloneFailed": "فشل استنساخ المستودع"
     }
   },
   "ProjectBoot": {

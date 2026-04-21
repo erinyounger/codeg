@@ -12,54 +12,6 @@
     "portuguese": "Portuguese",
     "arabic": "Arabic"
   },
-  "WelcomePage": {
-    "title": "Welcome to Codeg",
-    "openSettings": "Open Settings",
-    "searchPlaceholder": "Search folders...",
-    "loading": "Loading...",
-    "emptyFolders": "No folders yet",
-    "removeFromHistory": "Remove from history",
-    "openFolder": "Open Folder",
-    "cloneRepository": "Clone Repository",
-    "projectBoot": "Project Boot",
-    "softwareVersion": "version {version}",
-    "toasts": {
-      "loadFolderHistoryFailed": "Failed to load folder history",
-      "openFolderFailed": "Failed to open folder",
-      "removeFromHistoryFailed": "Failed to remove folder",
-      "openSettingsFailed": "Failed to open settings",
-      "cloneFailed": "Failed to clone repository",
-      "openProjectBootFailed": "Failed to open Project Boot"
-    },
-    "errors": {
-      "unknown": "Unexpected error",
-      "invalidInput": "Invalid input.",
-      "notFound": "Resource not found.",
-      "alreadyExists": "Resource already exists.",
-      "dependencyMissing": "Required dependency is missing.",
-      "databaseError": "Database operation failed.",
-      "ioError": "File operation failed.",
-      "externalCommandFailed": "External command failed.",
-      "windowOperationFailed": "Window operation failed.",
-      "gitNotInstalled": "Git is not installed. Please install Git first.",
-      "targetDirectoryNotEmpty": "Target directory already exists and is not empty.",
-      "repositoryNotFound": "Repository not found. Check URL and access permissions.",
-      "networkUnavailable": "Network is unavailable. Check your connection and try again.",
-      "authenticationFailed": "Authentication failed. Check credentials or SSH key.",
-      "permissionDenied": "Permission denied. Check directory permissions."
-    },
-    "cloneDialog": {
-      "title": "Clone Repository",
-      "repositoryUrl": "Repository URL",
-      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
-      "directory": "Directory",
-      "directoryPlaceholder": "Select target directory...",
-      "browseDirectory": "Browse directory",
-      "cancel": "Cancel",
-      "clone": "Clone",
-      "clonePath": "Clone path: {path}"
-    }
-  },
   "GitCredentialDialog": {
     "title": "Authentication Required",
     "description": "The remote server requires credentials. Enter your username and password (or personal access token).",
@@ -825,7 +777,28 @@
         "noNewSessionsFound": "No new sessions found (skipped {skipped})",
         "importFailed": "Import failed: {message}",
         "reviewCompleted": "Marked {count, plural, one {# review session} other {# review sessions}} as completed",
-        "completeReviewFailed": "Failed to complete review sessions: {message}"
+        "completeReviewFailed": "Failed to complete review sessions: {message}",
+        "folderOpened": "Opened folder {name}",
+        "folderRemoved": "Removed folder {name}",
+        "openFolderFailed": "Failed to open folder",
+        "removeFolderFailed": "Failed to remove folder: {message}"
+      },
+      "statsLabel": "{folders} folders · {convos} conversations",
+      "openFolder": "Open Folder",
+      "searchPlaceholder": "Search conversations...",
+      "showCompleted": "Show completed conversations",
+      "moreOptions": "More options",
+      "statusRunningBadge": "Running",
+      "statusFailedBadge": "Failed",
+      "conversationCountUnit": "{count, plural, one {# conversation} other {# conversations}}",
+      "emptyFolderHint": "No conversations",
+      "noMatchingConversations": "No matching conversations",
+      "removeFolderConfirmTitle": "Remove folder from workspace?",
+      "removeFolderConfirmDescription": "Remove \"{name}\" from the workspace? Its tabs and terminals will close.",
+      "folderHeaderMenu": {
+        "focus": "Focus",
+        "closeFolderTabs": "Close all tabs of this folder",
+        "removeFromWorkspace": "Remove from workspace"
       }
     },
     "conversation": {
@@ -976,7 +949,8 @@
       "close": "Close",
       "closeOthers": "Close Others",
       "closeAll": "Close All",
-      "hideTerminal": "Hide Terminal ({shortcut})"
+      "hideTerminal": "Hide Terminal ({shortcut})",
+      "openFolderFirst": "Open a folder first"
     },
     "sessionFiles": {
       "currentResponse": "Current response",
@@ -1041,32 +1015,31 @@
         "checkoutTo": "Checkout to {branchName}",
         "mergeBranch": "Merge {branchName}",
         "rebaseTo": "Rebase to {branchName}",
-        "deleteBranch": "Delete branch {branchName}",
         "deleteRemoteBranch": "Delete remote branch {branchName}",
         "initGitRepo": "Initialize Git repository",
         "pullCode": "Pull code",
         "fetchInfo": "Fetch info",
         "pushCode": "Push code",
         "stashChanges": "Stash changes",
-        "stashPop": "Pop stash"
+        "stashPop": "Pop stash",
+        "deleteBranch": "Delete branch {branchName}"
       },
       "confirm": {
         "mergeTitle": "Merge branch",
         "rebaseTitle": "Rebase branch",
-        "deleteTitle": "Delete branch",
         "mergeDescription": "Merge {branchName} into current branch {currentBranch}?",
         "rebaseDescription": "Rebase current branch {currentBranch} onto {branchName}?",
+        "deleteRemoteTitle": "Delete Remote Branch",
+        "deleteRemoteDescription": "Delete remote branch {branchName}? This will remove it from the remote repository and cannot be undone.",
+        "deleteTitle": "Delete branch",
         "deleteDescription": "Delete branch {branchName}? This action cannot be undone.",
         "forceDeleteTitle": "Force Delete Branch",
-        "forceDeleteDescription": "Branch {branchName} is not fully merged. Are you sure you want to force delete it? This action cannot be undone.",
-        "deleteRemoteTitle": "Delete Remote Branch",
-        "deleteRemoteDescription": "Delete remote branch {branchName}? This will remove it from the remote repository and cannot be undone."
+        "forceDeleteDescription": "Branch {branchName} is not fully merged. Are you sure you want to force delete it? This action cannot be undone."
       },
       "current": "Current",
       "switchToBranch": "Switch to this branch",
       "mergeBranchIntoCurrent": "Merge {branchName} into {currentBranch}",
       "rebaseCurrentToBranch": "Rebase {currentBranch} onto {branchName}",
-      "deleteBranch": "Delete branch",
       "versionControl": "Version Control",
       "initGitRepo": "Initialize Git repository",
       "pullCode": "Pull code",
@@ -1132,7 +1105,8 @@
         "dropSuccess": "Stash dropped",
         "confirmApply": "Apply stash {ref} to working directory?",
         "cancel": "Cancel"
-      }
+      },
+      "deleteBranch": "Delete branch"
     },
     "commitDialog": {
       "toasts": {
@@ -1794,6 +1768,39 @@
       "hunkLabel": "Hunk {index}",
       "loadingHunk": "Loading hunk...",
       "noDiffData": "No diff data"
+    },
+    "conversationContextBar": {
+      "searchFolder": "Search folder...",
+      "searchBranch": "Search branch...",
+      "noFolders": "No folders",
+      "noBranches": "No branches",
+      "noBranch": "(no branch)",
+      "openNewFolder": "Open folder from disk...",
+      "cancel": "Cancel",
+      "create": "Create",
+      "commit": "Commit",
+      "push": "Push",
+      "merge": "Merge",
+      "toasts": {
+        "folderChanged": "Switched to {name}",
+        "openFolderFailed": "Failed to open folder",
+        "openStashFailed": "Failed to open stash window",
+        "openMergeFailed": "Failed to open merge window"
+      }
+    },
+    "cloneDialog": {
+      "title": "Clone Repository",
+      "repositoryUrl": "Repository URL",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
+      "directory": "Directory",
+      "directoryPlaceholder": "Select target directory...",
+      "browseDirectory": "Browse directory",
+      "cancel": "Cancel",
+      "clone": "Clone",
+      "clonePath": "Clone path: {path}"
+    },
+    "toasts": {
+      "cloneFailed": "Failed to clone repository"
     }
   },
   "ProjectBoot": {

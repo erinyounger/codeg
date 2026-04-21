@@ -23,7 +23,8 @@ import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { disposeTauriListener } from "@/lib/tauri-listener"
 import { useAcpActions } from "@/contexts/acp-connections-context"
-import { useFolderContext } from "@/contexts/folder-context"
+import { useActiveFolder } from "@/contexts/active-folder-context"
+import { useAppWorkspace } from "@/contexts/app-workspace-context"
 import { useTabContext } from "@/contexts/tab-context"
 import { useSessionStats } from "@/contexts/session-stats-context"
 import { useTaskContext } from "@/contexts/task-context"
@@ -34,6 +35,7 @@ import { MessageListView } from "@/components/message/message-list-view"
 import { ConversationShell } from "@/components/chat/conversation-shell"
 import { AgentSelector } from "@/components/chat/agent-selector"
 import { ChatInput } from "@/components/chat/chat-input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   acpFork,
   createConversation,
@@ -159,8 +161,9 @@ const ConversationTabView = memo(function ConversationTabView({
   const t = useTranslations("Folder.conversation")
   const tWelcome = useTranslations("Folder.chat.welcomeInputPanel")
   const sharedT = useTranslations("Folder.chat.shared")
-  const { folder, folderId, refreshConversations, updateConversationLocal } =
-    useFolderContext()
+  const { activeFolder: folder, activeFolderId } = useActiveFolder()
+  const { refreshConversations, updateConversationLocal } = useAppWorkspace()
+  const folderId = activeFolderId ?? 0
   const { tabs, bindConversationTab, setTabRuntimeConversationId, pinTab } =
     useTabContext()
   const { setSessionStats } = useSessionStats()
@@ -267,14 +270,13 @@ const ConversationTabView = memo(function ConversationTabView({
     if (dbConversationId != null) {
       return buildConversationDraftStorageKey(selectedAgent, dbConversationId)
     }
-    return buildNewConversationDraftStorageKey({ folderId })
-  }, [dbConversationId, folderId, selectedAgent])
-  const workingDirForConnection = useMemo(() => {
-    if (dbConversationId != null) {
-      return detailLoading ? undefined : folder?.path
-    }
-    return workingDir ?? folder?.path
-  }, [dbConversationId, detailLoading, folder?.path, workingDir])
+    return buildNewConversationDraftStorageKey({ tabId })
+  }, [dbConversationId, tabId, selectedAgent])
+  // Use the per-tab workingDir (derived from the tab's own folderId by the
+  // parent) rather than the active folder's path — otherwise switching tabs
+  // briefly exposes the previous folder's path to the ACP auto-connect
+  // effect, and the connection sticks with the wrong cwd.
+  const workingDirForConnection = workingDir ?? folder?.path
 
   const {
     conn,
@@ -624,7 +626,7 @@ const ConversationTabView = memo(function ConversationTabView({
             effectiveConversationId
           )
           moveMessageInputDraft(
-            buildNewConversationDraftStorageKey({ folderId }),
+            buildNewConversationDraftStorageKey({ tabId }),
             buildConversationDraftStorageKey(selectedAgent, newConversationId)
           )
           statusUpdatedRef.current = false
@@ -1034,13 +1036,13 @@ export function ConversationDetailPanel() {
     getSession,
     removeConversation: runtimeRemoveConversation,
   } = useConversationRuntime()
+  const { activeFolder: folder } = useActiveFolder()
   const {
-    folder,
-    newConversation,
     conversations,
     refreshConversations,
     updateConversationLocal,
-  } = useFolderContext()
+    getFolder,
+  } = useAppWorkspace()
   const {
     tabs,
     activeTabId,
@@ -1050,6 +1052,13 @@ export function ConversationDetailPanel() {
     switchTab,
     onPreviewTabReplaced,
   } = useTabContext()
+  const newConversation = useMemo(() => {
+    const activeTab = tabs.find((tab) => tab.id === activeTabId)
+    if (!activeTab || activeTab.conversationId != null) return null
+    const workingDir = activeTab.workingDir ?? folder?.path
+    if (!workingDir) return null
+    return { workingDir, folderId: activeTab.folderId }
+  }, [tabs, activeTabId, folder?.path])
   const { disconnect: disconnectByKey } = useAcpActions()
   const { addTask, updateTask } = useTaskContext()
   const [reloadByTabId, setReloadByTabId] = useState<Record<string, number>>({})
@@ -1298,7 +1307,7 @@ export function ConversationDetailPanel() {
 
   const handleNewConversation = useCallback(() => {
     if (!folder) return
-    openNewConversationTab(folder.path)
+    openNewConversationTab(folder.id, folder.path)
   }, [folder, openNewConversationTab])
 
   const handleCloseActiveTab = useCallback(() => {
@@ -1372,59 +1381,65 @@ export function ConversationDetailPanel() {
     if (!folder) return
 
     if (hasNoTabs) {
-      openNewConversationTab(newConversation?.workingDir ?? folder.path)
+      openNewConversationTab(
+        folder.id,
+        newConversation?.workingDir ?? folder.path
+      )
     }
   }, [folder, hasNoTabs, newConversation?.workingDir, openNewConversationTab])
 
   const canTile = isTileMode && tabs.length > 1
 
-  // Empty state: no tabs at all — show full-screen welcome
   if (hasNoTabs) {
     return null
   }
+
+  const tabElements = tabs.map((tab, index) => {
+    const active = tab.id === activeTabId
+    return (
+      <div
+        key={tab.id}
+        className={cn(
+          canTile
+            ? cn(
+                "relative h-full min-w-[420px] flex-1 overflow-hidden",
+                index > 0 && "border-l border-border",
+                active && "bg-gradient-to-b from-muted/50 to-transparent"
+              )
+            : active
+              ? "h-full"
+              : "absolute inset-0 invisible pointer-events-none"
+        )}
+        onPointerDownCapture={
+          canTile && !active ? () => switchTab(tab.id) : undefined
+        }
+      >
+        <ConversationTabView
+          tabId={tab.id}
+          conversationId={tab.conversationId}
+          agentType={tab.agentType}
+          workingDir={tab.workingDir ?? getFolder(tab.folderId)?.path}
+          isActive={active}
+          reloadSignal={reloadByTabId[tab.id] ?? 0}
+        />
+      </div>
+    )
+  })
 
   return (
     <ContextMenu onOpenChange={handleContextMenuOpenChange}>
       <ContextMenuTrigger asChild>
         <div
-          className={cn(
-            "relative h-full min-h-0 overflow-hidden",
-            canTile && "flex flex-row"
-          )}
+          className="relative h-full min-h-0 overflow-hidden"
           onPointerDown={handleContextMenuTriggerPointerDown}
         >
-          {tabs.map((tab, index) => {
-            const active = tab.id === activeTabId
-            return (
-              <div
-                key={tab.id}
-                className={cn(
-                  canTile
-                    ? cn(
-                        "relative h-full min-w-[200px] flex-1 overflow-hidden",
-                        index > 0 && "border-l border-border",
-                        active &&
-                          "bg-gradient-to-b from-muted/50 to-transparent"
-                      )
-                    : active
-                      ? "h-full"
-                      : "absolute inset-0 invisible pointer-events-none"
-                )}
-                onPointerDownCapture={
-                  canTile && !active ? () => switchTab(tab.id) : undefined
-                }
-              >
-                <ConversationTabView
-                  tabId={tab.id}
-                  conversationId={tab.conversationId}
-                  agentType={tab.agentType}
-                  workingDir={tab.workingDir ?? folder?.path}
-                  isActive={active}
-                  reloadSignal={reloadByTabId[tab.id] ?? 0}
-                />
-              </div>
-            )
-          })}
+          {canTile ? (
+            <ScrollArea x="scroll" y="hidden" className="h-full w-full">
+              <div className="flex h-full flex-row">{tabElements}</div>
+            </ScrollArea>
+          ) : (
+            tabElements
+          )}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

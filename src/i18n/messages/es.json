@@ -12,54 +12,6 @@
     "portuguese": "Portugués",
     "arabic": "Árabe"
   },
-  "WelcomePage": {
-    "title": "Bienvenido a Codeg",
-    "openSettings": "Abrir configuración",
-    "searchPlaceholder": "Buscar carpetas...",
-    "loading": "Cargando...",
-    "emptyFolders": "Aún no hay carpetas",
-    "removeFromHistory": "Quitar del historial",
-    "openFolder": "Abrir carpeta",
-    "cloneRepository": "Clonar repositorio",
-    "projectBoot": "Inicio de Proyecto",
-    "softwareVersion": "versión {version}",
-    "toasts": {
-      "loadFolderHistoryFailed": "No se pudo cargar el historial de carpetas",
-      "openFolderFailed": "No se pudo abrir la carpeta",
-      "removeFromHistoryFailed": "No se pudo quitar la carpeta",
-      "openSettingsFailed": "No se pudo abrir la configuración",
-      "cloneFailed": "No se pudo clonar el repositorio",
-      "openProjectBootFailed": "Error al abrir el inicio de proyecto"
-    },
-    "errors": {
-      "unknown": "Error inesperado",
-      "invalidInput": "Entrada no válida.",
-      "notFound": "Recurso no encontrado.",
-      "alreadyExists": "El recurso ya existe.",
-      "dependencyMissing": "Falta una dependencia requerida.",
-      "databaseError": "Falló la operación de base de datos.",
-      "ioError": "Falló la operación de archivos.",
-      "externalCommandFailed": "Falló el comando externo.",
-      "windowOperationFailed": "Falló la operación de ventana.",
-      "gitNotInstalled": "Git no está instalado. Instala Git primero.",
-      "targetDirectoryNotEmpty": "El directorio de destino ya existe y no está vacío.",
-      "repositoryNotFound": "Repositorio no encontrado. Revisa la URL y los permisos de acceso.",
-      "networkUnavailable": "La red no está disponible. Revisa tu conexión e inténtalo de nuevo.",
-      "authenticationFailed": "Autenticación fallida. Revisa credenciales o clave SSH.",
-      "permissionDenied": "Permiso denegado. Revisa los permisos del directorio."
-    },
-    "cloneDialog": {
-      "title": "Clonar repositorio",
-      "repositoryUrl": "URL del repositorio",
-      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
-      "directory": "Directorio",
-      "directoryPlaceholder": "Selecciona el directorio de destino...",
-      "browseDirectory": "Explorar directorio",
-      "cancel": "Cancelar",
-      "clone": "Clonar",
-      "clonePath": "Ruta de clonación: {path}"
-    }
-  },
   "GitCredentialDialog": {
     "title": "Autenticación requerida",
     "description": "El servidor remoto requiere credenciales. Introduce tu nombre de usuario y contraseña (o token de acceso personal).",
@@ -825,7 +777,28 @@
         "noNewSessionsFound": "No se encontraron sesiones nuevas (omitidas {skipped})",
         "importFailed": "Error al importar: {message}",
         "reviewCompleted": "Se marcaron como completadas {count, plural, one {# sesión en revisión} other {# sesiones en revisión}}",
-        "completeReviewFailed": "Error al completar sesiones en revisión: {message}"
+        "completeReviewFailed": "Error al completar sesiones en revisión: {message}",
+        "folderOpened": "Carpeta {name} abierta",
+        "folderRemoved": "Carpeta {name} eliminada",
+        "openFolderFailed": "Error al abrir carpeta",
+        "removeFolderFailed": "Error al eliminar carpeta: {message}"
+      },
+      "statsLabel": "{folders} carpetas · {convos} conversaciones",
+      "openFolder": "Abrir carpeta",
+      "searchPlaceholder": "Buscar conversaciones...",
+      "showCompleted": "Mostrar conversaciones completadas",
+      "moreOptions": "Más opciones",
+      "statusRunningBadge": "Ejecutando",
+      "statusFailedBadge": "Fallido",
+      "conversationCountUnit": "{count, plural, one {# conversación} other {# conversaciones}}",
+      "emptyFolderHint": "Sin conversaciones",
+      "noMatchingConversations": "No hay conversaciones coincidentes",
+      "removeFolderConfirmTitle": "¿Eliminar carpeta del espacio de trabajo?",
+      "removeFolderConfirmDescription": "¿Eliminar \"{name}\" del espacio de trabajo? Sus pestañas y terminales se cerrarán.",
+      "folderHeaderMenu": {
+        "focus": "Enfocar",
+        "closeFolderTabs": "Cerrar todas las pestañas de esta carpeta",
+        "removeFromWorkspace": "Quitar del espacio de trabajo"
       }
     },
     "conversation": {
@@ -976,7 +949,8 @@
       "close": "Cerrar",
       "closeOthers": "Cerrar otros",
       "closeAll": "Cerrar todo",
-      "hideTerminal": "Ocultar terminal ({shortcut})"
+      "hideTerminal": "Ocultar terminal ({shortcut})",
+      "openFolderFirst": "Abre primero una carpeta"
     },
     "sessionFiles": {
       "currentResponse": "Respuesta actual",
@@ -1041,32 +1015,31 @@
         "checkoutTo": "Cambiar a {branchName}",
         "mergeBranch": "Fusionar {branchName}",
         "rebaseTo": "Rebase a {branchName}",
-        "deleteBranch": "Eliminar rama {branchName}",
         "deleteRemoteBranch": "Eliminar rama remota {branchName}",
         "initGitRepo": "Inicializar repositorio Git",
         "pullCode": "Hacer pull del código",
         "fetchInfo": "Obtener información",
         "pushCode": "Enviar código",
         "stashChanges": "Guardar cambios en stash",
-        "stashPop": "Aplicar stash"
+        "stashPop": "Aplicar stash",
+        "deleteBranch": "Eliminar rama {branchName}"
       },
       "confirm": {
         "mergeTitle": "Fusionar rama",
         "rebaseTitle": "Rebase de rama",
-        "deleteTitle": "Eliminar rama",
         "mergeDescription": "¿Fusionar {branchName} en la rama actual {currentBranch}?",
         "rebaseDescription": "¿Hacer rebase de la rama actual {currentBranch} sobre {branchName}?",
+        "deleteRemoteTitle": "Eliminar rama remota",
+        "deleteRemoteDescription": "¿Eliminar la rama remota {branchName}? Esto la eliminará del repositorio remoto y no se puede deshacer.",
+        "deleteTitle": "Eliminar rama",
         "deleteDescription": "¿Eliminar la rama {branchName}? Esta acción no se puede deshacer.",
         "forceDeleteTitle": "Forzar eliminación de rama",
-        "forceDeleteDescription": "La rama {branchName} no está completamente fusionada. ¿Estás seguro de que quieres forzar su eliminación? Esta acción no se puede deshacer.",
-        "deleteRemoteTitle": "Eliminar rama remota",
-        "deleteRemoteDescription": "¿Eliminar la rama remota {branchName}? Esto la eliminará del repositorio remoto y no se puede deshacer."
+        "forceDeleteDescription": "La rama {branchName} no está completamente fusionada. ¿Estás seguro de que quieres forzar su eliminación? Esta acción no se puede deshacer."
       },
       "current": "Actual",
       "switchToBranch": "Cambiar a esta rama",
       "mergeBranchIntoCurrent": "Fusionar {branchName} en {currentBranch}",
       "rebaseCurrentToBranch": "Rebase de {currentBranch} sobre {branchName}",
-      "deleteBranch": "Eliminar rama",
       "versionControl": "Control de versiones",
       "initGitRepo": "Inicializar repositorio Git",
       "pullCode": "Hacer pull del código",
@@ -1132,7 +1105,8 @@
         "dropSuccess": "Stash eliminado",
         "confirmApply": "¿Aplicar stash {ref} al directorio de trabajo?",
         "cancel": "Cancelar"
-      }
+      },
+      "deleteBranch": "Eliminar rama"
     },
     "commitDialog": {
       "toasts": {
@@ -1794,6 +1768,39 @@
       "hunkLabel": "Bloque {index}",
       "loadingHunk": "Cargando hunk...",
       "noDiffData": "Sin datos de diff"
+    },
+    "conversationContextBar": {
+      "searchFolder": "Search folder...",
+      "searchBranch": "Search branch...",
+      "noFolders": "No folders",
+      "noBranches": "No branches",
+      "noBranch": "(no branch)",
+      "openNewFolder": "Open folder from disk...",
+      "cancel": "Cancel",
+      "create": "Create",
+      "commit": "Commit",
+      "push": "Push",
+      "merge": "Merge",
+      "toasts": {
+        "folderChanged": "Switched to {name}",
+        "openFolderFailed": "Failed to open folder",
+        "openStashFailed": "Failed to open stash window",
+        "openMergeFailed": "Failed to open merge window"
+      }
+    },
+    "cloneDialog": {
+      "title": "Clonar repositorio",
+      "repositoryUrl": "URL del repositorio",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
+      "directory": "Directorio",
+      "directoryPlaceholder": "Selecciona el directorio de destino...",
+      "browseDirectory": "Explorar directorio",
+      "cancel": "Cancelar",
+      "clone": "Clonar",
+      "clonePath": "Ruta de clonación: {path}"
+    },
+    "toasts": {
+      "cloneFailed": "No se pudo clonar el repositorio"
     }
   },
   "ProjectBoot": {

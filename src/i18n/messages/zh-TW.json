@@ -12,54 +12,6 @@
     "portuguese": "葡萄牙語",
     "arabic": "阿拉伯語"
   },
-  "WelcomePage": {
-    "title": "歡迎使用Codeg",
-    "openSettings": "打開設定",
-    "searchPlaceholder": "搜尋資料夾...",
-    "loading": "載入中...",
-    "emptyFolders": "暫無資料夾",
-    "removeFromHistory": "從歷史中移除",
-    "openFolder": "打開資料夾",
-    "cloneRepository": "複製倉庫",
-    "projectBoot": "專案啟動器",
-    "softwareVersion": "版本 {version}",
-    "toasts": {
-      "loadFolderHistoryFailed": "載入資料夾歷史失敗",
-      "openFolderFailed": "打開資料夾失敗",
-      "removeFromHistoryFailed": "移除歷史記錄失敗",
-      "openSettingsFailed": "打開設定失敗",
-      "cloneFailed": "複製倉庫失敗",
-      "openProjectBootFailed": "開啟專案啟動器失敗"
-    },
-    "errors": {
-      "unknown": "發生未知錯誤",
-      "invalidInput": "輸入無效。",
-      "notFound": "資源不存在。",
-      "alreadyExists": "資源已存在。",
-      "dependencyMissing": "缺少必要依賴。",
-      "databaseError": "資料庫操作失敗。",
-      "ioError": "檔案操作失敗。",
-      "externalCommandFailed": "外部指令執行失敗。",
-      "windowOperationFailed": "視窗操作失敗。",
-      "gitNotInstalled": "未檢測到 Git，請先安裝 Git。",
-      "targetDirectoryNotEmpty": "目標目錄已存在且不為空。",
-      "repositoryNotFound": "倉庫不存在，請檢查地址與存取權限。",
-      "networkUnavailable": "網路不可用，請檢查網路連線後重試。",
-      "authenticationFailed": "驗證失敗，請檢查憑證或 SSH Key。",
-      "permissionDenied": "權限不足，請檢查目錄權限。"
-    },
-    "cloneDialog": {
-      "title": "複製倉庫",
-      "repositoryUrl": "倉庫地址",
-      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
-      "directory": "目錄",
-      "directoryPlaceholder": "選擇目標目錄...",
-      "browseDirectory": "瀏覽目錄",
-      "cancel": "取消",
-      "clone": "複製",
-      "clonePath": "克隆路徑: {path}"
-    }
-  },
   "GitCredentialDialog": {
     "title": "需要身份驗證",
     "description": "遠端伺服器要求輸入憑據。請輸入使用者名稱和密碼（或個人存取權杖）。",
@@ -825,7 +777,28 @@
         "noNewSessionsFound": "沒有新會話（已跳過 {skipped} 個）",
         "importFailed": "匯入失敗：{message}",
         "reviewCompleted": "已將 {count} 個複查會話標記為已完成",
-        "completeReviewFailed": "批次完成複查會話失敗：{message}"
+        "completeReviewFailed": "批次完成複查會話失敗：{message}",
+        "folderOpened": "已開啟資料夾 {name}",
+        "folderRemoved": "已移除資料夾 {name}",
+        "openFolderFailed": "開啟資料夾失敗",
+        "removeFolderFailed": "移除資料夾失敗：{message}"
+      },
+      "statsLabel": "{folders} 個資料夾 · {convos} 個對話",
+      "openFolder": "開啟資料夾",
+      "searchPlaceholder": "搜尋對話...",
+      "showCompleted": "顯示已完成對話",
+      "moreOptions": "更多選項",
+      "statusRunningBadge": "運行中",
+      "statusFailedBadge": "失敗",
+      "conversationCountUnit": "{count} 條",
+      "emptyFolderHint": "暫無對話",
+      "noMatchingConversations": "找不到符合的對話",
+      "removeFolderConfirmTitle": "從工作區移除此資料夾？",
+      "removeFolderConfirmDescription": "從工作區移除 \"{name}\"？相關分頁與終端機將會關閉。",
+      "folderHeaderMenu": {
+        "focus": "聚焦至此",
+        "closeFolderTabs": "關閉此資料夾的所有分頁",
+        "removeFromWorkspace": "從工作區移除"
       }
     },
     "conversation": {
@@ -976,7 +949,8 @@
       "close": "關閉",
       "closeOthers": "關閉其它",
       "closeAll": "關閉所有",
-      "hideTerminal": "隱藏終端（{shortcut}）"
+      "hideTerminal": "隱藏終端（{shortcut}）",
+      "openFolderFirst": "請先開啟一個資料夾"
     },
     "sessionFiles": {
       "currentResponse": "目前回應",
@@ -1041,32 +1015,31 @@
         "checkoutTo": "切換到 {branchName}",
         "mergeBranch": "合併 {branchName}",
         "rebaseTo": "變基到 {branchName}",
-        "deleteBranch": "刪除分支 {branchName}",
         "deleteRemoteBranch": "刪除遠端分支 {branchName}",
         "initGitRepo": "初始化 Git 倉庫",
         "pullCode": "更新程式碼",
         "fetchInfo": "獲取資訊",
         "pushCode": "推送程式碼",
         "stashChanges": "暫存變更",
-        "stashPop": "取消暫存"
+        "stashPop": "取消暫存",
+        "deleteBranch": "刪除分支 {branchName}"
       },
       "confirm": {
         "mergeTitle": "合併分支",
         "rebaseTitle": "變基分支",
-        "deleteTitle": "刪除分支",
         "mergeDescription": "確定將 {branchName} 合併到目前分支 {currentBranch} 嗎？",
         "rebaseDescription": "確定將目前分支 {currentBranch} 變基到 {branchName} 嗎？",
+        "deleteRemoteTitle": "刪除遠端分支",
+        "deleteRemoteDescription": "確定刪除遠端分支 {branchName} 嗎？此操作將從遠端倉庫中移除該分支，且不可恢復。",
+        "deleteTitle": "刪除分支",
         "deleteDescription": "確定刪除分支 {branchName} 嗎？此操作無法復原。",
         "forceDeleteTitle": "強制刪除分支",
-        "forceDeleteDescription": "分支 {branchName} 尚未完全合併，確定要強制刪除嗎？此操作不可恢復。",
-        "deleteRemoteTitle": "刪除遠端分支",
-        "deleteRemoteDescription": "確定刪除遠端分支 {branchName} 嗎？此操作將從遠端倉庫中移除該分支，且不可恢復。"
+        "forceDeleteDescription": "分支 {branchName} 尚未完全合併，確定要強制刪除嗎？此操作不可恢復。"
       },
       "current": "目前",
       "switchToBranch": "切換到此分支",
       "mergeBranchIntoCurrent": "將 {branchName} 合併到 {currentBranch}",
       "rebaseCurrentToBranch": "將 {currentBranch} 變基到 {branchName}",
-      "deleteBranch": "刪除分支",
       "versionControl": "版本控制",
       "initGitRepo": "初始化 Git 倉庫",
       "pullCode": "更新程式碼",
@@ -1132,7 +1105,8 @@
         "dropSuccess": "貯藏已刪除",
         "confirmApply": "將貯藏 {ref} 套用到工作目錄？",
         "cancel": "取消"
-      }
+      },
+      "deleteBranch": "刪除分支"
     },
     "commitDialog": {
       "toasts": {
@@ -1794,6 +1768,39 @@
       "hunkLabel": "區塊 {index}",
       "loadingHunk": "正在載入區塊...",
       "noDiffData": "無差異資料"
+    },
+    "conversationContextBar": {
+      "searchFolder": "Search folder...",
+      "searchBranch": "Search branch...",
+      "noFolders": "No folders",
+      "noBranches": "No branches",
+      "noBranch": "(no branch)",
+      "openNewFolder": "Open folder from disk...",
+      "cancel": "Cancel",
+      "create": "Create",
+      "commit": "Commit",
+      "push": "Push",
+      "merge": "Merge",
+      "toasts": {
+        "folderChanged": "Switched to {name}",
+        "openFolderFailed": "Failed to open folder",
+        "openStashFailed": "Failed to open stash window",
+        "openMergeFailed": "Failed to open merge window"
+      }
+    },
+    "cloneDialog": {
+      "title": "複製倉庫",
+      "repositoryUrl": "倉庫地址",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
+      "directory": "目錄",
+      "directoryPlaceholder": "選擇目標目錄...",
+      "browseDirectory": "瀏覽目錄",
+      "cancel": "取消",
+      "clone": "複製",
+      "clonePath": "克隆路徑: {path}"
+    },
+    "toasts": {
+      "cloneFailed": "複製倉庫失敗"
     }
   },
   "ProjectBoot": {

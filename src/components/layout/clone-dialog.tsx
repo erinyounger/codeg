@@ -3,21 +3,22 @@
 import { useState, useMemo } from "react"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
-import { cloneRepository, openFolderWindow } from "@/lib/api"
+import { FolderOpen, Loader2 } from "lucide-react"
+import { cloneRepository } from "@/lib/api"
+import { toErrorMessage } from "@/lib/app-error"
 import { isDesktop, openFileDialog } from "@/lib/platform"
+import { useAppWorkspace } from "@/contexts/app-workspace-context"
 import { useGitCredential } from "@/contexts/git-credential-context"
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { FolderOpen, Loader2 } from "lucide-react"
-import { resolveCloneError } from "@/components/welcome/error-utils"
 import { DirectoryBrowserDialog } from "@/components/shared/directory-browser-dialog"
 
 interface CloneDialogProps {
@@ -25,17 +26,16 @@ interface CloneDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function CloneDialog({ open: isOpen, onOpenChange }: CloneDialogProps) {
-  const t = useTranslations("WelcomePage")
+export function CloneDialog({ open, onOpenChange }: CloneDialogProps) {
+  const t = useTranslations("Folder.cloneDialog")
+  const tToasts = useTranslations("Folder.toasts")
+  const { openFolder } = useAppWorkspace()
   const { withCredentialRetry } = useGitCredential()
   const [url, setUrl] = useState("")
   const [targetDir, setTargetDir] = useState("")
   const [cloning, setCloning] = useState(false)
   const [browserOpen, setBrowserOpen] = useState(false)
-  const [error, setError] = useState<{
-    message: string
-    detail: string | null
-  } | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const repoName = useMemo(
     () =>
@@ -60,46 +60,38 @@ export function CloneDialog({ open: isOpen, onOpenChange }: CloneDialogProps) {
     }
   }
 
-  const handleClone = async () => {
-    if (!url || !targetDir) return
-
-    const fullPath = `${targetDir}/${repoName}`
-
-    setCloning(true)
-    setError(null)
-
-    try {
-      await withCredentialRetry(
-        (creds) => cloneRepository(url, fullPath, creds),
-        { remoteUrl: url }
-      )
-      await openFolderWindow(fullPath)
-      onOpenChange(false)
-      resetForm()
-    } catch (err) {
-      const resolvedError = resolveCloneError(err)
-      setError({
-        message: t(resolvedError.key),
-        detail: resolvedError.detail ?? null,
-      })
-      toast.error(t("toasts.cloneFailed"), {
-        description: resolvedError.detail ?? t(resolvedError.key),
-      })
-    } finally {
-      setCloning(false)
-    }
-  }
-
   const resetForm = () => {
     setUrl("")
     setTargetDir("")
     setError(null)
   }
 
+  const handleClone = async () => {
+    if (!url || !targetDir) return
+    const fullPath = `${targetDir}/${repoName}`
+    setCloning(true)
+    setError(null)
+    try {
+      await withCredentialRetry(
+        (creds) => cloneRepository(url, fullPath, creds),
+        { remoteUrl: url }
+      )
+      await openFolder(fullPath)
+      onOpenChange(false)
+      resetForm()
+    } catch (err) {
+      const msg = toErrorMessage(err)
+      setError(msg)
+      toast.error(tToasts("cloneFailed"), { description: msg })
+    } finally {
+      setCloning(false)
+    }
+  }
+
   return (
     <>
       <Dialog
-        open={isOpen}
+        open={open}
         onOpenChange={(v) => {
           onOpenChange(v)
           if (!v) resetForm()
@@ -107,27 +99,26 @@ export function CloneDialog({ open: isOpen, onOpenChange }: CloneDialogProps) {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("cloneDialog.title")}</DialogTitle>
+            <DialogTitle>{t("title")}</DialogTitle>
           </DialogHeader>
-
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="repo-url">{t("cloneDialog.repositoryUrl")}</Label>
+              <Label htmlFor="clone-repo-url">{t("repositoryUrl")}</Label>
               <Input
-                id="repo-url"
-                placeholder={t("cloneDialog.repositoryUrlPlaceholder")}
+                id="clone-repo-url"
+                placeholder={t("repositoryUrlPlaceholder")}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={cloning}
+                autoFocus
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="target-dir">{t("cloneDialog.directory")}</Label>
+              <Label htmlFor="clone-target-dir">{t("directory")}</Label>
               <div className="flex gap-2">
                 <Input
-                  id="target-dir"
-                  placeholder={t("cloneDialog.directoryPlaceholder")}
+                  id="clone-target-dir"
+                  placeholder={t("directoryPlaceholder")}
                   value={targetDir}
                   onChange={(e) => setTargetDir(e.target.value)}
                   disabled={cloning}
@@ -138,8 +129,8 @@ export function CloneDialog({ open: isOpen, onOpenChange }: CloneDialogProps) {
                   size="icon"
                   onClick={handleBrowse}
                   disabled={cloning}
-                  title={t("cloneDialog.browseDirectory")}
-                  aria-label={t("cloneDialog.browseDirectory")}
+                  title={t("browseDirectory")}
+                  aria-label={t("browseDirectory")}
                   type="button"
                 >
                   <FolderOpen className="h-4 w-4" />
@@ -147,25 +138,12 @@ export function CloneDialog({ open: isOpen, onOpenChange }: CloneDialogProps) {
               </div>
               {targetDir && url && (
                 <p className="text-xs text-muted-foreground">
-                  {t("cloneDialog.clonePath", {
-                    path: `${targetDir}/${repoName}`,
-                  })}
+                  {t("clonePath", { path: `${targetDir}/${repoName}` })}
                 </p>
               )}
             </div>
-
-            {error && (
-              <div className="space-y-1">
-                <p className="text-sm text-destructive">{error.message}</p>
-                {error.detail && (
-                  <p className="text-xs text-muted-foreground">
-                    {error.detail}
-                  </p>
-                )}
-              </div>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
-
           <DialogFooter>
             <Button
               variant="outline"
@@ -173,7 +151,7 @@ export function CloneDialog({ open: isOpen, onOpenChange }: CloneDialogProps) {
               disabled={cloning}
               type="button"
             >
-              {t("cloneDialog.cancel")}
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleClone}
@@ -181,12 +159,11 @@ export function CloneDialog({ open: isOpen, onOpenChange }: CloneDialogProps) {
               type="button"
             >
               {cloning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {t("cloneDialog.clone")}
+              {t("clone")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <DirectoryBrowserDialog
         open={browserOpen}
         onOpenChange={setBrowserOpen}

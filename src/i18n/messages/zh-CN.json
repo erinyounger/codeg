@@ -12,54 +12,6 @@
     "portuguese": "葡萄牙语",
     "arabic": "阿拉伯语"
   },
-  "WelcomePage": {
-    "title": "欢迎使用Codeg",
-    "openSettings": "打开设置",
-    "searchPlaceholder": "搜索文件夹...",
-    "loading": "加载中...",
-    "emptyFolders": "暂无文件夹",
-    "removeFromHistory": "从历史中移除",
-    "openFolder": "打开文件夹",
-    "cloneRepository": "克隆仓库",
-    "projectBoot": "项目启动器",
-    "softwareVersion": "版本 {version}",
-    "toasts": {
-      "loadFolderHistoryFailed": "加载文件夹历史失败",
-      "openFolderFailed": "打开文件夹失败",
-      "removeFromHistoryFailed": "移除历史记录失败",
-      "openSettingsFailed": "打开设置失败",
-      "cloneFailed": "克隆仓库失败",
-      "openProjectBootFailed": "打开项目启动器失败"
-    },
-    "errors": {
-      "unknown": "发生未知错误",
-      "invalidInput": "输入无效。",
-      "notFound": "资源不存在。",
-      "alreadyExists": "资源已存在。",
-      "dependencyMissing": "缺少必要依赖。",
-      "databaseError": "数据库操作失败。",
-      "ioError": "文件操作失败。",
-      "externalCommandFailed": "外部命令执行失败。",
-      "windowOperationFailed": "窗口操作失败。",
-      "gitNotInstalled": "未检测到 Git，请先安装 Git。",
-      "targetDirectoryNotEmpty": "目标目录已存在且不为空。",
-      "repositoryNotFound": "仓库不存在，请检查地址和访问权限。",
-      "networkUnavailable": "网络不可用，请检查网络连接后重试。",
-      "authenticationFailed": "认证失败，请检查凭据或 SSH Key。",
-      "permissionDenied": "权限不足，请检查目录权限。"
-    },
-    "cloneDialog": {
-      "title": "克隆仓库",
-      "repositoryUrl": "仓库地址",
-      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
-      "directory": "目录",
-      "directoryPlaceholder": "选择目标目录...",
-      "browseDirectory": "浏览目录",
-      "cancel": "取消",
-      "clone": "克隆",
-      "clonePath": "克隆路径: {path}"
-    }
-  },
   "GitCredentialDialog": {
     "title": "需要身份验证",
     "description": "远程服务器要求输入凭据。请输入用户名和密码（或个人访问令牌）。",
@@ -825,7 +777,28 @@
         "noNewSessionsFound": "没有新会话（已跳过 {skipped} 个）",
         "importFailed": "导入失败：{message}",
         "reviewCompleted": "已将 {count} 个复查会话标记为已完成",
-        "completeReviewFailed": "批量完成复查会话失败：{message}"
+        "completeReviewFailed": "批量完成复查会话失败：{message}",
+        "folderOpened": "已打开文件夹 {name}",
+        "folderRemoved": "已移除文件夹 {name}",
+        "openFolderFailed": "打开文件夹失败",
+        "removeFolderFailed": "移除文件夹失败：{message}"
+      },
+      "statsLabel": "{folders} 个文件夹 · {convos} 个会话",
+      "openFolder": "打开文件夹",
+      "searchPlaceholder": "搜索会话...",
+      "showCompleted": "显示已完成会话",
+      "moreOptions": "更多选项",
+      "statusRunningBadge": "运行中",
+      "statusFailedBadge": "失败",
+      "conversationCountUnit": "{count} 条",
+      "emptyFolderHint": "暂无会话",
+      "noMatchingConversations": "未找到匹配的会话",
+      "removeFolderConfirmTitle": "从工作区移除该文件夹？",
+      "removeFolderConfirmDescription": "从工作区移除 \"{name}\"？其相关 Tab 与终端将会关闭。",
+      "folderHeaderMenu": {
+        "focus": "聚焦到此",
+        "closeFolderTabs": "关闭此文件夹的所有 Tab",
+        "removeFromWorkspace": "从工作区移除"
       }
     },
     "conversation": {
@@ -976,7 +949,8 @@
       "close": "关闭",
       "closeOthers": "关闭其它",
       "closeAll": "关闭所有",
-      "hideTerminal": "隐藏终端（{shortcut}）"
+      "hideTerminal": "隐藏终端（{shortcut}）",
+      "openFolderFirst": "请先打开一个文件夹"
     },
     "sessionFiles": {
       "currentResponse": "当前响应",
@@ -1041,32 +1015,31 @@
         "checkoutTo": "切换到 {branchName}",
         "mergeBranch": "合并 {branchName}",
         "rebaseTo": "变基到 {branchName}",
-        "deleteBranch": "删除分支 {branchName}",
         "deleteRemoteBranch": "删除远程分支 {branchName}",
         "initGitRepo": "初始化 Git 仓库",
         "pullCode": "更新代码",
         "fetchInfo": "获取信息",
         "pushCode": "推送代码",
         "stashChanges": "贮藏更改",
-        "stashPop": "取消贮藏"
+        "stashPop": "取消贮藏",
+        "deleteBranch": "删除分支 {branchName}"
       },
       "confirm": {
         "mergeTitle": "合并分支",
         "rebaseTitle": "变基分支",
-        "deleteTitle": "删除分支",
         "mergeDescription": "确定将 {branchName} 合并到当前分支 {currentBranch} 吗？",
         "rebaseDescription": "确定将当前分支 {currentBranch} 变基到 {branchName} 吗？",
+        "deleteRemoteTitle": "删除远程分支",
+        "deleteRemoteDescription": "确定删除远程分支 {branchName} 吗？此操作将从远程仓库中移除该分支，且不可恢复。",
+        "deleteTitle": "删除分支",
         "deleteDescription": "确定删除分支 {branchName} 吗？此操作不可恢复。",
         "forceDeleteTitle": "强制删除分支",
-        "forceDeleteDescription": "分支 {branchName} 尚未完全合并，确定要强制删除吗？此操作不可恢复。",
-        "deleteRemoteTitle": "删除远程分支",
-        "deleteRemoteDescription": "确定删除远程分支 {branchName} 吗？此操作将从远程仓库中移除该分支，且不可恢复。"
+        "forceDeleteDescription": "分支 {branchName} 尚未完全合并，确定要强制删除吗？此操作不可恢复。"
       },
       "current": "当前",
       "switchToBranch": "切换到此分支",
       "mergeBranchIntoCurrent": "将 {branchName} 合并到 {currentBranch}",
       "rebaseCurrentToBranch": "将 {currentBranch} 变基到 {branchName}",
-      "deleteBranch": "删除分支",
       "versionControl": "版本控制",
       "initGitRepo": "初始化 Git 仓库",
       "pullCode": "更新代码",
@@ -1132,7 +1105,8 @@
         "dropSuccess": "贮藏已删除",
         "confirmApply": "将贮藏 {ref} 应用到工作目录？",
         "cancel": "取消"
-      }
+      },
+      "deleteBranch": "删除分支"
     },
     "commitDialog": {
       "toasts": {
@@ -1794,6 +1768,39 @@
       "hunkLabel": "代码块 {index}",
       "loadingHunk": "正在加载代码块...",
       "noDiffData": "无差异数据"
+    },
+    "conversationContextBar": {
+      "searchFolder": "搜索文件夹...",
+      "searchBranch": "搜索分支...",
+      "noFolders": "暂无文件夹",
+      "noBranches": "暂无分支",
+      "noBranch": "（无分支）",
+      "openNewFolder": "从磁盘打开文件夹...",
+      "cancel": "取消",
+      "create": "创建",
+      "commit": "提交",
+      "push": "推送",
+      "merge": "合并",
+      "toasts": {
+        "folderChanged": "已切换到 {name}",
+        "openFolderFailed": "打开文件夹失败",
+        "openStashFailed": "打开贮藏窗口失败",
+        "openMergeFailed": "打开合并窗口失败"
+      }
+    },
+    "cloneDialog": {
+      "title": "克隆仓库",
+      "repositoryUrl": "仓库地址",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
+      "directory": "目录",
+      "directoryPlaceholder": "选择目标目录...",
+      "browseDirectory": "浏览目录",
+      "cancel": "取消",
+      "clone": "克隆",
+      "clonePath": "克隆路径: {path}"
+    },
+    "toasts": {
+      "cloneFailed": "克隆仓库失败"
     }
   },
   "ProjectBoot": {
