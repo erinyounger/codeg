@@ -9,7 +9,6 @@ import {
   CircleCheck,
   CircleDashed,
   CircleX,
-  Download,
   Plus,
   type LucideIcon,
 } from "lucide-react"
@@ -68,6 +67,7 @@ const STATUS_ICON_COLORS: Record<ConversationStatus, string> = {
 interface SidebarConversationCardProps {
   conversation: DbConversationSummary
   isSelected: boolean
+  isOpenInTab?: boolean
   timeLabel?: string
   onSelect: (id: number, agentType: string) => void
   onDoubleClick?: (id: number, agentType: string) => void
@@ -75,13 +75,12 @@ interface SidebarConversationCardProps {
   onDelete: (id: number, agentType: string) => Promise<void>
   onStatusChange: (id: number, status: ConversationStatus) => Promise<void>
   onNewConversation?: () => void
-  onImport?: () => void
-  importing?: boolean
 }
 
 export const SidebarConversationCard = memo(function SidebarConversationCard({
   conversation,
   isSelected,
+  isOpenInTab = false,
   timeLabel,
   onSelect,
   onDoubleClick,
@@ -89,8 +88,6 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
   onDelete,
   onStatusChange,
   onNewConversation,
-  onImport,
-  importing,
 }: SidebarConversationCardProps) {
   const t = useTranslations("Folder.conversationCard")
   const tSidebar = useTranslations("Folder.sidebar")
@@ -134,14 +131,17 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
     <>
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <div className="relative h-[2rem]">
+          <div
+            className="relative h-[2rem]"
+            data-conv-key={`${conversation.agent_type}:${conversation.id}`}
+          >
             <button
               data-conversation-id={conversation.id}
               onClick={handleClick}
               onDoubleClick={handleDblClick}
               className={cn(
                 "relative flex h-[1.9375rem] w-full items-center gap-[0.625rem] text-left outline-none",
-                "rounded-[0.375rem] text-sidebar-foreground",
+                "rounded-full text-sidebar-foreground",
                 "transition-colors duration-[120ms]",
                 "pr-[0.5rem] pl-7",
                 isSelected
@@ -151,14 +151,18 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
             >
               <span
                 aria-hidden
-                className="pointer-events-none absolute top-0 bottom-0 rounded-[0.125rem] bg-sidebar-primary/15"
+                className={cn(
+                  "pointer-events-none absolute -top-px -bottom-px z-0",
+                  isOpenInTab
+                    ? "bg-sidebar-primary/85"
+                    : "bg-sidebar-primary/30"
+                )}
                 style={{
-                  left: "0.875rem",
+                  left: "calc(0.875rem - 0.5px)",
                   width: "1px",
-                  transform: "translateX(-50%)",
                 }}
               />
-              <SidebarStatusIcon status={beadStatus} />
+              <SidebarStatusIcon status={beadStatus} emphasized={isOpenInTab} />
 
               <span
                 className={cn(
@@ -174,9 +178,10 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
               {isRunning ? (
                 <span
                   className={cn(
-                    "relative shrink-0 rounded-[0.1875rem] px-[0.375rem] py-px",
-                    "text-[0.6875rem] font-semibold tracking-[0.01875rem]",
-                    "bg-amber-500/10 text-amber-600 dark:bg-amber-400/15 dark:text-amber-400"
+                    "relative inline-flex shrink-0 items-center justify-center",
+                    "h-[0.9375rem] rounded-[0.3125rem] px-[0.25rem]",
+                    "text-[0.625rem] font-semibold leading-none tracking-[0.01875rem]",
+                    "bg-amber-500/20 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400"
                   )}
                 >
                   {tSidebar("statusRunningBadge")}
@@ -184,9 +189,10 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
               ) : isFailed ? (
                 <span
                   className={cn(
-                    "relative shrink-0 rounded-[0.1875rem] px-[0.375rem] py-px",
-                    "text-[0.6875rem] font-semibold tracking-[0.01875rem]",
-                    "bg-destructive/10 text-destructive"
+                    "relative inline-flex shrink-0 items-center justify-center",
+                    "h-[0.9375rem] rounded-[0.3125rem] px-[0.25rem]",
+                    "text-[0.625rem] font-semibold leading-none tracking-[0.01875rem]",
+                    "bg-destructive/20 text-destructive"
                   )}
                 >
                   {tSidebar("statusFailedBadge")}
@@ -254,15 +260,6 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
             <Trash2 className="h-4 w-4" />
             {t("delete")}
           </ContextMenuItem>
-          {onImport && (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuItem disabled={importing} onSelect={onImport}>
-                <Download className="h-4 w-4" />
-                {importing ? t("importing") : t("importLocalSessions")}
-              </ContextMenuItem>
-            </>
-          )}
         </ContextMenuContent>
       </ContextMenu>
 

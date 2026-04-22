@@ -781,13 +781,18 @@
         "folderOpened": "تم فتح المجلد {name}",
         "folderRemoved": "تمت إزالة المجلد {name}",
         "openFolderFailed": "فشل فتح المجلد",
-        "removeFolderFailed": "فشل إزالة المجلد: {message}"
+        "removeFolderFailed": "فشل إزالة المجلد: {message}",
+        "reorderFoldersFailed": "فشل إعادة ترتيب المجلدات: {message}"
       },
       "statsLabel": "{folders} مجلدات · {convos} محادثة",
+      "reorderHandle": "اسحب لإعادة الترتيب",
       "openFolder": "فتح مجلد",
       "searchPlaceholder": "بحث عن محادثات...",
       "showCompleted": "عرض المحادثات المكتملة",
       "moreOptions": "المزيد من الخيارات",
+      "sortBy": "الترتيب حسب",
+      "sortByCreatedAt": "وقت الإنشاء",
+      "sortByUpdatedAt": "وقت التحديث",
       "statusRunningBadge": "قيد التشغيل",
       "statusFailedBadge": "فشل",
       "conversationCountUnit": "{count} محادثة",
@@ -796,9 +801,29 @@
       "removeFolderConfirmTitle": "إزالة المجلد من مساحة العمل؟",
       "removeFolderConfirmDescription": "إزالة \"{name}\" من مساحة العمل؟ سيتم إغلاق علامات التبويب والمحطات المرتبطة.",
       "folderHeaderMenu": {
-        "focus": "تركيز",
-        "closeFolderTabs": "إغلاق جميع علامات تبويب هذا المجلد",
+        "manageConversations": "إدارة المحادثات…",
         "removeFromWorkspace": "إزالة من مساحة العمل"
+      },
+      "manageConversations": {
+        "title": "إدارة المحادثات — {name}",
+        "searchPlaceholder": "البحث بالعنوان…",
+        "agentFilterAll": "جميع الوكلاء",
+        "statusFilterAll": "جميع الحالات",
+        "selectAllVisible": "تحديد الكل",
+        "deselectAll": "إلغاء التحديد",
+        "selectedCount": "{count} محدد",
+        "matchedCount": "{count} مطابق",
+        "messagesShort": "{count} رسالة",
+        "untitledConversation": "محادثة بدون عنوان",
+        "setStatus": "تعيين الحالة…",
+        "deleteSelected": "حذف",
+        "noConversations": "لا توجد محادثات في هذا المجلد.",
+        "noMatchingConversations": "لا توجد محادثات مطابقة للفلاتر.",
+        "confirmDeleteTitle": "حذف {count} محادثة؟",
+        "confirmDeleteDescription": "لا يمكن التراجع عن هذا الإجراء.",
+        "toastDeleted": "تم حذف {count} محادثة",
+        "toastStatusUpdated": "تم تحديث حالة {count} محادثة",
+        "toastOpFailed": "فشلت العملية: {message}"
       }
     },
     "conversation": {
@@ -915,7 +940,9 @@
         "files": "الملفات",
         "changes": "التغييرات",
         "commits": "الالتزامات"
-      }
+      },
+      "noFolderTitle": "لا يوجد مجلد مفتوح",
+      "noFolderHint": "افتح مجلدا لعرض محتواه هنا"
     },
     "windowControls": {
       "minimizeWindow": "تصغير النافذة",
@@ -1775,9 +1802,6 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
-      "openNewFolder": "Open folder from disk...",
-      "cancel": "Cancel",
-      "create": "Create",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",

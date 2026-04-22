@@ -1390,6 +1390,19 @@ export function ConversationDetailPanel() {
 
   const canTile = isTileMode && tabs.length > 1
 
+  const tileTabRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
+
+  useEffect(() => {
+    if (!canTile || !activeTabId) return
+    const el = tileTabRefs.current.get(activeTabId)
+    if (!el) return
+    el.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    })
+  }, [canTile, activeTabId])
+
   if (hasNoTabs) {
     return null
   }
@@ -1399,12 +1412,20 @@ export function ConversationDetailPanel() {
     return (
       <div
         key={tab.id}
+        ref={(el) => {
+          if (el) {
+            tileTabRefs.current.set(tab.id, el)
+          } else {
+            tileTabRefs.current.delete(tab.id)
+          }
+        }}
         className={cn(
           canTile
             ? cn(
-                "relative h-full min-w-[420px] flex-1 overflow-hidden",
+                "relative h-full min-w-96 flex-1 overflow-hidden",
                 index > 0 && "border-l border-border",
-                active && "bg-gradient-to-b from-muted/50 to-transparent"
+                active &&
+                  "bg-gradient-to-b from-sidebar-primary/[0.03] to-transparent"
               )
             : active
               ? "h-full"
@@ -1433,13 +1454,21 @@ export function ConversationDetailPanel() {
           className="relative h-full min-h-0 overflow-hidden"
           onPointerDown={handleContextMenuTriggerPointerDown}
         >
-          {canTile ? (
-            <ScrollArea x="scroll" y="hidden" className="h-full w-full">
-              <div className="flex h-full flex-row">{tabElements}</div>
-            </ScrollArea>
-          ) : (
-            tabElements
-          )}
+          {/* Stable wrapper across canTile flip — otherwise sibling tabs remount and a live streaming response is torn down. */}
+          <ScrollArea
+            x={canTile ? "scroll" : "hidden"}
+            y="hidden"
+            className="h-full w-full"
+          >
+            <div
+              className={cn(
+                "relative h-full",
+                canTile && "flex min-w-full flex-row"
+              )}
+            >
+              {tabElements}
+            </div>
+          </ScrollArea>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

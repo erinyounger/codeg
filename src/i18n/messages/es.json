@@ -781,13 +781,18 @@
         "folderOpened": "Carpeta {name} abierta",
         "folderRemoved": "Carpeta {name} eliminada",
         "openFolderFailed": "Error al abrir carpeta",
-        "removeFolderFailed": "Error al eliminar carpeta: {message}"
+        "removeFolderFailed": "Error al eliminar carpeta: {message}",
+        "reorderFoldersFailed": "Error al reordenar carpetas: {message}"
       },
       "statsLabel": "{folders} carpetas · {convos} conversaciones",
+      "reorderHandle": "Arrastrar para reordenar",
       "openFolder": "Abrir carpeta",
       "searchPlaceholder": "Buscar conversaciones...",
       "showCompleted": "Mostrar conversaciones completadas",
       "moreOptions": "Más opciones",
+      "sortBy": "Ordenar por",
+      "sortByCreatedAt": "Fecha de creación",
+      "sortByUpdatedAt": "Fecha de actualización",
       "statusRunningBadge": "Ejecutando",
       "statusFailedBadge": "Fallido",
       "conversationCountUnit": "{count, plural, one {# conversación} other {# conversaciones}}",
@@ -796,9 +801,29 @@
       "removeFolderConfirmTitle": "¿Eliminar carpeta del espacio de trabajo?",
       "removeFolderConfirmDescription": "¿Eliminar \"{name}\" del espacio de trabajo? Sus pestañas y terminales se cerrarán.",
       "folderHeaderMenu": {
-        "focus": "Enfocar",
-        "closeFolderTabs": "Cerrar todas las pestañas de esta carpeta",
+        "manageConversations": "Gestionar conversaciones…",
         "removeFromWorkspace": "Quitar del espacio de trabajo"
+      },
+      "manageConversations": {
+        "title": "Gestionar conversaciones — {name}",
+        "searchPlaceholder": "Buscar por título…",
+        "agentFilterAll": "Todos los agentes",
+        "statusFilterAll": "Todos los estados",
+        "selectAllVisible": "Seleccionar todo",
+        "deselectAll": "Deseleccionar todo",
+        "selectedCount": "{count} seleccionada(s)",
+        "matchedCount": "{count} coincidencia(s)",
+        "messagesShort": "{count} msg",
+        "untitledConversation": "Conversación sin título",
+        "setStatus": "Cambiar estado…",
+        "deleteSelected": "Eliminar",
+        "noConversations": "No hay conversaciones en esta carpeta.",
+        "noMatchingConversations": "Ninguna conversación coincide con los filtros.",
+        "confirmDeleteTitle": "¿Eliminar {count} conversación(es)?",
+        "confirmDeleteDescription": "Esta acción no se puede deshacer.",
+        "toastDeleted": "Se eliminaron {count} conversación(es)",
+        "toastStatusUpdated": "Estado actualizado para {count} conversación(es)",
+        "toastOpFailed": "Error en la operación: {message}"
       }
     },
     "conversation": {
@@ -915,7 +940,9 @@
         "files": "Archivos",
         "changes": "Cambios",
         "commits": "Confirmaciones"
-      }
+      },
+      "noFolderTitle": "No hay carpeta abierta",
+      "noFolderHint": "Abre una carpeta para ver su contenido aquí"
     },
     "windowControls": {
       "minimizeWindow": "Minimizar ventana",
@@ -1775,9 +1802,6 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
-      "openNewFolder": "Open folder from disk...",
-      "cancel": "Cancel",
-      "create": "Create",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",

@@ -781,13 +781,18 @@
         "folderOpened": "已打开文件夹 {name}",
         "folderRemoved": "已移除文件夹 {name}",
         "openFolderFailed": "打开文件夹失败",
-        "removeFolderFailed": "移除文件夹失败：{message}"
+        "removeFolderFailed": "移除文件夹失败：{message}",
+        "reorderFoldersFailed": "重新排序文件夹失败：{message}"
       },
       "statsLabel": "{folders} 个文件夹 · {convos} 个会话",
+      "reorderHandle": "拖拽排序",
       "openFolder": "打开文件夹",
       "searchPlaceholder": "搜索会话...",
       "showCompleted": "显示已完成会话",
       "moreOptions": "更多选项",
+      "sortBy": "排序方式",
+      "sortByCreatedAt": "按创建时间排序",
+      "sortByUpdatedAt": "按更新时间排序",
       "statusRunningBadge": "运行中",
       "statusFailedBadge": "失败",
       "conversationCountUnit": "{count} 条",
@@ -796,9 +801,29 @@
       "removeFolderConfirmTitle": "从工作区移除该文件夹？",
       "removeFolderConfirmDescription": "从工作区移除 \"{name}\"？其相关 Tab 与终端将会关闭。",
       "folderHeaderMenu": {
-        "focus": "聚焦到此",
-        "closeFolderTabs": "关闭此文件夹的所有 Tab",
+        "manageConversations": "会话管理…",
         "removeFromWorkspace": "从工作区移除"
+      },
+      "manageConversations": {
+        "title": "会话管理 — {name}",
+        "searchPlaceholder": "按标题搜索…",
+        "agentFilterAll": "全部智能体",
+        "statusFilterAll": "全部状态",
+        "selectAllVisible": "全选",
+        "deselectAll": "取消全选",
+        "selectedCount": "已选 {count} 条",
+        "matchedCount": "匹配 {count} 条",
+        "messagesShort": "{count} 条",
+        "untitledConversation": "未命名会话",
+        "setStatus": "设为状态…",
+        "deleteSelected": "删除",
+        "noConversations": "此文件夹暂无会话。",
+        "noMatchingConversations": "没有匹配过滤条件的会话。",
+        "confirmDeleteTitle": "删除 {count} 个会话？",
+        "confirmDeleteDescription": "此操作不可撤销。",
+        "toastDeleted": "已删除 {count} 个会话",
+        "toastStatusUpdated": "已更新 {count} 个会话的状态",
+        "toastOpFailed": "操作失败：{message}"
       }
     },
     "conversation": {
@@ -915,7 +940,9 @@
         "files": "文件",
         "changes": "变更",
         "commits": "提交"
-      }
+      },
+      "noFolderTitle": "暂无打开的文件夹",
+      "noFolderHint": "打开一个文件夹后在这里查看"
     },
     "windowControls": {
       "minimizeWindow": "最小化窗口",
@@ -1775,9 +1802,6 @@
       "noFolders": "暂无文件夹",
       "noBranches": "暂无分支",
       "noBranch": "（无分支）",
-      "openNewFolder": "从磁盘打开文件夹...",
-      "cancel": "取消",
-      "create": "创建",
       "commit": "提交",
       "push": "推送",
       "merge": "合并",

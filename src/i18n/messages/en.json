@@ -781,13 +781,18 @@
         "folderOpened": "Opened folder {name}",
         "folderRemoved": "Removed folder {name}",
         "openFolderFailed": "Failed to open folder",
-        "removeFolderFailed": "Failed to remove folder: {message}"
+        "removeFolderFailed": "Failed to remove folder: {message}",
+        "reorderFoldersFailed": "Failed to reorder folders: {message}"
       },
       "statsLabel": "{folders} folders · {convos} conversations",
+      "reorderHandle": "Drag to reorder",
       "openFolder": "Open Folder",
       "searchPlaceholder": "Search conversations...",
       "showCompleted": "Show completed conversations",
       "moreOptions": "More options",
+      "sortBy": "Sort by",
+      "sortByCreatedAt": "Created time",
+      "sortByUpdatedAt": "Updated time",
       "statusRunningBadge": "Running",
       "statusFailedBadge": "Failed",
       "conversationCountUnit": "{count, plural, one {# conversation} other {# conversations}}",
@@ -796,9 +801,29 @@
       "removeFolderConfirmTitle": "Remove folder from workspace?",
       "removeFolderConfirmDescription": "Remove \"{name}\" from the workspace? Its tabs and terminals will close.",
       "folderHeaderMenu": {
-        "focus": "Focus",
-        "closeFolderTabs": "Close all tabs of this folder",
+        "manageConversations": "Manage conversations…",
         "removeFromWorkspace": "Remove from workspace"
+      },
+      "manageConversations": {
+        "title": "Manage conversations — {name}",
+        "searchPlaceholder": "Search by title…",
+        "agentFilterAll": "All agents",
+        "statusFilterAll": "All statuses",
+        "selectAllVisible": "Select all",
+        "deselectAll": "Deselect all",
+        "selectedCount": "{count} selected",
+        "matchedCount": "{count} matched",
+        "messagesShort": "{count} msg",
+        "untitledConversation": "Untitled conversation",
+        "setStatus": "Set status…",
+        "deleteSelected": "Delete",
+        "noConversations": "No conversations in this folder.",
+        "noMatchingConversations": "No conversations match the filters.",
+        "confirmDeleteTitle": "Delete {count} conversation(s)?",
+        "confirmDeleteDescription": "This action cannot be undone.",
+        "toastDeleted": "Deleted {count} conversation(s)",
+        "toastStatusUpdated": "Updated status for {count} conversation(s)",
+        "toastOpFailed": "Operation failed: {message}"
       }
     },
     "conversation": {
@@ -915,7 +940,9 @@
         "files": "Files",
         "changes": "Changes",
         "commits": "Commits"
-      }
+      },
+      "noFolderTitle": "No folder open",
+      "noFolderHint": "Open a folder to see its contents here"
     },
     "windowControls": {
       "minimizeWindow": "Minimize window",
@@ -1775,9 +1802,6 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
-      "openNewFolder": "Open folder from disk...",
-      "cancel": "Cancel",
-      "create": "Create",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",

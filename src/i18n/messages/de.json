@@ -781,13 +781,18 @@
         "folderOpened": "Ordner {name} geöffnet",
         "folderRemoved": "Ordner {name} entfernt",
         "openFolderFailed": "Ordner konnte nicht geöffnet werden",
-        "removeFolderFailed": "Ordner konnte nicht entfernt werden: {message}"
+        "removeFolderFailed": "Ordner konnte nicht entfernt werden: {message}",
+        "reorderFoldersFailed": "Ordner konnten nicht neu sortiert werden: {message}"
       },
       "statsLabel": "{folders} Ordner · {convos} Konversationen",
+      "reorderHandle": "Zum Neuordnen ziehen",
       "openFolder": "Ordner öffnen",
       "searchPlaceholder": "Konversationen suchen...",
       "showCompleted": "Abgeschlossene Konversationen anzeigen",
       "moreOptions": "Weitere Optionen",
+      "sortBy": "Sortieren nach",
+      "sortByCreatedAt": "Erstellungszeit",
+      "sortByUpdatedAt": "Aktualisierungszeit",
       "statusRunningBadge": "Läuft",
       "statusFailedBadge": "Fehlgeschlagen",
       "conversationCountUnit": "{count, plural, one {# Konversation} other {# Konversationen}}",
@@ -796,9 +801,29 @@
       "removeFolderConfirmTitle": "Ordner aus Arbeitsbereich entfernen?",
       "removeFolderConfirmDescription": "\"{name}\" aus dem Arbeitsbereich entfernen? Zugehörige Tabs und Terminals werden geschlossen.",
       "folderHeaderMenu": {
-        "focus": "Fokussieren",
-        "closeFolderTabs": "Alle Tabs dieses Ordners schließen",
+        "manageConversations": "Konversationen verwalten…",
         "removeFromWorkspace": "Aus Arbeitsbereich entfernen"
+      },
+      "manageConversations": {
+        "title": "Konversationen verwalten — {name}",
+        "searchPlaceholder": "Nach Titel suchen…",
+        "agentFilterAll": "Alle Agenten",
+        "statusFilterAll": "Alle Status",
+        "selectAllVisible": "Alle auswählen",
+        "deselectAll": "Auswahl aufheben",
+        "selectedCount": "{count} ausgewählt",
+        "matchedCount": "{count} Treffer",
+        "messagesShort": "{count} Nachr.",
+        "untitledConversation": "Unbenannte Konversation",
+        "setStatus": "Status setzen…",
+        "deleteSelected": "Löschen",
+        "noConversations": "Keine Konversationen in diesem Ordner.",
+        "noMatchingConversations": "Keine Konversationen entsprechen den Filtern.",
+        "confirmDeleteTitle": "{count} Konversation(en) löschen?",
+        "confirmDeleteDescription": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "toastDeleted": "{count} Konversation(en) gelöscht",
+        "toastStatusUpdated": "Status von {count} Konversation(en) aktualisiert",
+        "toastOpFailed": "Aktion fehlgeschlagen: {message}"
       }
     },
     "conversation": {
@@ -915,7 +940,9 @@
         "files": "Dateien",
         "changes": "Änderungen",
         "commits": "Einträge"
-      }
+      },
+      "noFolderTitle": "Kein Ordner geöffnet",
+      "noFolderHint": "Öffnen Sie einen Ordner, um seinen Inhalt hier zu sehen"
     },
     "windowControls": {
       "minimizeWindow": "Fenster minimieren",
@@ -1775,9 +1802,6 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
-      "openNewFolder": "Open folder from disk...",
-      "cancel": "Cancel",
-      "create": "Create",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",

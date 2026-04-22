@@ -546,6 +546,21 @@ pub async fn list_all_folder_details(
 
 #[cfg(feature = "tauri-runtime")]
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
+pub async fn open_folder(
+    db: tauri::State<'_, AppDatabase>,
+    path: String,
+) -> Result<FolderDetail, AppCommandError> {
+    let entry = folder_service::add_folder(&db.conn, &path)
+        .await
+        .map_err(AppCommandError::from)?;
+    folder_service::get_folder_by_id(&db.conn, entry.id)
+        .await
+        .map_err(AppCommandError::from)?
+        .ok_or_else(|| AppCommandError::not_found("Folder not found after add"))
+}
+
+#[cfg(feature = "tauri-runtime")]
+#[cfg_attr(feature = "tauri-runtime", tauri::command)]
 pub async fn open_folder_by_id(
     db: tauri::State<'_, AppDatabase>,
     folder_id: i32,
@@ -570,6 +585,17 @@ pub async fn remove_folder_from_workspace(
         .await
         .map_err(AppCommandError::from)?;
     folder_service::set_folder_open(&db.conn, folder_id, false)
+        .await
+        .map_err(AppCommandError::from)
+}
+
+#[cfg(feature = "tauri-runtime")]
+#[cfg_attr(feature = "tauri-runtime", tauri::command)]
+pub async fn reorder_folders(
+    db: tauri::State<'_, AppDatabase>,
+    ids: Vec<i32>,
+) -> Result<(), AppCommandError> {
+    folder_service::reorder_folders(&db.conn, ids)
         .await
         .map_err(AppCommandError::from)
 }
