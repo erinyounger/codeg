@@ -10,6 +10,11 @@ use crate::db::error::DbError;
 use crate::models::agent::AgentType;
 use crate::models::{FolderDetail, FolderHistoryEntry};
 
+/// Sentinel stored in the DB that the frontend resolves to
+/// `var(--sidebar-foreground)` — the theme-aware text color. New folders
+/// start with this neutral swatch until the user picks a palette color.
+pub const DEFAULT_FOLDER_COLOR: &str = "foreground";
+
 fn to_entry(m: folder::Model) -> FolderHistoryEntry {
     FolderHistoryEntry {
         id: m.id,
@@ -31,10 +36,10 @@ fn to_detail(m: folder::Model) -> FolderDetail {
         name: m.name,
         path: m.path,
         git_branch: m.git_branch,
-        parent_branch: m.parent_branch,
         default_agent_type,
         last_opened_at: m.last_opened_at,
         sort_order: m.sort_order,
+        color: m.color,
     }
 }
 
@@ -82,10 +87,9 @@ pub async fn add_folder(
             .unwrap_or(0);
         let active = folder::ActiveModel {
             id: NotSet,
-            name: Set(name),
+            name: Set(name.clone()),
             path: Set(path.to_string()),
             git_branch: Set(None),
-            parent_branch: Set(None),
             default_agent_type: Set(None),
             last_opened_at: Set(now),
             created_at: Set(now),
@@ -93,11 +97,33 @@ pub async fn add_folder(
             deleted_at: Set(None),
             is_open: Set(true),
             sort_order: Set(max_order + 1),
+            color: Set(DEFAULT_FOLDER_COLOR.to_string()),
         };
         active.insert(conn).await?
     };
 
     Ok(to_entry(model))
+}
+
+pub async fn update_folder_color(
+    conn: &DatabaseConnection,
+    folder_id: i32,
+    color: &str,
+) -> Result<Option<FolderDetail>, DbError> {
+    let row = folder::Entity::find_by_id(folder_id)
+        .filter(folder::Column::DeletedAt.is_null())
+        .one(conn)
+        .await?;
+
+    let Some(row) = row else {
+        return Ok(None);
+    };
+
+    let mut active = row.into_active_model();
+    active.color = Set(color.to_string());
+    active.updated_at = Set(Utc::now());
+    let updated = active.update(conn).await?;
+    Ok(Some(to_detail(updated)))
 }
 
 pub async fn list_folders(conn: &DatabaseConnection) -> Result<Vec<FolderHistoryEntry>, DbError> {
@@ -122,22 +148,6 @@ pub async fn remove_folder(conn: &DatabaseConnection, path: &str) -> Result<(), 
         let mut active = row.into_active_model();
         active.deleted_at = Set(Some(now));
         active.updated_at = Set(now);
-        active.update(conn).await?;
-    }
-    Ok(())
-}
-
-pub async fn set_folder_parent_branch(
-    conn: &DatabaseConnection,
-    folder_id: i32,
-    parent_branch: Option<String>,
-) -> Result<(), DbError> {
-    let row = folder::Entity::find_by_id(folder_id).one(conn).await?;
-
-    if let Some(row) = row {
-        let mut active = row.into_active_model();
-        active.parent_branch = Set(parent_branch);
-        active.updated_at = Set(Utc::now());
         active.update(conn).await?;
     }
     Ok(())
@@ -199,10 +209,7 @@ pub async fn list_all_folder_details(
     Ok(rows.into_iter().map(to_detail).collect())
 }
 
-pub async fn reorder_folders(
-    conn: &DatabaseConnection,
-    ids: Vec<i32>,
-) -> Result<(), DbError> {
+pub async fn reorder_folders(conn: &DatabaseConnection, ids: Vec<i32>) -> Result<(), DbError> {
     if ids.is_empty() {
         return Ok(());
     }

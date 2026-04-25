@@ -14,6 +14,7 @@ import {
   Globe,
   Keyboard,
   Menu,
+  MessageSquareText,
   SendHorizontal,
   Palette,
   PlugZap,
@@ -41,6 +42,7 @@ interface SettingsNavItem {
     | "mcp"
     | "skills"
     | "experts"
+    | "quick_messages"
     | "shortcuts"
     | "version_control"
     | "chat_channels"
@@ -74,6 +76,11 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
     href: "/settings/agents",
     labelKey: "agents",
     icon: Bot,
+  },
+  {
+    href: "/settings/quick-messages",
+    labelKey: "quick_messages",
+    icon: MessageSquareText,
   },
   {
     href: "/settings/model-providers",

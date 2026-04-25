@@ -47,7 +47,8 @@
       "chat_channels": "消息渠道",
       "web_service": "Web 服务",
       "model_providers": "模型供应商",
-      "experts": "专家"
+      "experts": "专家",
+      "quick_messages": "快捷消息"
     }
   },
   "AppearanceSettings": {
@@ -301,6 +302,8 @@
     "loadingSkill": "正在加载 Skill...",
     "emptyNoAgents": "暂无可用 Agent。",
     "noSelectionHint": "从左侧选择一个 Skill，或点击“新建 Skill”创建。",
+    "systemBadge": "系统",
+    "systemHint": "CLI 内置 Skill · 只读",
     "scope": {
       "global": "全局",
       "folder": "文件夹",
@@ -782,7 +785,8 @@
         "folderRemoved": "已移除文件夹 {name}",
         "openFolderFailed": "打开文件夹失败",
         "removeFolderFailed": "移除文件夹失败：{message}",
-        "reorderFoldersFailed": "重新排序文件夹失败：{message}"
+        "reorderFoldersFailed": "重新排序文件夹失败：{message}",
+        "changeFolderColorFailed": "修改颜色失败：{message}"
       },
       "statsLabel": "{folders} 个文件夹 · {convos} 个会话",
       "reorderHandle": "拖拽排序",
@@ -798,10 +802,12 @@
       "conversationCountUnit": "{count} 条",
       "emptyFolderHint": "暂无会话",
       "noMatchingConversations": "未找到匹配的会话",
+      "noUnfinishedConversations": "当前暂无未完成会话，右上角可启用显示已完成会话",
       "removeFolderConfirmTitle": "从工作区移除该文件夹？",
       "removeFolderConfirmDescription": "从工作区移除 \"{name}\"？其相关 Tab 与终端将会关闭。",
       "folderHeaderMenu": {
         "manageConversations": "会话管理…",
+        "changeColor": "修改颜色",
         "removeFromWorkspace": "从工作区移除"
       },
       "manageConversations": {
@@ -881,6 +887,7 @@
     },
     "search": {
       "dialogTitle": "搜索",
+      "dialogTitleWithFolder": "搜索 — {name}",
       "tabConversations": "会话",
       "tabFiles": "文件",
       "placeholder": "搜索会话...",
@@ -1067,7 +1074,7 @@
       "switchToBranch": "切换到此分支",
       "mergeBranchIntoCurrent": "将 {branchName} 合并到 {currentBranch}",
       "rebaseCurrentToBranch": "将 {currentBranch} 变基到 {branchName}",
-      "versionControl": "版本控制",
+      "noBranch": "无分支",
       "initGitRepo": "初始化 Git 仓库",
       "pullCode": "更新代码",
       "fetchRemoteBranches": "提取远程分支",
@@ -1082,7 +1089,6 @@
       "noLocalBranches": "无本地分支",
       "remoteBranches": "远程分支 ({count})",
       "noRemoteBranches": "无远程分支",
-      "parentBranchHint": "当前分支从 {parentBranch} 创建，点击合并 {parentBranch} 到当前分支",
       "dialogs": {
         "newBranchTitle": "新建分支",
         "newBranchDescription": "从当前分支 {branch} 创建新分支",
@@ -1566,6 +1572,11 @@
         "askAnything": "请开始输入...",
         "removeAttachmentAria": "移除 {name}",
         "attachFiles": "附加文件",
+        "addActions": "添加",
+        "quickMessages": "快捷消息",
+        "quickMessagesEmpty": "暂无快捷消息",
+        "quickMessagesLoading": "加载中...",
+        "quickMessageUntitled": "未命名",
         "dropFilesToAttach": "拖拽文件到此处附加",
         "loadingSettings": "正在加载设置...",
         "loadingMode": "正在加载模式...",
@@ -1797,6 +1808,8 @@
       "noDiffData": "无差异数据"
     },
     "conversationContextBar": {
+      "folderTitle": "工作文件夹",
+      "branchTitle": "工作分支",
       "searchFolder": "搜索文件夹...",
       "searchBranch": "搜索分支...",
       "noFolders": "暂无文件夹",
@@ -2103,6 +2116,44 @@
       "enableFailed": "启用专家失败",
       "disableFailed": "禁用专家失败",
       "openFolderFailed": "打开目录失败"
+    }
+  },
+  "QuickMessagesSettings": {
+    "title": "快捷消息",
+    "description": "管理可复用的消息片段。拖拽以调整顺序。",
+    "loading": "加载快捷消息…",
+    "emptyList": "暂无快捷消息。点击“新建”创建一条。",
+    "emptySelection": "选择一条快捷消息进行编辑。",
+    "searchPlaceholder": "按标题或内容搜索",
+    "untitled": "未命名",
+    "actions": {
+      "new": "新建",
+      "save": "保存",
+      "delete": "删除",
+      "dragSort": "拖拽排序",
+      "dragSortMessage": "拖拽排序快捷消息：{name}"
+    },
+    "fields": {
+      "title": "标题",
+      "titlePlaceholder": "为此消息取一个简短的标题",
+      "content": "内容",
+      "contentPlaceholder": "在此输入消息内容"
+    },
+    "confirmDelete": {
+      "title": "删除快捷消息？",
+      "message": "将永久删除“{name}”。确定吗？",
+      "cancel": "取消",
+      "confirm": "删除"
+    },
+    "toasts": {
+      "loadFailed": "加载快捷消息失败",
+      "createFailed": "创建快捷消息失败",
+      "saveFailed": "保存快捷消息失败",
+      "deleteFailed": "删除快捷消息失败",
+      "saveOrderFailed": "保存顺序失败",
+      "created": "已创建快捷消息",
+      "saved": "已保存快捷消息",
+      "deleted": "已删除快捷消息"
     }
   }
 }

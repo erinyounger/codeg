@@ -19,6 +19,7 @@ use tauri::Manager;
 use crate::app_error::AppCommandError;
 #[cfg(feature = "tauri-runtime")]
 use crate::db::error::DbError;
+#[cfg(feature = "tauri-runtime")]
 use crate::db::service::folder_service;
 use crate::db::AppDatabase;
 use crate::models::GitCredentials;
@@ -479,40 +480,6 @@ pub async fn add_folder_to_history(
     folder_service::add_folder(&db.conn, &path).await
 }
 
-pub(crate) async fn set_folder_parent_branch_core(
-    conn: &sea_orm::DatabaseConnection,
-    path: &str,
-    parent_branch: Option<String>,
-) -> Result<(), AppCommandError> {
-    use crate::db::entities::folder;
-    use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-    let row = folder::Entity::find()
-        .filter(folder::Column::Path.eq(path))
-        .filter(folder::Column::DeletedAt.is_null())
-        .one(conn)
-        .await
-        .map_err(|e| {
-            AppCommandError::database_error("Failed to query folder").with_detail(e.to_string())
-        })?;
-
-    if let Some(folder_model) = row {
-        folder_service::set_folder_parent_branch(conn, folder_model.id, parent_branch)
-            .await
-            .map_err(AppCommandError::from)?;
-    }
-    Ok(())
-}
-
-#[cfg(feature = "tauri-runtime")]
-#[cfg_attr(feature = "tauri-runtime", tauri::command)]
-pub async fn set_folder_parent_branch(
-    db: tauri::State<'_, AppDatabase>,
-    path: String,
-    parent_branch: Option<String>,
-) -> Result<(), AppCommandError> {
-    set_folder_parent_branch_core(&db.conn, &path, parent_branch).await
-}
-
 #[cfg(feature = "tauri-runtime")]
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
 pub async fn remove_folder_from_history(
@@ -598,6 +565,19 @@ pub async fn reorder_folders(
     folder_service::reorder_folders(&db.conn, ids)
         .await
         .map_err(AppCommandError::from)
+}
+
+#[cfg(feature = "tauri-runtime")]
+#[cfg_attr(feature = "tauri-runtime", tauri::command)]
+pub async fn update_folder_color(
+    db: tauri::State<'_, AppDatabase>,
+    folder_id: i32,
+    color: String,
+) -> Result<crate::models::FolderDetail, AppCommandError> {
+    folder_service::update_folder_color(&db.conn, folder_id, &color)
+        .await
+        .map_err(AppCommandError::from)?
+        .ok_or_else(|| AppCommandError::not_found("Folder not found"))
 }
 
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
@@ -1225,11 +1205,7 @@ pub async fn git_checkout(path: String, branch_name: String) -> Result<(), AppCo
 }
 
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
-pub async fn git_reset(
-    path: String,
-    commit: String,
-    mode: String,
-) -> Result<(), AppCommandError> {
+pub async fn git_reset(path: String, commit: String, mode: String) -> Result<(), AppCommandError> {
     let mode = mode.trim().to_lowercase();
     let mode_flag = match mode.as_str() {
         "soft" | "mixed" | "hard" | "keep" => format!("--{mode}"),
@@ -2161,10 +2137,7 @@ pub async fn git_delete_branch(
         .map_err(AppCommandError::io)?;
 
     if !output.status.success() {
-        return Err(git_command_error(
-            &format!("branch {flag}"),
-            &output.stderr,
-        ));
+        return Err(git_command_error(&format!("branch {flag}"), &output.stderr));
     }
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }

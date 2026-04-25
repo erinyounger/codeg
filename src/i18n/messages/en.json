@@ -47,7 +47,8 @@
       "chat_channels": "Chat Channels",
       "web_service": "Web Service",
       "model_providers": "Model Providers",
-      "experts": "Experts"
+      "experts": "Experts",
+      "quick_messages": "Quick Messages"
     }
   },
   "AppearanceSettings": {
@@ -301,6 +302,8 @@
     "loadingSkill": "Loading skill...",
     "emptyNoAgents": "No available agent.",
     "noSelectionHint": "Select a skill on the left, or click \"New Skill\" to create one.",
+    "systemBadge": "System",
+    "systemHint": "Built-in CLI skill · read-only",
     "scope": {
       "global": "Global",
       "folder": "Folder",
@@ -782,7 +785,8 @@
         "folderRemoved": "Removed folder {name}",
         "openFolderFailed": "Failed to open folder",
         "removeFolderFailed": "Failed to remove folder: {message}",
-        "reorderFoldersFailed": "Failed to reorder folders: {message}"
+        "reorderFoldersFailed": "Failed to reorder folders: {message}",
+        "changeFolderColorFailed": "Failed to change folder color: {message}"
       },
       "statsLabel": "{folders} folders · {convos} conversations",
       "reorderHandle": "Drag to reorder",
@@ -798,10 +802,12 @@
       "conversationCountUnit": "{count, plural, one {# conversation} other {# conversations}}",
       "emptyFolderHint": "No conversations",
       "noMatchingConversations": "No matching conversations",
+      "noUnfinishedConversations": "No unfinished conversations. Enable \"Show completed\" from the top-right menu.",
       "removeFolderConfirmTitle": "Remove folder from workspace?",
       "removeFolderConfirmDescription": "Remove \"{name}\" from the workspace? Its tabs and terminals will close.",
       "folderHeaderMenu": {
         "manageConversations": "Manage conversations…",
+        "changeColor": "Change color",
         "removeFromWorkspace": "Remove from workspace"
       },
       "manageConversations": {
@@ -881,6 +887,7 @@
     },
     "search": {
       "dialogTitle": "Search",
+      "dialogTitleWithFolder": "Search — {name}",
       "tabConversations": "Conversations",
       "tabFiles": "Files",
       "placeholder": "Search conversations...",
@@ -1067,7 +1074,7 @@
       "switchToBranch": "Switch to this branch",
       "mergeBranchIntoCurrent": "Merge {branchName} into {currentBranch}",
       "rebaseCurrentToBranch": "Rebase {currentBranch} onto {branchName}",
-      "versionControl": "Version Control",
+      "noBranch": "No branch",
       "initGitRepo": "Initialize Git repository",
       "pullCode": "Pull code",
       "fetchRemoteBranches": "Fetch remote branches",
@@ -1082,7 +1089,6 @@
       "noLocalBranches": "No local branches",
       "remoteBranches": "Remote branches ({count, plural, one {#} other {#}})",
       "noRemoteBranches": "No remote branches",
-      "parentBranchHint": "Current branch was created from {parentBranch}. Click to merge {parentBranch} into current branch.",
       "dialogs": {
         "newBranchTitle": "New branch",
         "newBranchDescription": "Create a new branch from current branch {branch}",
@@ -1566,6 +1572,11 @@
         "askAnything": "Ask anything...",
         "removeAttachmentAria": "Remove {name}",
         "attachFiles": "Attach files",
+        "addActions": "Add",
+        "quickMessages": "Quick messages",
+        "quickMessagesEmpty": "No quick messages yet",
+        "quickMessagesLoading": "Loading...",
+        "quickMessageUntitled": "Untitled",
         "dropFilesToAttach": "Drop files to attach",
         "loadingSettings": "Loading settings...",
         "loadingMode": "Loading mode...",
@@ -1797,6 +1808,8 @@
       "noDiffData": "No diff data"
     },
     "conversationContextBar": {
+      "folderTitle": "Working folder",
+      "branchTitle": "Working branch",
       "searchFolder": "Search folder...",
       "searchBranch": "Search branch...",
       "noFolders": "No folders",
@@ -2103,6 +2116,44 @@
       "enableFailed": "Failed to enable expert",
       "disableFailed": "Failed to disable expert",
       "openFolderFailed": "Failed to open folder"
+    }
+  },
+  "QuickMessagesSettings": {
+    "title": "Quick Messages",
+    "description": "Manage reusable message snippets. Drag to reorder.",
+    "loading": "Loading quick messages…",
+    "emptyList": "No quick messages yet. Click \"New\" to create one.",
+    "emptySelection": "Select a quick message to edit.",
+    "searchPlaceholder": "Search by title or content",
+    "untitled": "Untitled",
+    "actions": {
+      "new": "New",
+      "save": "Save",
+      "delete": "Delete",
+      "dragSort": "Drag to reorder",
+      "dragSortMessage": "Drag to reorder quick message: {name}"
+    },
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "Give this message a short title",
+      "content": "Content",
+      "contentPlaceholder": "Write the message content here"
+    },
+    "confirmDelete": {
+      "title": "Delete quick message?",
+      "message": "This will permanently delete \"{name}\". Are you sure?",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load quick messages",
+      "createFailed": "Failed to create quick message",
+      "saveFailed": "Failed to save quick message",
+      "deleteFailed": "Failed to delete quick message",
+      "saveOrderFailed": "Failed to save order",
+      "created": "Quick message created",
+      "saved": "Quick message saved",
+      "deleted": "Quick message deleted"
     }
   }
 }

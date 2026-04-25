@@ -47,7 +47,8 @@
       "chat_channels": "قنوات المحادثة",
       "web_service": "خدمة الويب",
       "model_providers": "مزودو النماذج",
-      "experts": "الخبراء"
+      "experts": "الخبراء",
+      "quick_messages": "رسائل سريعة"
     }
   },
   "AppearanceSettings": {
@@ -301,6 +302,8 @@
     "loadingSkill": "جارٍ تحميل Skill...",
     "emptyNoAgents": "لا يوجد وكيل متاح.",
     "noSelectionHint": "اختر Skill من اليسار، أو انقر على \"Skill جديد\" لإنشاء واحد.",
+    "systemBadge": "نظام",
+    "systemHint": "Skill مدمج في CLI · للقراءة فقط",
     "scope": {
       "global": "عام",
       "folder": "مجلد",
@@ -782,7 +785,8 @@
         "folderRemoved": "تمت إزالة المجلد {name}",
         "openFolderFailed": "فشل فتح المجلد",
         "removeFolderFailed": "فشل إزالة المجلد: {message}",
-        "reorderFoldersFailed": "فشل إعادة ترتيب المجلدات: {message}"
+        "reorderFoldersFailed": "فشل إعادة ترتيب المجلدات: {message}",
+        "changeFolderColorFailed": "فشل تغيير اللون: {message}"
       },
       "statsLabel": "{folders} مجلدات · {convos} محادثة",
       "reorderHandle": "اسحب لإعادة الترتيب",
@@ -798,10 +802,12 @@
       "conversationCountUnit": "{count} محادثة",
       "emptyFolderHint": "لا توجد محادثات",
       "noMatchingConversations": "لا توجد محادثات مطابقة",
+      "noUnfinishedConversations": "لا توجد محادثات غير مكتملة. يمكنك تفعيل \"عرض المكتملة\" من القائمة في أعلى اليمين.",
       "removeFolderConfirmTitle": "إزالة المجلد من مساحة العمل؟",
       "removeFolderConfirmDescription": "إزالة \"{name}\" من مساحة العمل؟ سيتم إغلاق علامات التبويب والمحطات المرتبطة.",
       "folderHeaderMenu": {
         "manageConversations": "إدارة المحادثات…",
+        "changeColor": "تغيير اللون",
         "removeFromWorkspace": "إزالة من مساحة العمل"
       },
       "manageConversations": {
@@ -881,6 +887,7 @@
     },
     "search": {
       "dialogTitle": "بحث",
+      "dialogTitleWithFolder": "بحث — {name}",
       "tabConversations": "المحادثات",
       "tabFiles": "الملفات",
       "placeholder": "البحث في المحادثات...",
@@ -1067,7 +1074,7 @@
       "switchToBranch": "التبديل إلى هذا الفرع",
       "mergeBranchIntoCurrent": "دمج {branchName} في {currentBranch}",
       "rebaseCurrentToBranch": "Rebase لـ {currentBranch} على {branchName}",
-      "versionControl": "التحكم في الإصدارات",
+      "noBranch": "بدون فرع",
       "initGitRepo": "تهيئة مستودع Git",
       "pullCode": "سحب الكود",
       "fetchRemoteBranches": "جلب الفروع البعيدة",
@@ -1082,7 +1089,6 @@
       "noLocalBranches": "لا توجد فروع محلية",
       "remoteBranches": "الفروع البعيدة ({count, plural, one {#} other {#}})",
       "noRemoteBranches": "لا توجد فروع بعيدة",
-      "parentBranchHint": "تم إنشاء الفرع الحالي من {parentBranch}. انقر لدمج {parentBranch} في الفرع الحالي.",
       "dialogs": {
         "newBranchTitle": "فرع جديد",
         "newBranchDescription": "إنشاء فرع جديد من الفرع الحالي {branch}",
@@ -1566,6 +1572,11 @@
         "askAnything": "اسأل أي شيء...",
         "removeAttachmentAria": "إزالة {name}",
         "attachFiles": "إرفاق ملفات",
+        "addActions": "إضافة",
+        "quickMessages": "الرسائل السريعة",
+        "quickMessagesEmpty": "لا توجد رسائل سريعة بعد",
+        "quickMessagesLoading": "جارٍ التحميل...",
+        "quickMessageUntitled": "بدون عنوان",
         "dropFilesToAttach": "أسقط الملفات لإرفاقها",
         "loadingSettings": "جارٍ تحميل الإعدادات...",
         "loadingMode": "جارٍ تحميل الوضع...",
@@ -1797,6 +1808,8 @@
       "noDiffData": "لا توجد بيانات diff"
     },
     "conversationContextBar": {
+      "folderTitle": "مجلد العمل",
+      "branchTitle": "فرع العمل",
       "searchFolder": "Search folder...",
       "searchBranch": "Search branch...",
       "noFolders": "No folders",
@@ -2103,6 +2116,44 @@
       "enableFailed": "فشل تفعيل الخبير",
       "disableFailed": "فشل تعطيل الخبير",
       "openFolderFailed": "فشل فتح المجلد"
+    }
+  },
+  "QuickMessagesSettings": {
+    "title": "رسائل سريعة",
+    "description": "إدارة مقتطفات الرسائل القابلة لإعادة الاستخدام. اسحب لإعادة الترتيب.",
+    "loading": "جارٍ تحميل الرسائل السريعة…",
+    "emptyList": "لا توجد رسائل سريعة بعد. انقر على \"جديد\" لإنشاء واحدة.",
+    "emptySelection": "اختر رسالة سريعة للتعديل.",
+    "searchPlaceholder": "ابحث حسب العنوان أو المحتوى",
+    "untitled": "بدون عنوان",
+    "actions": {
+      "new": "جديد",
+      "save": "حفظ",
+      "delete": "حذف",
+      "dragSort": "اسحب لإعادة الترتيب",
+      "dragSortMessage": "اسحب لإعادة ترتيب الرسالة السريعة: {name}"
+    },
+    "fields": {
+      "title": "العنوان",
+      "titlePlaceholder": "أعطِ هذه الرسالة عنوانًا قصيرًا",
+      "content": "المحتوى",
+      "contentPlaceholder": "اكتب محتوى الرسالة هنا"
+    },
+    "confirmDelete": {
+      "title": "حذف الرسالة السريعة؟",
+      "message": "سيؤدي ذلك إلى حذف \"{name}\" نهائيًا. هل أنت متأكد؟",
+      "cancel": "إلغاء",
+      "confirm": "حذف"
+    },
+    "toasts": {
+      "loadFailed": "فشل تحميل الرسائل السريعة",
+      "createFailed": "فشل إنشاء الرسالة السريعة",
+      "saveFailed": "فشل حفظ الرسالة السريعة",
+      "deleteFailed": "فشل حذف الرسالة السريعة",
+      "saveOrderFailed": "فشل حفظ الترتيب",
+      "created": "تم إنشاء الرسالة السريعة",
+      "saved": "تم حفظ الرسالة السريعة",
+      "deleted": "تم حذف الرسالة السريعة"
     }
   }
 }

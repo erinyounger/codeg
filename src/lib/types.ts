@@ -160,10 +160,10 @@ export interface FolderDetail {
   name: string
   path: string
   git_branch: string | null
-  parent_branch: string | null
   default_agent_type: AgentType | null
   last_opened_at: string
   sort_order: number
+  color: string
 }
 
 export interface OpenedTab {
@@ -226,6 +226,13 @@ export const STATUS_COLORS: Record<ConversationStatus, string> = {
   pending_review: "bg-orange-500",
   completed: "bg-green-500",
   cancelled: "bg-red-500",
+}
+
+export const STATUS_ICON_COLORS: Record<ConversationStatus, string> = {
+  in_progress: "text-blue-500",
+  pending_review: "text-orange-500",
+  completed: "text-green-500",
+  cancelled: "text-red-500",
 }
 
 export const AGENT_DISPLAY_ORDER: AgentType[] = [
@@ -550,6 +557,7 @@ export interface AgentSkillItem {
   scope: AgentSkillScope
   layout: AgentSkillLayout
   path: string
+  read_only: boolean
 }
 
 export interface AgentSkillsListResult {
@@ -757,6 +765,15 @@ export interface FolderCommand {
   folder_id: number
   name: string
   command: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface QuickMessage {
+  id: number
+  title: string
+  content: string
   sort_order: number
   created_at: string
   updated_at: string

@@ -8,9 +8,9 @@ use tauri::State;
 
 use crate::acp::binary_cache;
 use crate::acp::error::AcpError;
-use crate::acp::opencode_plugins::{self, PluginCheckSummary};
 #[cfg(feature = "tauri-runtime")]
 use crate::acp::manager::ConnectionManager;
+use crate::acp::opencode_plugins::{self, PluginCheckSummary};
 use crate::acp::preflight::{self, PreflightResult};
 use crate::acp::registry;
 use crate::acp::types::{
@@ -154,9 +154,7 @@ pub(crate) fn verify_agent_installed(agent_type: AgentType) -> Result<(), AcpErr
             }
             Ok(())
         }
-        registry::AgentDistribution::Binary {
-            cmd, platforms, ..
-        } => {
+        registry::AgentDistribution::Binary { cmd, platforms, .. } => {
             let platform = registry::current_platform();
             if !platforms.iter().any(|p| p.platform == platform) {
                 return Err(AcpError::PlatformNotSupported(format!(
@@ -212,7 +210,11 @@ async fn npm_list_version(
     prefix: Option<&std::path::Path>,
 ) -> Option<String> {
     let mut cmd = crate::process::tokio_command(npm_path);
-    cmd.arg("list").arg("-g").arg(package_name).arg("--json").arg("--depth=0");
+    cmd.arg("list")
+        .arg("-g")
+        .arg(package_name)
+        .arg("--json")
+        .arg("--depth=0");
     if let Some(p) = prefix {
         cmd.arg(format!("--prefix={}", p.display()));
     }
@@ -266,9 +268,9 @@ async fn run_npm_streaming(
     cmd.stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| {
-        AcpError::protocol(format!("failed to spawn npm: {e}"))
-    })?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| AcpError::protocol(format!("failed to spawn npm: {e}")))?;
 
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
@@ -283,9 +285,7 @@ async fn run_npm_streaming(
                 let reader = BufReader::new(out);
                 let mut lines = reader.lines();
                 while let Ok(Some(line)) = lines.next_line().await {
-                    emit_agent_install_event(
-                        &emitter, &task_id, AgentInstallEventKind::Log, &line,
-                    );
+                    emit_agent_install_event(&emitter, &task_id, AgentInstallEventKind::Log, &line);
                 }
             }
         }
@@ -300,9 +300,7 @@ async fn run_npm_streaming(
                 let reader = BufReader::new(err);
                 let mut lines = reader.lines();
                 while let Ok(Some(line)) = lines.next_line().await {
-                    emit_agent_install_event(
-                        &emitter, &task_id, AgentInstallEventKind::Log, &line,
-                    );
+                    emit_agent_install_event(&emitter, &task_id, AgentInstallEventKind::Log, &line);
                     if !collected.is_empty() {
                         collected.push('\n');
                     }
@@ -316,9 +314,10 @@ async fn run_npm_streaming(
     let (_, stderr_result) = tokio::join!(stdout_handle, stderr_handle);
     let collected_stderr = stderr_result.unwrap_or_default();
 
-    let status = child.wait().await.map_err(|e| {
-        AcpError::protocol(format!("failed to wait for npm process: {e}"))
-    })?;
+    let status = child
+        .wait()
+        .await
+        .map_err(|e| AcpError::protocol(format!("failed to wait for npm process: {e}")))?;
 
     Ok((status.success(), collected_stderr))
 }
@@ -331,49 +330,58 @@ async fn install_npm_global_package_streaming(
     let registry_arg = format!("--registry={NPM_OFFICIAL_REGISTRY}");
 
     emit_agent_install_event(
-        emitter, task_id, AgentInstallEventKind::Log,
+        emitter,
+        task_id,
+        AgentInstallEventKind::Log,
         format!("$ npm install -g {package}"),
     );
 
-    let (success, stderr) = run_npm_streaming(
-        &["install", "-g", &registry_arg, package],
-        task_id,
-        emitter,
-    ).await?;
+    let (success, stderr) =
+        run_npm_streaming(&["install", "-g", &registry_arg, package], task_id, emitter).await?;
 
     if !success {
         // EACCES: permission denied — retry with a user-local --prefix so
         // we don't require root/sudo on macOS / Linux.
         if stderr.contains("EACCES") {
             emit_agent_install_event(
-                emitter, task_id, AgentInstallEventKind::Log,
+                emitter,
+                task_id,
+                AgentInstallEventKind::Log,
                 "Permission denied, retrying with user prefix...",
             );
-            return install_npm_to_user_prefix_streaming(
-                package, &registry_arg, task_id, emitter,
-            ).await;
+            return install_npm_to_user_prefix_streaming(package, &registry_arg, task_id, emitter)
+                .await;
         }
 
         // EEXIST: file conflict — retry with --force to overwrite
         if stderr.contains("EEXIST") {
             emit_agent_install_event(
-                emitter, task_id, AgentInstallEventKind::Log,
+                emitter,
+                task_id,
+                AgentInstallEventKind::Log,
                 "File conflict, retrying with --force...",
             );
             let (retry_success, retry_stderr) = run_npm_streaming(
                 &["install", "-g", "--force", &registry_arg, package],
                 task_id,
                 emitter,
-            ).await?;
+            )
+            .await?;
             if !retry_success {
                 if retry_stderr.contains("EACCES") {
                     emit_agent_install_event(
-                        emitter, task_id, AgentInstallEventKind::Log,
+                        emitter,
+                        task_id,
+                        AgentInstallEventKind::Log,
                         "Permission denied on --force retry, falling back to user prefix...",
                     );
                     return install_npm_to_user_prefix_streaming(
-                        package, &registry_arg, task_id, emitter,
-                    ).await;
+                        package,
+                        &registry_arg,
+                        task_id,
+                        emitter,
+                    )
+                    .await;
                 }
                 let err = retry_stderr.trim().to_string();
                 let msg = if err.is_empty() {
@@ -424,7 +432,9 @@ async fn install_npm_to_user_prefix_streaming(
     let prefix_arg = format!("--prefix={}", prefix.display());
 
     emit_agent_install_event(
-        emitter, task_id, AgentInstallEventKind::Log,
+        emitter,
+        task_id,
+        AgentInstallEventKind::Log,
         format!("$ npm install -g --prefix={} {package}", prefix.display()),
     );
 
@@ -432,21 +442,32 @@ async fn install_npm_to_user_prefix_streaming(
         &["install", "-g", &prefix_arg, registry_arg, package],
         task_id,
         emitter,
-    ).await?;
+    )
+    .await?;
 
     if !success {
         // EEXIST in the user prefix: retry with --force to overwrite stale files
         // from a previous installation.
         if stderr.contains("EEXIST") {
             emit_agent_install_event(
-                emitter, task_id, AgentInstallEventKind::Log,
+                emitter,
+                task_id,
+                AgentInstallEventKind::Log,
                 "File conflict in user prefix, retrying with --force...",
             );
             let (force_success, force_stderr) = run_npm_streaming(
-                &["install", "-g", "--force", &prefix_arg, registry_arg, package],
+                &[
+                    "install",
+                    "-g",
+                    "--force",
+                    &prefix_arg,
+                    registry_arg,
+                    package,
+                ],
                 task_id,
                 emitter,
-            ).await?;
+            )
+            .await?;
             if !force_success {
                 let err = force_stderr.trim().to_string();
                 let msg = if err.is_empty() {
@@ -854,10 +875,7 @@ fn persist_cline_local_config(config_patch_json: Option<&str>) -> Result<(), Acp
                 act_model_key.to_string(),
                 serde_json::Value::String(model.clone()),
             );
-            gs_obj.insert(
-                plan_model_key.to_string(),
-                serde_json::Value::String(model),
-            );
+            gs_obj.insert(plan_model_key.to_string(), serde_json::Value::String(model));
         }
         None => {
             gs_obj.remove(act_model_key);
@@ -888,9 +906,8 @@ fn persist_cline_local_config(config_patch_json: Option<&str>) -> Result<(), Acp
     }
 
     if let Some(parent) = gs_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| {
-            AcpError::protocol(format!("create cline data directory failed: {e}"))
-        })?;
+        fs::create_dir_all(parent)
+            .map_err(|e| AcpError::protocol(format!("create cline data directory failed: {e}")))?;
     }
     let serialized_gs = serde_json::to_string_pretty(&gs)
         .map_err(|e| AcpError::protocol(format!("serialize cline globalState failed: {e}")))?;
@@ -917,10 +934,7 @@ fn persist_cline_local_config(config_patch_json: Option<&str>) -> Result<(), Acp
     let key_field = cline_api_key_field_for_provider(&provider);
     match trim_non_empty(runtime.api_key) {
         Some(api_key) => {
-            secrets_obj.insert(
-                key_field.to_string(),
-                serde_json::Value::String(api_key),
-            );
+            secrets_obj.insert(key_field.to_string(), serde_json::Value::String(api_key));
         }
         None => {
             secrets_obj.remove(key_field);
@@ -928,9 +942,8 @@ fn persist_cline_local_config(config_patch_json: Option<&str>) -> Result<(), Acp
     }
 
     if let Some(parent) = secrets_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| {
-            AcpError::protocol(format!("create cline data directory failed: {e}"))
-        })?;
+        fs::create_dir_all(parent)
+            .map_err(|e| AcpError::protocol(format!("create cline data directory failed: {e}")))?;
     }
     let serialized_secrets = serde_json::to_string_pretty(&secrets)
         .map_err(|e| AcpError::protocol(format!("serialize cline secrets failed: {e}")))?;
@@ -1384,6 +1397,13 @@ pub(crate) fn skill_storage_spec(agent_type: AgentType) -> Option<SkillStorageSp
             kind: SkillStorageKind::SkillDirectoryOrMarkdownFile,
             global_dirs: vec![
                 codex_home_dir().join("skills"),
+                // `.system` is where Codex CLI stores its own bundled
+                // skills (imagegen, skill-creator, etc.). The directory
+                // name is a Codex convention, not a stable contract —
+                // if Codex renames it we'll silently stop listing them.
+                // `is_read_only_skill_path` mirrors this path to prevent
+                // edit/delete from clobbering CLI assets.
+                codex_home_dir().join("skills").join(".system"),
                 home_dir_or_default().join(".agents").join("skills"),
             ],
             project_rel_dirs: vec![".codex/skills", ".agents/skills"],
@@ -1519,7 +1539,20 @@ fn build_skill_item(
         scope,
         layout,
         path: path.to_string_lossy().to_string(),
+        read_only: false,
     }
+}
+
+/// Codex ships a handful of built-in skills under `~/.codex/skills/.system/`
+/// (imagegen, skill-creator, etc.). We scan that directory so users see
+/// these in the `$` autocomplete and the Skills settings list — but any
+/// write to those files would clobber the CLI's own assets.
+fn is_read_only_skill_path(agent_type: AgentType, skill_path: &Path) -> bool {
+    if agent_type != AgentType::Codex {
+        return false;
+    }
+    let ro_root = codex_home_dir().join("skills").join(".system");
+    skill_path.starts_with(&ro_root)
 }
 
 fn skill_content_path(layout: AgentSkillLayout, skill_path: &Path) -> PathBuf {
@@ -1719,7 +1752,11 @@ fn trim_non_empty(value: Option<String>) -> Option<String> {
 /// Shared by runtime env resolution, model-provider cascade, and config patching.
 fn agent_env_keys(agent_type: AgentType) -> (&'static str, &'static str, &'static str) {
     match agent_type {
-        AgentType::ClaudeCode => ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_MODEL"),
+        AgentType::ClaudeCode => (
+            "ANTHROPIC_BASE_URL",
+            "ANTHROPIC_AUTH_TOKEN",
+            "ANTHROPIC_MODEL",
+        ),
         AgentType::Gemini => ("GOOGLE_GEMINI_BASE_URL", "GEMINI_API_KEY", "GEMINI_MODEL"),
         _ => ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"),
     }
@@ -1814,11 +1851,17 @@ fn cascade_update_agent_config(
         AgentType::ClaudeCode | AgentType::Gemini => {
             // Write into config.env (not root-level)
             let mut env = serde_json::Map::new();
-            env.insert(url_key.to_string(), serde_json::Value::String(api_url.to_string()));
-            env.insert(key_key.to_string(), serde_json::Value::String(api_key.to_string()));
+            env.insert(
+                url_key.to_string(),
+                serde_json::Value::String(api_url.to_string()),
+            );
+            env.insert(
+                key_key.to_string(),
+                serde_json::Value::String(api_key.to_string()),
+            );
             let patch = serde_json::json!({ "env": env });
-            let patch_str = serde_json::to_string(&patch)
-                .map_err(|e| AcpError::protocol(e.to_string()))?;
+            let patch_str =
+                serde_json::to_string(&patch).map_err(|e| AcpError::protocol(e.to_string()))?;
             persist_agent_local_config_json(agent_type, Some(&patch_str))?;
         }
         AgentType::OpenClaw => {
@@ -1855,7 +1898,10 @@ fn cascade_update_agent_config(
                 if api_url.trim().is_empty() {
                     table.remove("api_base_url");
                 } else {
-                    table.insert("api_base_url".to_string(), toml::Value::String(api_url.to_string()));
+                    table.insert(
+                        "api_base_url".to_string(),
+                        toml::Value::String(api_url.to_string()),
+                    );
                 }
             }
             let toml_str = toml::to_string_pretty(&toml_value)
@@ -1882,8 +1928,8 @@ fn cascade_update_agent_config(
             persist_opencode_auth_json(&auth_str)?;
 
             let patch = serde_json::json!({ "apiBaseUrl": api_url });
-            let patch_str = serde_json::to_string(&patch)
-                .map_err(|e| AcpError::protocol(e.to_string()))?;
+            let patch_str =
+                serde_json::to_string(&patch).map_err(|e| AcpError::protocol(e.to_string()))?;
             persist_agent_local_config_json(agent_type, Some(&patch_str))?;
         }
         AgentType::Cline => {}
@@ -2106,17 +2152,11 @@ pub(crate) async fn acp_get_agent_status_core(
             true,
             setting.as_ref().and_then(|m| m.installed_version.clone()),
         ),
-        registry::AgentDistribution::Binary {
-            platforms, cmd, ..
-        } => {
-            let detected =
-                binary_cache::detect_installed_version(agent_type, cmd)
-                    .ok()
-                    .flatten();
-            (
-                platforms.iter().any(|p| p.platform == platform),
-                detected,
-            )
+        registry::AgentDistribution::Binary { platforms, cmd, .. } => {
+            let detected = binary_cache::detect_installed_version(agent_type, cmd)
+                .ok()
+                .flatten();
+            (platforms.iter().any(|p| p.platform == platform), detected)
         }
     };
 
@@ -2137,9 +2177,7 @@ pub async fn acp_get_agent_status(
     acp_get_agent_status_core(agent_type, &db).await
 }
 
-pub(crate) async fn acp_list_agents_core(
-    db: &AppDatabase,
-) -> Result<Vec<AcpAgentInfo>, AcpError> {
+pub(crate) async fn acp_list_agents_core(db: &AppDatabase) -> Result<Vec<AcpAgentInfo>, AcpError> {
     let platform = registry::current_platform();
     let agent_types = registry::all_acp_agents();
 
@@ -2417,9 +2455,17 @@ pub async fn acp_update_agent_preferences(
 ) -> Result<(), AcpError> {
     let emitter = EventEmitter::Tauri(app);
     acp_update_agent_preferences_core(
-        agent_type, enabled, env, config_json, opencode_auth_json,
-        codex_auth_json, codex_config_toml, &db, &emitter,
-    ).await
+        agent_type,
+        enabled,
+        env,
+        config_json,
+        opencode_auth_json,
+        codex_auth_json,
+        codex_config_toml,
+        &db,
+        &emitter,
+    )
+    .await
 }
 
 pub(crate) async fn acp_update_agent_env_core(
@@ -2557,7 +2603,12 @@ pub async fn acp_update_agent_config(
 ) -> Result<(), AcpError> {
     let emitter = EventEmitter::Tauri(app);
     acp_update_agent_config_core(
-        agent_type, config_json, opencode_auth_json, codex_auth_json, codex_config_toml, &emitter,
+        agent_type,
+        config_json,
+        opencode_auth_json,
+        codex_auth_json,
+        codex_config_toml,
+        &emitter,
     )
     .await
 }
@@ -2589,17 +2640,25 @@ pub(crate) async fn acp_download_agent_binary_core(
                 })?;
 
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Log,
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Log,
                 format!("Downloading {} v{version} for {platform}", meta.name),
             );
 
             let emitter_clone = emitter.clone();
             let task_id_clone = task_id.clone();
             let _ = binary_cache::ensure_binary_for_agent_with_progress(
-                agent_type, version, fallback.url, cmd,
+                agent_type,
+                version,
+                fallback.url,
+                cmd,
                 move |msg| {
                     emit_agent_install_event(
-                        &emitter_clone, &task_id_clone, AgentInstallEventKind::Log, msg,
+                        &emitter_clone,
+                        &task_id_clone,
+                        AgentInstallEventKind::Log,
+                        msg,
                     );
                 },
             )
@@ -2607,21 +2666,26 @@ pub(crate) async fn acp_download_agent_binary_core(
             emit_acp_agents_updated(emitter, "binary_downloaded", Some(agent_type));
             Ok(())
         }
-        registry::AgentDistribution::Npx { .. } => Err(
-            AcpError::protocol("download is only supported for binary agents"),
-        ),
+        registry::AgentDistribution::Npx { .. } => Err(AcpError::protocol(
+            "download is only supported for binary agents",
+        )),
     };
 
     match &result {
         Ok(()) => {
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Completed,
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Completed,
                 format!("{} installed successfully", meta.name),
             );
         }
         Err(e) => {
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Failed, e.to_string(),
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Failed,
+                e.to_string(),
             );
         }
     }
@@ -2645,12 +2709,9 @@ pub(crate) async fn acp_detect_agent_local_version_core(
 ) -> Result<Option<String>, AcpError> {
     let detected = detect_local_version(agent_type).await;
     if let Some(version) = detected.clone() {
-        let _ = agent_setting_service::set_installed_version(
-            conn,
-            agent_type,
-            Some(version.clone()),
-        )
-        .await;
+        let _ =
+            agent_setting_service::set_installed_version(conn, agent_type, Some(version.clone()))
+                .await;
         return Ok(Some(version));
     }
 
@@ -2699,13 +2760,17 @@ pub(crate) async fn acp_prepare_npx_agent_core(
                 .and_then(|m| m.installed_version);
 
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Log,
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Log,
                 format!("Installing {} ({package})", meta.name),
             );
             install_npm_global_package_streaming(package, &task_id, emitter).await?;
 
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Log,
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Log,
                 "Detecting installed version...",
             );
             let resolved = detect_local_version(agent_type)
@@ -2741,13 +2806,18 @@ pub(crate) async fn acp_prepare_npx_agent_core(
     match &result {
         Ok(version) => {
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Completed,
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Completed,
                 format!("{} v{version} installed successfully", meta.name),
             );
         }
         Err(e) => {
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Failed, e.to_string(),
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Failed,
+                e.to_string(),
             );
         }
     }
@@ -2777,7 +2847,9 @@ pub(crate) async fn acp_uninstall_agent_core(
 
     let meta = registry::get_agent_meta(agent_type);
     emit_agent_install_event(
-        emitter, &task_id, AgentInstallEventKind::Log,
+        emitter,
+        &task_id,
+        AgentInstallEventKind::Log,
         format!("Uninstalling {}...", meta.name),
     );
 
@@ -2802,13 +2874,18 @@ pub(crate) async fn acp_uninstall_agent_core(
     match &result {
         Ok(()) => {
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Completed,
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Completed,
                 format!("{} uninstalled successfully", meta.name),
             );
         }
         Err(e) => {
             emit_agent_install_event(
-                emitter, &task_id, AgentInstallEventKind::Failed, e.to_string(),
+                emitter,
+                &task_id,
+                AgentInstallEventKind::Failed,
+                e.to_string(),
             );
         }
     }
@@ -2868,9 +2945,7 @@ pub async fn acp_list_agent_skills(
     let Some(spec) = skill_storage_spec(agent_type) else {
         return Ok(AgentSkillsListResult {
             supported: false,
-            message: Some(format!(
-                "{agent_type} 暂不支持在设置页管理 Skills"
-            )),
+            message: Some(format!("{agent_type} 暂不支持在设置页管理 Skills")),
             locations: Vec::new(),
             skills: Vec::new(),
         });
@@ -2912,6 +2987,11 @@ pub async fn acp_list_agent_skills(
     }
 
     let mut skills = skills_by_key.into_values().collect::<Vec<_>>();
+    for skill in &mut skills {
+        if is_read_only_skill_path(agent_type, Path::new(&skill.path)) {
+            skill.read_only = true;
+        }
+    }
     skills.sort_by(|a, b| {
         scope_rank(a.scope)
             .cmp(&scope_rank(b.scope))
@@ -2941,8 +3021,11 @@ pub async fn acp_read_agent_skill(
     let id = validate_skill_id(&skill_id)?;
     let dirs = scoped_skill_dirs(agent_type, scope, workspace_path.as_deref())?;
 
-    let skill = locate_existing_skill_across_dirs(&dirs, spec.kind, &id, scope)
+    let mut skill = locate_existing_skill_across_dirs(&dirs, spec.kind, &id, scope)
         .ok_or_else(|| AcpError::protocol(format!("skill not found: {id}")))?;
+    if is_read_only_skill_path(agent_type, Path::new(&skill.path)) {
+        skill.read_only = true;
+    }
     let content_path = skill_content_path(skill.layout, Path::new(&skill.path));
     let content = fs::read_to_string(&content_path)
         .map_err(|e| AcpError::protocol(format!("failed to read skill content: {e}")))?;
@@ -2971,6 +3054,13 @@ pub async fn acp_save_agent_skill(
         .map_err(|e| AcpError::protocol(format!("failed to create skills directory: {e}")))?;
 
     let existing = locate_existing_skill_across_dirs(&dirs, spec.kind, &id, scope);
+    if let Some(ref item) = existing {
+        if is_read_only_skill_path(agent_type, Path::new(&item.path)) {
+            return Err(AcpError::protocol(format!(
+                "skill '{id}' is a built-in system skill and cannot be modified"
+            )));
+        }
+    }
     let skill = if let Some(item) = existing {
         item
     } else {
@@ -3026,6 +3116,11 @@ pub async fn acp_delete_agent_skill(
 
     let skill = locate_existing_skill_across_dirs(&dirs, spec.kind, &id, scope)
         .ok_or_else(|| AcpError::protocol(format!("skill not found: {id}")))?;
+    if is_read_only_skill_path(agent_type, Path::new(&skill.path)) {
+        return Err(AcpError::protocol(format!(
+            "skill '{id}' is a built-in system skill and cannot be deleted"
+        )));
+    }
     let skill_path = PathBuf::from(&skill.path);
     remove_skill_entry(&skill_path)
         .map_err(|e| AcpError::protocol(format!("failed to delete skill entry: {e}")))?;
@@ -3033,8 +3128,7 @@ pub async fn acp_delete_agent_skill(
 }
 
 pub(crate) async fn opencode_list_plugins_core() -> Result<PluginCheckSummary, AcpError> {
-    opencode_plugins::check_opencode_plugins(None)
-        .map_err(|e| AcpError::Protocol(e))
+    opencode_plugins::check_opencode_plugins(None).map_err(AcpError::Protocol)
 }
 
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
@@ -3049,7 +3143,7 @@ pub(crate) async fn opencode_install_plugins_core(
 ) -> Result<(), AcpError> {
     opencode_plugins::install_missing_plugins(names, task_id, emitter)
         .await
-        .map_err(|e| AcpError::Protocol(e))
+        .map_err(AcpError::Protocol)
 }
 
 #[cfg(feature = "tauri-runtime")]
@@ -3068,13 +3162,11 @@ pub(crate) async fn opencode_uninstall_plugin_core(
 ) -> Result<PluginCheckSummary, AcpError> {
     opencode_plugins::uninstall_plugin(name)
         .await
-        .map_err(|e| AcpError::Protocol(e))
+        .map_err(AcpError::Protocol)
 }
 
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
-pub async fn opencode_uninstall_plugin(
-    name: String,
-) -> Result<PluginCheckSummary, AcpError> {
+pub async fn opencode_uninstall_plugin(name: String) -> Result<PluginCheckSummary, AcpError> {
     opencode_uninstall_plugin_core(name).await
 }
 
@@ -3108,7 +3200,10 @@ struct DeviceCodeUserCodeResp {
     device_auth_id: String,
     #[serde(alias = "usercode")]
     user_code: String,
-    #[serde(default = "default_interval", deserialize_with = "deserialize_interval")]
+    #[serde(
+        default = "default_interval",
+        deserialize_with = "deserialize_interval"
+    )]
     interval: u64,
 }
 
@@ -3118,11 +3213,8 @@ fn default_interval() -> u64 {
 
 fn extract_jwt_account_id(jwt: &str) -> Option<String> {
     let payload = jwt.split('.').nth(1)?;
-    let decoded = base64::Engine::decode(
-        &base64::engine::general_purpose::URL_SAFE_NO_PAD,
-        payload,
-    )
-    .ok()?;
+    let decoded =
+        base64::Engine::decode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, payload).ok()?;
     let value: serde_json::Value = serde_json::from_slice(&decoded).ok()?;
     value
         .get("https://api.openai.com/auth")
@@ -3138,11 +3230,13 @@ where
     use serde::de;
     let value = serde_json::Value::deserialize(deserializer)?;
     match &value {
-        serde_json::Value::Number(n) => n.as_u64().ok_or_else(|| {
-            de::Error::custom(format!("invalid interval number: {n}"))
-        }),
+        serde_json::Value::Number(n) => n
+            .as_u64()
+            .ok_or_else(|| de::Error::custom(format!("invalid interval number: {n}"))),
         serde_json::Value::String(s) => s.trim().parse::<u64>().map_err(de::Error::custom),
-        _ => Err(de::Error::custom(format!("unexpected interval type: {value}"))),
+        _ => Err(de::Error::custom(format!(
+            "unexpected interval type: {value}"
+        ))),
     }
 }
 
@@ -3161,9 +3255,7 @@ struct OAuthTokenResp {
     refresh_token: String,
 }
 
-pub(crate) async fn codex_request_device_code_core()
-    -> Result<CodexDeviceCodeResponse, AcpError>
-{
+pub(crate) async fn codex_request_device_code_core() -> Result<CodexDeviceCodeResponse, AcpError> {
     let client = reqwest::Client::new();
     let url = format!("{CODEX_OAUTH_ISSUER}/api/accounts/deviceauth/usercode");
     let body = serde_json::json!({ "client_id": CODEX_OAUTH_CLIENT_ID });
@@ -3187,8 +3279,11 @@ pub(crate) async fn codex_request_device_code_core()
         .text()
         .await
         .map_err(|e| AcpError::protocol(format!("read device code response failed: {e}")))?;
-    let uc: DeviceCodeUserCodeResp = serde_json::from_str(&raw_body)
-        .map_err(|e| AcpError::protocol(format!("parse device code response failed: {e} | body: {raw_body}")))?;
+    let uc: DeviceCodeUserCodeResp = serde_json::from_str(&raw_body).map_err(|e| {
+        AcpError::protocol(format!(
+            "parse device code response failed: {e} | body: {raw_body}"
+        ))
+    })?;
 
     Ok(CodexDeviceCodeResponse {
         user_code: uc.user_code,
@@ -3199,9 +3294,7 @@ pub(crate) async fn codex_request_device_code_core()
 }
 
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
-pub async fn codex_request_device_code()
-    -> Result<CodexDeviceCodeResponse, AcpError>
-{
+pub async fn codex_request_device_code() -> Result<CodexDeviceCodeResponse, AcpError> {
     codex_request_device_code_core().await
 }
 

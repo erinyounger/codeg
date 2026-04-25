@@ -47,7 +47,8 @@
       "chat_channels": "Canaux de chat",
       "web_service": "Service Web",
       "model_providers": "Fournisseurs de Modèles",
-      "experts": "Experts"
+      "experts": "Experts",
+      "quick_messages": "Messages rapides"
     }
   },
   "AppearanceSettings": {
@@ -301,6 +302,8 @@
     "loadingSkill": "Chargement de la Skill...",
     "emptyNoAgents": "Aucun agent disponible.",
     "noSelectionHint": "Sélectionnez un Skill à gauche ou cliquez sur « Nouveau Skill » pour en créer un.",
+    "systemBadge": "Système",
+    "systemHint": "Skill intégré du CLI · lecture seule",
     "scope": {
       "global": "Global",
       "folder": "Dossier",
@@ -782,7 +785,8 @@
         "folderRemoved": "Dossier {name} retiré",
         "openFolderFailed": "Échec de l'ouverture du dossier",
         "removeFolderFailed": "Échec de la suppression du dossier : {message}",
-        "reorderFoldersFailed": "Échec du réordonnancement des dossiers : {message}"
+        "reorderFoldersFailed": "Échec du réordonnancement des dossiers : {message}",
+        "changeFolderColorFailed": "Échec du changement de couleur : {message}"
       },
       "statsLabel": "{folders} dossiers · {convos} conversations",
       "reorderHandle": "Glisser pour réorganiser",
@@ -798,10 +802,12 @@
       "conversationCountUnit": "{count, plural, one {# conversation} other {# conversations}}",
       "emptyFolderHint": "Aucune conversation",
       "noMatchingConversations": "Aucune conversation correspondante",
+      "noUnfinishedConversations": "Aucune conversation en cours. Activez « Afficher les terminées » dans le menu en haut à droite.",
       "removeFolderConfirmTitle": "Retirer le dossier de l'espace de travail ?",
       "removeFolderConfirmDescription": "Retirer \"{name}\" de l'espace de travail ? Les onglets et terminaux associés seront fermés.",
       "folderHeaderMenu": {
         "manageConversations": "Gérer les conversations…",
+        "changeColor": "Changer la couleur",
         "removeFromWorkspace": "Retirer de l'espace de travail"
       },
       "manageConversations": {
@@ -881,6 +887,7 @@
     },
     "search": {
       "dialogTitle": "Rechercher",
+      "dialogTitleWithFolder": "Rechercher — {name}",
       "tabConversations": "Conversations",
       "tabFiles": "Fichiers",
       "placeholder": "Rechercher des conversations...",
@@ -1067,7 +1074,7 @@
       "switchToBranch": "Basculer vers cette branche",
       "mergeBranchIntoCurrent": "Fusionner {branchName} dans {currentBranch}",
       "rebaseCurrentToBranch": "Rebaser {currentBranch} sur {branchName}",
-      "versionControl": "Contrôle de version",
+      "noBranch": "Aucune branche",
       "initGitRepo": "Initialiser le dépôt Git",
       "pullCode": "Pull du code",
       "fetchRemoteBranches": "Récupérer les branches distantes",
@@ -1082,7 +1089,6 @@
       "noLocalBranches": "Aucune branche locale",
       "remoteBranches": "Branches distantes ({count, plural, one {#} other {#}})",
       "noRemoteBranches": "Aucune branche distante",
-      "parentBranchHint": "La branche actuelle a été créée depuis {parentBranch}. Cliquez pour fusionner {parentBranch} dans la branche actuelle.",
       "dialogs": {
         "newBranchTitle": "Nouvelle branche",
         "newBranchDescription": "Créer une nouvelle branche depuis la branche actuelle {branch}",
@@ -1566,6 +1572,11 @@
         "askAnything": "Posez n'importe quelle question...",
         "removeAttachmentAria": "Retirer {name}",
         "attachFiles": "Joindre des fichiers",
+        "addActions": "Ajouter",
+        "quickMessages": "Messages rapides",
+        "quickMessagesEmpty": "Aucun message rapide pour l'instant",
+        "quickMessagesLoading": "Chargement...",
+        "quickMessageUntitled": "Sans titre",
         "dropFilesToAttach": "Déposez des fichiers à joindre",
         "loadingSettings": "Chargement des paramètres...",
         "loadingMode": "Chargement du mode...",
@@ -1797,6 +1808,8 @@
       "noDiffData": "Aucune donnée diff"
     },
     "conversationContextBar": {
+      "folderTitle": "Dossier de travail",
+      "branchTitle": "Branche de travail",
       "searchFolder": "Search folder...",
       "searchBranch": "Search branch...",
       "noFolders": "No folders",
@@ -2103,6 +2116,44 @@
       "enableFailed": "Échec de l'activation de l'expert",
       "disableFailed": "Échec de la désactivation de l'expert",
       "openFolderFailed": "Échec de l'ouverture du dossier"
+    }
+  },
+  "QuickMessagesSettings": {
+    "title": "Messages rapides",
+    "description": "Gérez des extraits de messages réutilisables. Glissez pour réorganiser.",
+    "loading": "Chargement des messages rapides…",
+    "emptyList": "Aucun message rapide. Cliquez sur « Nouveau » pour en créer un.",
+    "emptySelection": "Sélectionnez un message rapide à modifier.",
+    "searchPlaceholder": "Rechercher par titre ou contenu",
+    "untitled": "Sans titre",
+    "actions": {
+      "new": "Nouveau",
+      "save": "Enregistrer",
+      "delete": "Supprimer",
+      "dragSort": "Glisser pour réorganiser",
+      "dragSortMessage": "Réorganiser le message rapide : {name}"
+    },
+    "fields": {
+      "title": "Titre",
+      "titlePlaceholder": "Donnez un titre court à ce message",
+      "content": "Contenu",
+      "contentPlaceholder": "Saisissez ici le contenu du message"
+    },
+    "confirmDelete": {
+      "title": "Supprimer le message rapide ?",
+      "message": "Cela supprimera définitivement « {name} ». Êtes-vous sûr ?",
+      "cancel": "Annuler",
+      "confirm": "Supprimer"
+    },
+    "toasts": {
+      "loadFailed": "Échec du chargement des messages rapides",
+      "createFailed": "Échec de la création du message rapide",
+      "saveFailed": "Échec de l'enregistrement du message rapide",
+      "deleteFailed": "Échec de la suppression du message rapide",
+      "saveOrderFailed": "Échec de l'enregistrement de l'ordre",
+      "created": "Message rapide créé",
+      "saved": "Message rapide enregistré",
+      "deleted": "Message rapide supprimé"
     }
   }
 }

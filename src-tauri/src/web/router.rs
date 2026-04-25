@@ -106,17 +106,14 @@ pub fn build_router(state: Arc<AppState>, token: String, static_dir: std::path::
             "/remove_folder_from_workspace",
             post(handlers::folders::remove_folder_from_workspace),
         )
+        .route("/reorder_folders", post(handlers::folders::reorder_folders))
         .route(
-            "/reorder_folders",
-            post(handlers::folders::reorder_folders),
+            "/update_folder_color",
+            post(handlers::folders::update_folder_color),
         )
         .route(
             "/add_folder_to_history",
             post(handlers::folders::add_folder_to_history),
-        )
-        .route(
-            "/set_folder_parent_branch",
-            post(handlers::folders::set_folder_parent_branch),
         )
         .route(
             "/remove_folder_from_history",
@@ -633,6 +630,27 @@ pub fn build_router(state: Arc<AppState>, token: String, static_dir: std::path::
         .route(
             "/delete_model_provider",
             post(handlers::model_provider::delete_model_provider),
+        )
+        // ─── Quick Messages ───
+        .route(
+            "/quick_messages_list",
+            post(handlers::quick_messages::quick_messages_list),
+        )
+        .route(
+            "/quick_messages_create",
+            post(handlers::quick_messages::quick_messages_create),
+        )
+        .route(
+            "/quick_messages_update",
+            post(handlers::quick_messages::quick_messages_update),
+        )
+        .route(
+            "/quick_messages_delete",
+            post(handlers::quick_messages::quick_messages_delete),
+        )
+        .route(
+            "/quick_messages_reorder",
+            post(handlers::quick_messages::quick_messages_reorder),
         )
         // ─── Terminal ───
         .route("/terminal_spawn", post(handlers::terminal::terminal_spawn))

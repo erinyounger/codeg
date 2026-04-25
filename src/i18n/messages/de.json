@@ -47,7 +47,8 @@
       "chat_channels": "Chat-Kanäle",
       "web_service": "Webdienst",
       "model_providers": "Modellanbieter",
-      "experts": "Experten"
+      "experts": "Experten",
+      "quick_messages": "Schnellnachrichten"
     }
   },
   "AppearanceSettings": {
@@ -301,6 +302,8 @@
     "loadingSkill": "Skill wird geladen...",
     "emptyNoAgents": "Kein verfügbarer Agent.",
     "noSelectionHint": "Wählen Sie links einen Skill oder klicken Sie auf „Neuer Skill“, um einen zu erstellen.",
+    "systemBadge": "System",
+    "systemHint": "Integrierter CLI-Skill · schreibgeschützt",
     "scope": {
       "global": "Global",
       "folder": "Ordner",
@@ -782,7 +785,8 @@
         "folderRemoved": "Ordner {name} entfernt",
         "openFolderFailed": "Ordner konnte nicht geöffnet werden",
         "removeFolderFailed": "Ordner konnte nicht entfernt werden: {message}",
-        "reorderFoldersFailed": "Ordner konnten nicht neu sortiert werden: {message}"
+        "reorderFoldersFailed": "Ordner konnten nicht neu sortiert werden: {message}",
+        "changeFolderColorFailed": "Farbe konnte nicht geändert werden: {message}"
       },
       "statsLabel": "{folders} Ordner · {convos} Konversationen",
       "reorderHandle": "Zum Neuordnen ziehen",
@@ -798,10 +802,12 @@
       "conversationCountUnit": "{count, plural, one {# Konversation} other {# Konversationen}}",
       "emptyFolderHint": "Keine Konversationen",
       "noMatchingConversations": "Keine passenden Konversationen",
+      "noUnfinishedConversations": "Keine offenen Konversationen. Aktiviere \"Abgeschlossene anzeigen\" im Menü oben rechts.",
       "removeFolderConfirmTitle": "Ordner aus Arbeitsbereich entfernen?",
       "removeFolderConfirmDescription": "\"{name}\" aus dem Arbeitsbereich entfernen? Zugehörige Tabs und Terminals werden geschlossen.",
       "folderHeaderMenu": {
         "manageConversations": "Konversationen verwalten…",
+        "changeColor": "Farbe ändern",
         "removeFromWorkspace": "Aus Arbeitsbereich entfernen"
       },
       "manageConversations": {
@@ -881,6 +887,7 @@
     },
     "search": {
       "dialogTitle": "Suchen",
+      "dialogTitleWithFolder": "Suchen — {name}",
       "tabConversations": "Konversationen",
       "tabFiles": "Dateien",
       "placeholder": "Konversationen suchen...",
@@ -1067,7 +1074,7 @@
       "switchToBranch": "Zu diesem Branch wechseln",
       "mergeBranchIntoCurrent": "{branchName} in {currentBranch} mergen",
       "rebaseCurrentToBranch": "{currentBranch} auf {branchName} rebasen",
-      "versionControl": "Versionskontrolle",
+      "noBranch": "Kein Branch",
       "initGitRepo": "Git-Repository initialisieren",
       "pullCode": "Code pullen",
       "fetchRemoteBranches": "Remote-Branches fetchen",
@@ -1082,7 +1089,6 @@
       "noLocalBranches": "Keine lokalen Branches",
       "remoteBranches": "Remote-Branches ({count, plural, one {#} other {#}})",
       "noRemoteBranches": "Keine Remote-Branches",
-      "parentBranchHint": "Der aktuelle Branch wurde von {parentBranch} erstellt. Klicken, um {parentBranch} in den aktuellen Branch zu mergen.",
       "dialogs": {
         "newBranchTitle": "Neuer Branch",
         "newBranchDescription": "Neuen Branch vom aktuellen Branch {branch} erstellen",
@@ -1566,6 +1572,11 @@
         "askAnything": "Fragen Sie alles...",
         "removeAttachmentAria": "{name} entfernen",
         "attachFiles": "Dateien anhängen",
+        "addActions": "Hinzufügen",
+        "quickMessages": "Schnellnachrichten",
+        "quickMessagesEmpty": "Noch keine Schnellnachrichten",
+        "quickMessagesLoading": "Wird geladen...",
+        "quickMessageUntitled": "Ohne Titel",
         "dropFilesToAttach": "Dateien zum Anhängen ablegen",
         "loadingSettings": "Einstellungen werden geladen...",
         "loadingMode": "Modus wird geladen...",
@@ -1797,6 +1808,8 @@
       "noDiffData": "Keine Diff-Daten"
     },
     "conversationContextBar": {
+      "folderTitle": "Arbeitsordner",
+      "branchTitle": "Arbeits-Branch",
       "searchFolder": "Search folder...",
       "searchBranch": "Search branch...",
       "noFolders": "No folders",
@@ -2103,6 +2116,44 @@
       "enableFailed": "Aktivieren des Experten fehlgeschlagen",
       "disableFailed": "Deaktivieren des Experten fehlgeschlagen",
       "openFolderFailed": "Ordner konnte nicht geöffnet werden"
+    }
+  },
+  "QuickMessagesSettings": {
+    "title": "Schnellnachrichten",
+    "description": "Verwalte wiederverwendbare Nachrichtenbausteine. Ziehe zum Neuordnen.",
+    "loading": "Schnellnachrichten werden geladen…",
+    "emptyList": "Noch keine Schnellnachrichten. Klicke auf \"Neu\", um eine zu erstellen.",
+    "emptySelection": "Wähle eine Schnellnachricht zum Bearbeiten aus.",
+    "searchPlaceholder": "Nach Titel oder Inhalt suchen",
+    "untitled": "Ohne Titel",
+    "actions": {
+      "new": "Neu",
+      "save": "Speichern",
+      "delete": "Löschen",
+      "dragSort": "Zum Neuordnen ziehen",
+      "dragSortMessage": "Schnellnachricht neu ordnen: {name}"
+    },
+    "fields": {
+      "title": "Titel",
+      "titlePlaceholder": "Gib dieser Nachricht einen kurzen Titel",
+      "content": "Inhalt",
+      "contentPlaceholder": "Gib hier den Nachrichteninhalt ein"
+    },
+    "confirmDelete": {
+      "title": "Schnellnachricht löschen?",
+      "message": "Dadurch wird \"{name}\" dauerhaft gelöscht. Bist du sicher?",
+      "cancel": "Abbrechen",
+      "confirm": "Löschen"
+    },
+    "toasts": {
+      "loadFailed": "Laden der Schnellnachrichten fehlgeschlagen",
+      "createFailed": "Erstellen der Schnellnachricht fehlgeschlagen",
+      "saveFailed": "Speichern der Schnellnachricht fehlgeschlagen",
+      "deleteFailed": "Löschen der Schnellnachricht fehlgeschlagen",
+      "saveOrderFailed": "Reihenfolge konnte nicht gespeichert werden",
+      "created": "Schnellnachricht erstellt",
+      "saved": "Schnellnachricht gespeichert",
+      "deleted": "Schnellnachricht gelöscht"
     }
   }
 }

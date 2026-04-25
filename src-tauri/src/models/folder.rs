@@ -17,10 +17,10 @@ pub struct FolderDetail {
     pub name: String,
     pub path: String,
     pub git_branch: Option<String>,
-    pub parent_branch: Option<String>,
     pub default_agent_type: Option<AgentType>,
     pub last_opened_at: DateTime<Utc>,
     pub sort_order: i32,
+    pub color: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

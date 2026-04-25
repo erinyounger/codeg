@@ -24,7 +24,8 @@ mod tauri_app {
     use crate::commands::{
         acp as acp_commands, chat_channel as chat_channel_commands, conversations,
         experts as experts_commands, folder_commands, folders, mcp as mcp_commands,
-        model_provider as model_provider_commands, notification, project_boot, system_settings,
+        model_provider as model_provider_commands, notification, project_boot,
+        quick_messages as quick_messages_commands, system_settings,
         terminal as terminal_commands, version_control, windows,
         workspace_state as workspace_state_commands,
     };
@@ -181,14 +182,11 @@ mod tauri_app {
                     });
                 }
 
-                if label == "main"
-                    && matches!(event, tauri::WindowEvent::CloseRequested { .. })
-                {
+                if label == "main" && matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
                     let app = window.app_handle();
                     if let Some(cm) = app.try_state::<ConnectionManager>() {
-                        let disconnected = tauri::async_runtime::block_on(
-                            cm.disconnect_by_owner_window(&label),
-                        );
+                        let disconnected =
+                            tauri::async_runtime::block_on(cm.disconnect_by_owner_window(&label));
                         eprintln!(
                             "[ACP] main window closing disconnected_connections={}",
                             disconnected
@@ -224,8 +222,8 @@ mod tauri_app {
                 folders::open_folder_by_id,
                 folders::remove_folder_from_workspace,
                 folders::reorder_folders,
+                folders::update_folder_color,
                 folders::add_folder_to_history,
-                folders::set_folder_parent_branch,
                 folders::remove_folder_from_history,
                 folders::create_folder_directory,
                 folders::clone_repository,
@@ -357,6 +355,11 @@ mod tauri_app {
                 folder_commands::delete_folder_command,
                 folder_commands::reorder_folder_commands,
                 folder_commands::bootstrap_folder_commands_from_package_json,
+                quick_messages_commands::quick_messages_list,
+                quick_messages_commands::quick_messages_create,
+                quick_messages_commands::quick_messages_update,
+                quick_messages_commands::quick_messages_delete,
+                quick_messages_commands::quick_messages_reorder,
                 terminal_commands::terminal_spawn,
                 terminal_commands::terminal_write,
                 terminal_commands::terminal_resize,
@@ -406,7 +409,7 @@ mod tauri_app {
                 if let tauri::RunEvent::ExitRequested { .. } = event {
                     APP_QUITTING.store(true, Ordering::Relaxed);
                     if let Some(ws) = app.try_state::<web::WebServerState>() {
-                        web::do_stop_web_server(&ws);
+                        tauri::async_runtime::block_on(web::do_stop_web_server(&ws));
                     }
                     if let Some(tm) = app.try_state::<TerminalManager>() {
                         tm.kill_all();

@@ -19,6 +19,8 @@ import {
   FileSearch,
   GitFork,
   ListPlus,
+  MessageSquareText,
+  Paperclip,
   Plus,
   Search,
   Send,
@@ -33,13 +35,16 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ImagePreviewDialog } from "@/components/ui/image-preview-dialog"
 import { cn, randomUUID } from "@/lib/utils"
 import { matchShortcutEvent } from "@/lib/keyboard-shortcuts"
 import { useShortcutSettings } from "@/hooks/use-shortcut-settings"
-import { readFileBase64 } from "@/lib/api"
+import { readFileBase64, quickMessagesList } from "@/lib/api"
 import { openFileDialog } from "@/lib/platform"
 import { disposeTauriListener } from "@/lib/tauri-listener"
 import type {
@@ -50,6 +55,7 @@ import type {
   PromptCapabilitiesInfo,
   PromptDraft,
   PromptInputBlock,
+  QuickMessage,
   SessionConfigOptionInfo,
   SessionModeInfo,
 } from "@/lib/types"
@@ -401,7 +407,7 @@ export function MessageInput({
     [tExperts]
   )
   const { shortcuts } = useShortcutSettings()
-  const effectiveDraftStorageKey = draftStorageKey ?? attachmentTabId ?? null
+  const effectiveDraftStorageKey = draftStorageKey ?? null
   const resolvedPlaceholder = placeholder ?? t("askAnything")
   const [text, setText] = useState(() => {
     if (!effectiveDraftStorageKey) return ""
@@ -409,6 +415,8 @@ export function MessageInput({
   })
   const [attachments, setAttachments] = useState<InputAttachment[]>([])
   const [isDragActive, setIsDragActive] = useState(false)
+  const [quickMessages, setQuickMessages] = useState<QuickMessage[]>([])
+  const [quickMessagesLoading, setQuickMessagesLoading] = useState(false)
   const [previewAttachmentId, setPreviewAttachmentId] = useState<string | null>(
     null
   )
@@ -1299,6 +1307,47 @@ export function MessageInput({
     }
   }, [appendResourceAttachments, defaultPath, disabled])
 
+  const loadQuickMessages = useCallback(async () => {
+    setQuickMessagesLoading(true)
+    try {
+      const list = await quickMessagesList()
+      setQuickMessages(list)
+    } catch (error) {
+      console.error("[MessageInput] load quick messages failed:", error)
+    } finally {
+      setQuickMessagesLoading(false)
+    }
+  }, [])
+
+  const handleAddMenuOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) return
+      cursorPosRef.current = textareaRef.current?.selectionStart ?? null
+      loadQuickMessages().catch((error) => {
+        console.error("[MessageInput] quick messages refresh failed:", error)
+      })
+    },
+    [loadQuickMessages]
+  )
+
+  const handleQuickMessageSelect = useCallback((message: QuickMessage) => {
+    const insertion = message.content
+    if (!insertion) return
+    const current = textRef.current
+    const rawPos = cursorPosRef.current ?? current.length
+    const pos = Math.max(0, Math.min(rawPos, current.length))
+    const before = current.slice(0, pos)
+    const after = current.slice(pos)
+    setText(before + insertion + after)
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current
+      if (!ta) return
+      ta.focus()
+      const newPos = pos + insertion.length
+      ta.setSelectionRange(newPos, newPos)
+    })
+  }, [])
+
   useEffect(() => {
     if (!attachmentTabId) return
 
@@ -1920,69 +1969,65 @@ export function MessageInput({
           className
         )}
       >
-        <ConversationContextBar tabId={attachmentTabId} />
-        {(hasImageAttachments || hasResourceAttachments) && (
-          <div className="flex shrink-0 flex-col gap-1 px-2 pt-2">
-            {hasImageAttachments && (
-              <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
-                {imageAttachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="relative shrink-0 overflow-hidden rounded-md border border-border/70 bg-muted/30"
+        <ConversationContextBar
+          tabId={attachmentTabId}
+          hasExtraContent={hasImageAttachments || hasResourceAttachments}
+          scrollEndTrigger={attachments.length}
+          extraContent={
+            <>
+              {imageAttachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="relative shrink-0 overflow-hidden rounded-md border border-border/70 bg-muted/30"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPreviewAttachmentId(attachment.id)}
+                    className="cursor-pointer transition-opacity hover:opacity-80"
                   >
-                    <button
-                      type="button"
-                      onClick={() => setPreviewAttachmentId(attachment.id)}
-                      className="cursor-pointer transition-opacity hover:opacity-80"
-                    >
-                      <Image
-                        src={`data:${attachment.mimeType};base64,${attachment.data}`}
-                        alt={attachment.name}
-                        width={56}
-                        height={56}
-                        unoptimized
-                        className="h-14 w-14 object-cover"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(attachment.id)}
-                      className="absolute right-1 top-1 rounded-sm bg-background/70 p-0.5 hover:bg-background"
-                      aria-label={t("removeAttachmentAria", {
-                        name: attachment.name,
-                      })}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {hasResourceAttachments && (
-              <div className="flex items-center gap-1 overflow-x-auto">
-                {resourceAttachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2 text-[11px] text-muted-foreground"
+                    <Image
+                      src={`data:${attachment.mimeType};base64,${attachment.data}`}
+                      alt={attachment.name}
+                      width={56}
+                      height={56}
+                      unoptimized
+                      className="h-14 w-14 object-cover"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(attachment.id)}
+                    className="absolute right-1 top-1 rounded-sm bg-background/70 p-0.5 hover:bg-background"
+                    aria-label={t("removeAttachmentAria", {
+                      name: attachment.name,
+                    })}
                   >
-                    <FileSearch className="h-3 w-3" />
-                    <span className="max-w-40 truncate">{attachment.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(attachment.id)}
-                      className="rounded-sm p-0.5 hover:bg-muted-foreground/15"
-                      aria-label={t("removeAttachmentAria", {
-                        name: attachment.name,
-                      })}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {resourceAttachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2 text-[11px] text-muted-foreground"
+                >
+                  <FileSearch className="h-3 w-3" />
+                  <span className="max-w-40 truncate">{attachment.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(attachment.id)}
+                    className="rounded-sm p-0.5 hover:bg-muted-foreground/15"
+                    aria-label={t("removeAttachmentAria", {
+                      name: attachment.name,
+                    })}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </>
+          }
+        />
         <Textarea
           ref={textareaRef}
           value={text}
@@ -1998,16 +2043,77 @@ export function MessageInput({
         />
         <div className="@container flex shrink-0 items-end justify-between gap-2 px-2 pb-2">
           <div className="flex min-w-0 items-end gap-2">
-            <Button
-              onClick={handlePickFiles}
-              disabled={disabled}
-              variant="outline"
-              size="icon"
-              className="h-6 w-6 shrink-0 bg-transparent"
-              title={t("attachFiles")}
-            >
-              <Plus className="size-4" />
-            </Button>
+            <DropdownMenu onOpenChange={handleAddMenuOpenChange}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  disabled={disabled}
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6 shrink-0 bg-transparent"
+                  title={t("addActions")}
+                  aria-label={t("addActions")}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                align="start"
+                className="min-w-48"
+              >
+                <DropdownMenuItem
+                  onClick={() => {
+                    handlePickFiles().catch((error) => {
+                      console.error(
+                        "[MessageInput] pick files from menu failed:",
+                        error
+                      )
+                    })
+                  }}
+                >
+                  <Paperclip className="size-4" />
+                  {t("attachFiles")}
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <MessageSquareText className="size-4" />
+                    {t("quickMessages")}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent
+                    className="min-w-40 overflow-y-auto"
+                    style={{
+                      maxHeight:
+                        "min(32rem, var(--radix-dropdown-menu-content-available-height))",
+                    }}
+                  >
+                    {quickMessagesLoading && quickMessages.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                        {t("quickMessagesLoading")}
+                      </div>
+                    ) : quickMessages.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                        {t("quickMessagesEmpty")}
+                      </div>
+                    ) : (
+                      quickMessages.map((message) => (
+                        <DropdownMenuItem
+                          key={message.id}
+                          onClick={() => handleQuickMessageSelect(message)}
+                        >
+                          <span className="truncate">
+                            {message.title || (
+                              <span className="italic text-muted-foreground">
+                                {t("quickMessageUntitled")}
+                              </span>
+                            )}
+                          </span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -2175,15 +2281,15 @@ export function MessageInput({
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* 宽屏内联显示，窄屏（<480px）通过"更多"气泡显示 */}
-            <div className="hidden @[480px]:contents">{selectorItems}</div>
+            {/* 宽屏内联显示，窄屏（<34rem）通过"更多"气泡显示；用 rem 让阈值随外观缩放同步变化 */}
+            <div className="hidden @[34rem]:contents">{selectorItems}</div>
             {hasAnySelector && (
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-6 w-6 shrink-0 bg-transparent @[480px]:hidden"
+                    className="h-6 w-6 shrink-0 bg-transparent @[34rem]:hidden"
                   >
                     <Ellipsis className="size-4" />
                   </Button>

@@ -9,7 +9,9 @@ use super::i18n::Lang;
 use super::manager::ChatChannelManager;
 use super::message_formatter;
 use super::types::RichMessage;
-use crate::db::service::{app_metadata_service, chat_channel_message_log_service, chat_channel_service};
+use crate::db::service::{
+    app_metadata_service, chat_channel_message_log_service, chat_channel_service,
+};
 use crate::web::event_bridge::WebEventBroadcaster;
 
 /// Minimum interval between pushes for the same event type per channel (debounce).
@@ -106,7 +108,7 @@ pub fn spawn_event_subscriber(
             last_push.retain(|_, t| t.elapsed() < Duration::from_secs(DEBOUNCE_SECS * 2));
 
             if let Some((event_type, msg)) =
-                parse_event(&event.channel, &event.payload, config.lang)
+                parse_event(&event.channel, event.payload.as_ref(), config.lang)
             {
                 // Global event filter check
                 if let Some(filter) = &config.global_filter {

@@ -2,8 +2,9 @@ pub mod agent;
 pub mod chat_channel;
 pub mod conversation;
 pub mod folder;
-pub mod model_provider;
 pub mod message;
+pub mod model_provider;
+pub mod quick_message;
 pub mod system;
 
 pub use agent::AgentType;
@@ -15,6 +16,7 @@ pub use conversation::{
     SidebarData,
 };
 pub use folder::{FolderCommandInfo, FolderDetail, FolderHistoryEntry, OpenedTab};
+pub use quick_message::QuickMessageInfo;
 pub use message::{
     AgentExecutionStats, AgentToolCall, ContentBlock, MessageRole, MessageTurn, TurnRole,
     TurnUsage, UnifiedMessage,

@@ -22,6 +22,7 @@ pub const DEFAULT_WEB_SERVICE_PORT: u16 = 3080;
 
 pub struct WebServerState {
     handle: Mutex<Option<tokio::task::JoinHandle<()>>>,
+    shutdown_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
     port: AtomicU16,
     token: Mutex<String>,
     running: std::sync::atomic::AtomicBool,
@@ -37,6 +38,7 @@ impl WebServerState {
     pub fn new() -> Self {
         Self {
             handle: Mutex::new(None),
+            shutdown_tx: Mutex::new(None),
             port: AtomicU16::new(0),
             token: Mutex::new(String::new()),
             running: std::sync::atomic::AtomicBool::new(false),
@@ -121,11 +123,10 @@ async fn persist_web_service_config(
     })
     .await
     .map_err(|e: TransactionError<AppCommandError>| match e {
-        TransactionError::Connection(db) => AppCommandError::new(
-            AppErrorCode::DatabaseError,
-            "Database transaction failed",
-        )
-        .with_detail(db.to_string()),
+        TransactionError::Connection(db) => {
+            AppCommandError::new(AppErrorCode::DatabaseError, "Database transaction failed")
+                .with_detail(db.to_string())
+        }
         TransactionError::Transaction(inner) => inner,
     })
 }
@@ -178,12 +179,18 @@ pub(crate) fn find_static_dir_tauri(app: &tauri::AppHandle) -> PathBuf {
     if let Some(ref dir) = resource {
         let web = dir.join("web");
         if web.join("index.html").exists() {
-            eprintln!("[WEB] Serving static files from resource/web: {}", web.display());
+            eprintln!(
+                "[WEB] Serving static files from resource/web: {}",
+                web.display()
+            );
             return web;
         }
         // Fallback: files at resource root.
         if dir.join("index.html").exists() {
-            eprintln!("[WEB] Serving static files from resource dir: {}", dir.display());
+            eprintln!(
+                "[WEB] Serving static files from resource dir: {}",
+                dir.display()
+            );
             return dir.clone();
         }
     }
@@ -197,7 +204,10 @@ pub(crate) fn find_static_dir_fallback() -> PathBuf {
     let project_out = manifest_dir.parent().map(|p| p.join("out"));
     if let Some(ref out) = project_out {
         if out.join("index.html").exists() {
-            eprintln!("[WEB] Serving static files from project out/: {}", out.display());
+            eprintln!(
+                "[WEB] Serving static files from project out/: {}",
+                out.display()
+            );
             return out.clone();
         }
     }
@@ -217,7 +227,10 @@ pub fn find_static_dir_standalone(explicit: Option<&str>) -> PathBuf {
     if let Some(dir) = explicit {
         let p = PathBuf::from(dir);
         if p.join("index.html").exists() {
-            eprintln!("[WEB] Serving static files from CODEG_STATIC_DIR: {}", p.display());
+            eprintln!(
+                "[WEB] Serving static files from CODEG_STATIC_DIR: {}",
+                p.display()
+            );
             return p;
         }
     }
@@ -292,12 +305,13 @@ pub(crate) async fn do_start_web_server_with_state(
     let host = host.unwrap_or_else(|| "0.0.0.0".to_string());
     let token = resolve_web_service_token(&app_state.db.conn, token).await?;
 
-    let addr: SocketAddr = format!("{}:{}", host, port)
-        .parse()
-        .map_err(|e: std::net::AddrParseError| {
-            AppCommandError::new(AppErrorCode::InvalidInput, ERR_INVALID_ADDRESS)
-                .with_detail(e.to_string())
-        })?;
+    let addr: SocketAddr =
+        format!("{}:{}", host, port)
+            .parse()
+            .map_err(|e: std::net::AddrParseError| {
+                AppCommandError::new(AppErrorCode::InvalidInput, ERR_INVALID_ADDRESS)
+                    .with_detail(e.to_string())
+            })?;
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await
@@ -311,13 +325,18 @@ pub(crate) async fn do_start_web_server_with_state(
     let actual_port = listener.local_addr().map(|a| a.port()).unwrap_or(port);
     eprintln!("[WEB] Starting web server on {}", addr);
 
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     let handle = tokio::spawn(async move {
-        if let Err(e) = axum::serve(listener, router).await {
+        let serve = axum::serve(listener, router).with_graceful_shutdown(async move {
+            let _ = shutdown_rx.await;
+        });
+        if let Err(e) = serve.await {
             eprintln!("[WEB] Server error: {}", e);
         }
     });
 
     *ws.handle.lock().unwrap() = Some(handle);
+    *ws.shutdown_tx.lock().unwrap() = Some(shutdown_tx);
     ws.port.store(actual_port, Ordering::Relaxed);
     *ws.token.lock().unwrap() = token.clone();
     // running already true from compare_exchange; disarm guard so it doesn't flip back.
@@ -331,13 +350,34 @@ pub(crate) async fn do_start_web_server_with_state(
     })
 }
 
-pub(crate) fn do_stop_web_server(state: &WebServerState) {
-    if let Some(handle) = state.handle.lock().unwrap().take() {
-        handle.abort();
+pub(crate) async fn do_stop_web_server(state: &WebServerState) {
+    let handle_opt = state.handle.lock().unwrap().take();
+    let shutdown_tx = state.shutdown_tx.lock().unwrap().take();
+
+    // Signal graceful shutdown so axum stops accepting new connections
+    // and drops the listening socket once the serve future resolves.
+    if let Some(tx) = shutdown_tx {
+        let _ = tx.send(());
     }
-    state.running.store(false, Ordering::Relaxed);
+
+    // Await the serve task so the OS socket is guaranteed released before we return.
+    // A live WebSocket/keep-alive connection can block graceful drain; after a
+    // short grace period, force-abort and await the cancellation to complete.
+    if let Some(mut handle) = handle_opt {
+        if tokio::time::timeout(std::time::Duration::from_secs(2), &mut handle)
+            .await
+            .is_err()
+        {
+            handle.abort();
+            let _ = handle.await;
+        }
+    }
+
+    // Only release the running flag after the listener is guaranteed dropped,
+    // so a concurrent start() cannot race into a bind() while the old socket lingers.
     state.port.store(0, Ordering::Relaxed);
     *state.token.lock().unwrap() = String::new();
+    state.running.store(false, Ordering::Release);
     eprintln!("[WEB] Web server stopped");
 }
 
@@ -387,12 +427,13 @@ pub async fn start_web_server(
     let host_val = host.unwrap_or_else(|| "0.0.0.0".to_string());
     let token = resolve_web_service_token(&db.conn, token).await?;
 
-    let addr: SocketAddr = format!("{}:{}", host_val, port_val)
-        .parse()
-        .map_err(|e: std::net::AddrParseError| {
-            AppCommandError::new(AppErrorCode::InvalidInput, ERR_INVALID_ADDRESS)
-                .with_detail(e.to_string())
-        })?;
+    let addr: SocketAddr =
+        format!("{}:{}", host_val, port_val)
+            .parse()
+            .map_err(|e: std::net::AddrParseError| {
+                AppCommandError::new(AppErrorCode::InvalidInput, ERR_INVALID_ADDRESS)
+                    .with_detail(e.to_string())
+            })?;
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await
@@ -410,7 +451,10 @@ pub async fn start_web_server(
         },
         connection_manager: (*app.state::<crate::acp::manager::ConnectionManager>()).clone_ref(),
         terminal_manager: (*app.state::<crate::terminal::manager::TerminalManager>()).clone_ref(),
-        event_broadcaster: app.state::<Arc<crate::web::event_bridge::WebEventBroadcaster>>().inner().clone(),
+        event_broadcaster: app
+            .state::<Arc<crate::web::event_bridge::WebEventBroadcaster>>()
+            .inner()
+            .clone(),
         emitter: crate::web::event_bridge::EventEmitter::Tauri(app.clone()),
         data_dir: app.path().app_data_dir().unwrap_or_default(),
         web_server_state: WebServerState::new(), // placeholder; not used by handlers
@@ -422,13 +466,18 @@ pub async fn start_web_server(
     let actual_port = listener.local_addr().map(|a| a.port()).unwrap_or(port_val);
     eprintln!("[WEB] Starting web server on {}", addr);
 
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     let handle = tokio::spawn(async move {
-        if let Err(e) = axum::serve(listener, router).await {
+        let serve = axum::serve(listener, router).with_graceful_shutdown(async move {
+            let _ = shutdown_rx.await;
+        });
+        if let Err(e) = serve.await {
             eprintln!("[WEB] Server error: {}", e);
         }
     });
 
     *ws.handle.lock().unwrap() = Some(handle);
+    *ws.shutdown_tx.lock().unwrap() = Some(shutdown_tx);
     ws.port.store(actual_port, Ordering::Relaxed);
     *ws.token.lock().unwrap() = token.clone();
     // running already true from compare_exchange; disarm guard so it doesn't flip back.
@@ -447,7 +496,7 @@ pub async fn start_web_server(
 pub async fn stop_web_server(
     state: tauri::State<'_, WebServerState>,
 ) -> Result<(), AppCommandError> {
-    do_stop_web_server(&state);
+    do_stop_web_server(&state).await;
     Ok(())
 }
 

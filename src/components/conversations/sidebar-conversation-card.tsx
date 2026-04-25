@@ -1,20 +1,10 @@
 "use client"
 
 import { memo, useState, useCallback } from "react"
-import {
-  Pencil,
-  Trash2,
-  Circle,
-  CircleAlert,
-  CircleCheck,
-  CircleDashed,
-  CircleX,
-  Plus,
-  type LucideIcon,
-} from "lucide-react"
+import { Pencil, Trash2, Circle, Plus } from "lucide-react"
 import { useTranslations } from "next-intl"
 import type { DbConversationSummary, ConversationStatus } from "@/lib/types"
-import { STATUS_ORDER } from "@/lib/types"
+import { STATUS_ICON_COLORS, STATUS_ORDER } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
   ContextMenu,
@@ -45,24 +35,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  SidebarStatusIcon,
-  conversationStatusToBead,
-} from "./sidebar-status-icon"
-
-const STATUS_ICONS: Record<ConversationStatus, LucideIcon> = {
-  in_progress: CircleDashed,
-  pending_review: CircleAlert,
-  completed: CircleCheck,
-  cancelled: CircleX,
-}
-
-const STATUS_ICON_COLORS: Record<ConversationStatus, string> = {
-  in_progress: "text-blue-500",
-  pending_review: "text-orange-500",
-  completed: "text-green-500",
-  cancelled: "text-red-500",
-}
+import { ConversationStatusIcon } from "./conversation-status-icon"
+import { SidebarStatusIcon } from "./sidebar-status-icon"
 
 interface SidebarConversationCardProps {
   conversation: DbConversationSummary
@@ -123,7 +97,6 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
   }, [conversation.id, conversation.agent_type, onDelete])
 
   const status = conversation.status as ConversationStatus
-  const beadStatus = conversationStatusToBead(conversation.status)
   const isRunning = status === "in_progress"
   const isFailed = status === "cancelled"
 
@@ -132,7 +105,7 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
-            className="relative h-[2rem]"
+            className="relative h-[2rem] bg-sidebar"
             data-conv-key={`${conversation.agent_type}:${conversation.id}`}
           >
             <button
@@ -152,17 +125,17 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
               <span
                 aria-hidden
                 className={cn(
-                  "pointer-events-none absolute -top-px -bottom-px z-0",
-                  isOpenInTab
-                    ? "bg-sidebar-primary/85"
-                    : "bg-sidebar-primary/30"
+                  "pointer-events-none absolute z-0 bg-sidebar-border"
                 )}
                 style={{
-                  left: "calc(0.875rem - 0.5px)",
-                  width: "1px",
+                  top: "-0.0625rem",
+                  bottom: "-0.0625rem",
+                  left: "var(--conv-rail-axis, 0.875rem)",
+                  width: "0.125rem",
+                  transform: "translateX(-50%)",
                 }}
               />
-              <SidebarStatusIcon status={beadStatus} emphasized={isOpenInTab} />
+              <SidebarStatusIcon status={status} emphasized={isOpenInTab} />
 
               <span
                 className={cn(
@@ -235,20 +208,18 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
               {STATUS_ORDER.filter((s) => s !== conversation.status).map(
-                (s) => {
-                  const StatusIcon = STATUS_ICONS[s]
-                  return (
-                    <ContextMenuItem
-                      key={s}
-                      onSelect={() => onStatusChange(conversation.id, s)}
-                    >
-                      <StatusIcon
-                        className={cn("h-4 w-4", STATUS_ICON_COLORS[s])}
-                      />
-                      {tStatus(s)}
-                    </ContextMenuItem>
-                  )
-                }
+                (s) => (
+                  <ContextMenuItem
+                    key={s}
+                    onSelect={() => onStatusChange(conversation.id, s)}
+                  >
+                    <ConversationStatusIcon
+                      status={s}
+                      className={cn("h-4 w-4", STATUS_ICON_COLORS[s])}
+                    />
+                    {tStatus(s)}
+                  </ContextMenuItem>
+                )
               )}
             </ContextMenuSubContent>
           </ContextMenuSub>

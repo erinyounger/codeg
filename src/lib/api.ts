@@ -63,6 +63,7 @@ import type {
   ChatChannelMessageLog,
   ModelProviderInfo,
   PluginCheckSummary,
+  QuickMessage,
 } from "./types"
 
 export async function listConversations(params?: {
@@ -644,6 +645,13 @@ export async function reorderFolders(ids: number[]): Promise<void> {
   return getTransport().call("reorder_folders", { ids })
 }
 
+export async function updateFolderColor(
+  folderId: number,
+  color: string
+): Promise<FolderDetail> {
+  return getTransport().call("update_folder_color", { folderId, color })
+}
+
 export async function importLocalConversations(
   folderId: number
 ): Promise<ImportResult> {
@@ -654,16 +662,6 @@ export async function getFolderConversation(
   conversationId: number
 ): Promise<DbConversationDetail> {
   return getTransport().call("get_folder_conversation", { conversationId })
-}
-
-export async function setFolderParentBranch(
-  path: string,
-  parentBranch: string | null
-): Promise<void> {
-  return getTransport().call("set_folder_parent_branch", {
-    path,
-    parentBranch,
-  })
 }
 
 export async function removeFolderFromHistory(path: string): Promise<void> {
@@ -1259,6 +1257,42 @@ export async function bootstrapFolderCommandsFromPackageJson(
     folderId,
     folderPath,
   })
+}
+
+// Quick message management
+
+export async function quickMessagesList(): Promise<QuickMessage[]> {
+  return getTransport().call("quick_messages_list")
+}
+
+export async function quickMessagesCreate(params: {
+  title: string
+  content: string
+}): Promise<QuickMessage> {
+  return getTransport().call("quick_messages_create", {
+    title: params.title,
+    content: params.content,
+  })
+}
+
+export async function quickMessagesUpdate(params: {
+  id: number
+  title?: string
+  content?: string
+}): Promise<QuickMessage> {
+  return getTransport().call("quick_messages_update", {
+    id: params.id,
+    title: params.title ?? null,
+    content: params.content ?? null,
+  })
+}
+
+export async function quickMessagesDelete(id: number): Promise<void> {
+  return getTransport().call("quick_messages_delete", { id })
+}
+
+export async function quickMessagesReorder(ids: number[]): Promise<void> {
+  return getTransport().call("quick_messages_reorder", { ids })
 }
 
 // Directory browser (for web/server mode)

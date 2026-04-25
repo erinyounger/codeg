@@ -15,8 +15,8 @@ pub struct Model {
     pub updated_at: DateTimeUtc,
     pub deleted_at: Option<DateTimeUtc>,
     pub is_open: bool,
-    pub parent_branch: Option<String>,
     pub sort_order: i32,
+    pub color: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

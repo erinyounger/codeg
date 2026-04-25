@@ -47,7 +47,8 @@
       "chat_channels": "訊息頻道",
       "web_service": "Web 服務",
       "model_providers": "模型供應商",
-      "experts": "專家"
+      "experts": "專家",
+      "quick_messages": "快捷訊息"
     }
   },
   "AppearanceSettings": {
@@ -301,6 +302,8 @@
     "loadingSkill": "正在載入 Skill...",
     "emptyNoAgents": "暫無可用 Agent。",
     "noSelectionHint": "從左側選擇一個 Skill，或點擊「新建 Skill」建立。",
+    "systemBadge": "系統",
+    "systemHint": "CLI 內建 Skill · 唯讀",
     "scope": {
       "global": "全域",
       "folder": "資料夾",
@@ -782,7 +785,8 @@
         "folderRemoved": "已移除資料夾 {name}",
         "openFolderFailed": "開啟資料夾失敗",
         "removeFolderFailed": "移除資料夾失敗：{message}",
-        "reorderFoldersFailed": "重新排序資料夾失敗：{message}"
+        "reorderFoldersFailed": "重新排序資料夾失敗：{message}",
+        "changeFolderColorFailed": "修改顏色失敗：{message}"
       },
       "statsLabel": "{folders} 個資料夾 · {convos} 個對話",
       "reorderHandle": "拖拽排序",
@@ -798,10 +802,12 @@
       "conversationCountUnit": "{count} 條",
       "emptyFolderHint": "暫無對話",
       "noMatchingConversations": "找不到符合的對話",
+      "noUnfinishedConversations": "目前沒有未完成的會話，右上角可啟用顯示已完成會話",
       "removeFolderConfirmTitle": "從工作區移除此資料夾？",
       "removeFolderConfirmDescription": "從工作區移除 \"{name}\"？相關分頁與終端機將會關閉。",
       "folderHeaderMenu": {
         "manageConversations": "會話管理…",
+        "changeColor": "修改顏色",
         "removeFromWorkspace": "從工作區移除"
       },
       "manageConversations": {
@@ -881,6 +887,7 @@
     },
     "search": {
       "dialogTitle": "搜尋",
+      "dialogTitleWithFolder": "搜尋 — {name}",
       "tabConversations": "會話",
       "tabFiles": "檔案",
       "placeholder": "搜尋會話...",
@@ -1067,7 +1074,7 @@
       "switchToBranch": "切換到此分支",
       "mergeBranchIntoCurrent": "將 {branchName} 合併到 {currentBranch}",
       "rebaseCurrentToBranch": "將 {currentBranch} 變基到 {branchName}",
-      "versionControl": "版本控制",
+      "noBranch": "無分支",
       "initGitRepo": "初始化 Git 倉庫",
       "pullCode": "更新程式碼",
       "fetchRemoteBranches": "提取遠端分支",
@@ -1082,7 +1089,6 @@
       "noLocalBranches": "無本地分支",
       "remoteBranches": "遠端分支 ({count})",
       "noRemoteBranches": "無遠端分支",
-      "parentBranchHint": "目前分支從 {parentBranch} 建立，點擊合併 {parentBranch} 到目前分支",
       "dialogs": {
         "newBranchTitle": "新增分支",
         "newBranchDescription": "從目前分支 {branch} 建立新分支",
@@ -1566,6 +1572,11 @@
         "askAnything": "請開始輸入...",
         "removeAttachmentAria": "移除 {name}",
         "attachFiles": "附加檔案",
+        "addActions": "新增",
+        "quickMessages": "快捷訊息",
+        "quickMessagesEmpty": "尚無快捷訊息",
+        "quickMessagesLoading": "載入中...",
+        "quickMessageUntitled": "未命名",
         "dropFilesToAttach": "拖曳檔案到此處附加",
         "loadingSettings": "正在載入設定...",
         "loadingMode": "正在載入模式...",
@@ -1797,6 +1808,8 @@
       "noDiffData": "無差異資料"
     },
     "conversationContextBar": {
+      "folderTitle": "工作資料夾",
+      "branchTitle": "工作分支",
       "searchFolder": "Search folder...",
       "searchBranch": "Search branch...",
       "noFolders": "No folders",
@@ -2103,6 +2116,44 @@
       "enableFailed": "啟用專家失敗",
       "disableFailed": "停用專家失敗",
       "openFolderFailed": "開啟目錄失敗"
+    }
+  },
+  "QuickMessagesSettings": {
+    "title": "快捷訊息",
+    "description": "管理可重用的訊息片段。拖曳以調整順序。",
+    "loading": "載入快捷訊息…",
+    "emptyList": "尚無快捷訊息。點擊「新增」建立一條。",
+    "emptySelection": "選擇一條快捷訊息進行編輯。",
+    "searchPlaceholder": "依標題或內容搜尋",
+    "untitled": "未命名",
+    "actions": {
+      "new": "新增",
+      "save": "儲存",
+      "delete": "刪除",
+      "dragSort": "拖曳排序",
+      "dragSortMessage": "拖曳排序快捷訊息：{name}"
+    },
+    "fields": {
+      "title": "標題",
+      "titlePlaceholder": "為此訊息取一個簡短的標題",
+      "content": "內容",
+      "contentPlaceholder": "在此輸入訊息內容"
+    },
+    "confirmDelete": {
+      "title": "刪除快捷訊息？",
+      "message": "將永久刪除「{name}」。確定嗎？",
+      "cancel": "取消",
+      "confirm": "刪除"
+    },
+    "toasts": {
+      "loadFailed": "載入快捷訊息失敗",
+      "createFailed": "建立快捷訊息失敗",
+      "saveFailed": "儲存快捷訊息失敗",
+      "deleteFailed": "刪除快捷訊息失敗",
+      "saveOrderFailed": "儲存順序失敗",
+      "created": "已建立快捷訊息",
+      "saved": "已儲存快捷訊息",
+      "deleted": "已刪除快捷訊息"
     }
   }
 }

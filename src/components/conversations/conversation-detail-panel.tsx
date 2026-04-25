@@ -66,7 +66,7 @@ import {
 import {
   buildConversationDraftStorageKey,
   buildNewConversationDraftStorageKey,
-  moveMessageInputDraft,
+  clearMessageInputDraft,
 } from "@/lib/message-input-draft"
 import {
   ContextMenu,
@@ -202,8 +202,6 @@ const ConversationTabView = memo(function ConversationTabView({
   const [hasSentMessage, setHasSentMessage] = useState(false)
 
   const hasPersistedConversation = dbConversationId != null
-  const canAutoConnect =
-    hasPersistedConversation || (agentsLoaded && usableAgentCount > 0)
 
   // Expose the runtime session key to the tab so the aux panel (Diff sidebar)
   // can look up live turns even before the DB conversation is created.
@@ -266,12 +264,23 @@ const ConversationTabView = memo(function ConversationTabView({
   }, [effectiveSessionStats, isActive, setSessionStats])
 
   const externalId = detail?.summary.external_id ?? undefined
+  // For persisted conversations opened from the sidebar, wait until the
+  // session's external_id has been resolved before auto-connecting.
+  // Otherwise the auto-connect effect fires with sessionId=undefined and
+  // the backend falls back to session/new, orphaning the historical
+  // context. cline doesn't support session resume, so it connects
+  // immediately regardless.
+  const awaitingHistoricalSessionId =
+    hasPersistedConversation && selectedAgent !== "cline" && detailLoading
+  const canAutoConnect =
+    (hasPersistedConversation || (agentsLoaded && usableAgentCount > 0)) &&
+    !awaitingHistoricalSessionId
   const draftStorageKey = useMemo(() => {
     if (dbConversationId != null) {
-      return buildConversationDraftStorageKey(selectedAgent, dbConversationId)
+      return buildConversationDraftStorageKey(dbConversationId)
     }
-    return buildNewConversationDraftStorageKey({ tabId })
-  }, [dbConversationId, tabId, selectedAgent])
+    return buildNewConversationDraftStorageKey()
+  }, [dbConversationId])
   // Use the per-tab workingDir (derived from the tab's own folderId by the
   // parent) rather than the active folder's path — otherwise switching tabs
   // briefly exposes the previous folder's path to the ACP auto-connect
@@ -625,10 +634,7 @@ const ConversationTabView = memo(function ConversationTabView({
             title,
             effectiveConversationId
           )
-          moveMessageInputDraft(
-            buildNewConversationDraftStorageKey({ tabId }),
-            buildConversationDraftStorageKey(selectedAgent, newConversationId)
-          )
+          clearMessageInputDraft(buildNewConversationDraftStorageKey())
           statusUpdatedRef.current = false
           // If the turn already finished while we were creating the
           // conversation, apply the deferred status directly instead
