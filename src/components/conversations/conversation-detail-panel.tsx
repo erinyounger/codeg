@@ -53,9 +53,9 @@ import {
 } from "@/lib/prompt-draft"
 import {
   AGENT_LABELS,
-  type AcpEvent,
   type AgentType,
   type ContentBlock,
+  type EventEnvelope,
   type MessageTurn,
   type PromptDraft,
 } from "@/lib/types"
@@ -591,10 +591,16 @@ const ConversationTabView = memo(function ConversationTabView({
       if (currentTab && !currentTab.isPinned) {
         pinTab(tabId)
       }
-      lifecycleSend(draft, selectedModeIdArg)
 
       const persistedId = dbConvIdRef.current
       if (persistedId) {
+        // Existing-tab path: row already exists, send immediately with the
+        // conversation_id pinned so the backend reuses our row instead of
+        // creating a duplicate.
+        lifecycleSend(draft, selectedModeIdArg, {
+          folderId,
+          conversationId: persistedId,
+        })
         updateConversationLocal(persistedId, { status: "in_progress" })
         updateConversationStatus(persistedId, "in_progress").catch(
           (e: unknown) =>
@@ -604,14 +610,23 @@ const ConversationTabView = memo(function ConversationTabView({
         return
       }
 
+      // New-tab path: create the DB row first, then send with the new id
+      // pinned. This prevents the backend's send_prompt_linked from racing
+      // us to create its own conversation row.
       if (createConversationPendingRef.current) return
       createConversationPendingRef.current = true
       const title = getPromptDraftDisplayText(
         draft,
         sharedT("attachedResources")
       ).slice(0, 80)
-      createConversation(folderId, selectedAgent, title)
-        .then((newConversationId) => {
+
+      void (async () => {
+        try {
+          const newConversationId = await createConversation(
+            folderId,
+            selectedAgent,
+            title
+          )
           dbConvIdRef.current = newConversationId
           // Set external ID on the stable virtual session (no migration needed —
           // effectiveConversationId never changes, so the session stays in place)
@@ -649,13 +664,20 @@ const ConversationTabView = memo(function ConversationTabView({
             (e: unknown) =>
               console.error("[ConversationTabView] update status:", e)
           )
-        })
-        .catch((e: unknown) =>
+
+          // Now that the row exists, kick off the actual prompt with the
+          // conversation_id pinned so the backend adopts our row instead of
+          // creating a duplicate one.
+          lifecycleSend(draft, selectedModeIdArg, {
+            folderId,
+            conversationId: newConversationId,
+          })
+        } catch (e) {
           console.error("[ConversationTabView] create conversation:", e)
-        )
-        .finally(() => {
+        } finally {
           createConversationPendingRef.current = false
-        })
+        }
+      })()
     },
     [
       appendOptimisticTurn,
@@ -1152,14 +1174,14 @@ export function ConversationDetailPanel() {
 
     void import("@tauri-apps/api/event")
       .then(({ listen }) =>
-        listen<AcpEvent>("acp://event", (event) => {
-          const payload = event.payload
-          if (payload.type !== "turn_complete") return
+        listen<EventEnvelope>("acp://event", (event) => {
+          const envelope = event.payload
+          if (envelope.type !== "turn_complete") return
 
           const runtimeConversationId =
-            getConversationIdByExternalIdRef.current(payload.session_id)
+            getConversationIdByExternalIdRef.current(envelope.session_id)
           const summary = conversationsRef.current.find(
-            (item) => item.external_id === payload.session_id
+            (item) => item.external_id === envelope.session_id
           )
           const matchedConversationId =
             runtimeConversationId ?? summary?.id ?? null

@@ -29,6 +29,7 @@ import type {
   AcpEvent,
   AvailableCommandInfo,
   ConnectionStatus,
+  EventEnvelope,
   PlanEntryInfo,
   PermissionOptionInfo,
   SessionConfigOptionInfo,
@@ -1293,7 +1294,11 @@ export interface AcpActionsValue {
   ): Promise<void>
   disconnect(contextKey: string): Promise<void>
   disconnectAll(): Promise<void>
-  sendPrompt(contextKey: string, blocks: PromptInputBlock[]): Promise<void>
+  sendPrompt(
+    contextKey: string,
+    blocks: PromptInputBlock[],
+    opts?: { folderId?: number | null; conversationId?: number | null }
+  ): Promise<void>
   setMode(contextKey: string, modeId: string): Promise<void>
   setConfigOption(
     contextKey: string,
@@ -1445,7 +1450,7 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
   const lastActivityRef = useRef(new Map<string, number>())
   const streamingQueueRef = useRef<StreamingAction[]>([])
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingUnmappedEventsRef = useRef(new Map<string, AcpEvent[]>())
+  const pendingUnmappedEventsRef = useRef(new Map<string, EventEnvelope[]>())
   const listenerReadyRef = useRef(false)
   const listenerReadyWaitersRef = useRef<Array<() => void>>([])
 
@@ -1608,7 +1613,7 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const bufferUnmappedEvent = useCallback((event: AcpEvent) => {
+  const bufferUnmappedEvent = useCallback((event: EventEnvelope) => {
     const connectionId = event.connection_id
     const buffered = pendingUnmappedEventsRef.current.get(connectionId) ?? []
     if (buffered.length >= MAX_BUFFERED_UNMAPPED_EVENTS_PER_CONNECTION) {
@@ -1628,7 +1633,7 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const consumeBufferedEvents = useCallback(
-    (connectionId: string): AcpEvent[] => {
+    (connectionId: string): EventEnvelope[] => {
       const buffered = pendingUnmappedEventsRef.current.get(connectionId)
       if (!buffered || buffered.length === 0) return []
       pendingUnmappedEventsRef.current.delete(connectionId)
@@ -1684,7 +1689,7 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const handleMappedEvent = useCallback(
-    (contextKey: string, e: AcpEvent) => {
+    (contextKey: string, e: EventEnvelope) => {
       switch (e.type) {
         case "status_changed":
           flushStreamingQueue()
@@ -1773,6 +1778,19 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
             type: "SESSION_STARTED",
             contextKey,
             sessionId: e.session_id,
+          })
+          break
+        case "conversation_linked":
+          // Backend just bound (or reaffirmed) the connection's DB conversation
+          // row. Phase 3a frontend pre-creates rows for new-tab sends so this
+          // event is mostly a confirmation; we log it for visibility. Phase 3b
+          // will use this to drive UI mapping when the frontend stops creating
+          // rows itself.
+          console.log("[acp-context] conversation_linked", {
+            contextKey,
+            connectionId: e.connection_id,
+            conversationId: e.conversation_id,
+            folderId: e.folder_id,
           })
           break
         case "session_modes": {
@@ -2053,16 +2071,16 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
 
     listenerReadyRef.current = false
 
-    subscribe<AcpEvent>("acp://event", (payload) => {
-      const contextKey = reverseMapRef.current.get(payload.connection_id)
+    subscribe<EventEnvelope>("acp://event", (envelope) => {
+      const contextKey = reverseMapRef.current.get(envelope.connection_id)
       if (!contextKey) {
-        bufferUnmappedEvent(payload)
+        bufferUnmappedEvent(envelope)
         return
       }
 
       // Touch activity on every incoming event
       lastActivityRef.current.set(contextKey, Date.now())
-      handleMappedEvent(contextKey, payload)
+      handleMappedEvent(contextKey, envelope)
     })
       .then((fn) => {
         if (cancelled) {
@@ -2325,11 +2343,20 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
   }, [dispatch])
 
   const sendPrompt = useCallback(
-    async (contextKey: string, blocks: PromptInputBlock[]) => {
+    async (
+      contextKey: string,
+      blocks: PromptInputBlock[],
+      opts?: { folderId?: number | null; conversationId?: number | null }
+    ) => {
       const conn = storeRef.current.connections.get(contextKey)
       if (!conn) return
       lastActivityRef.current.set(contextKey, Date.now())
-      await acpPrompt(conn.connectionId, blocks)
+      await acpPrompt(
+        conn.connectionId,
+        blocks,
+        opts?.folderId ?? null,
+        opts?.conversationId ?? null
+      )
     },
     []
   )
