@@ -22,7 +22,10 @@ import {
   acpCancel,
   acpRespondPermission,
   acpDisconnect,
+  acpTouchConnection,
+  acpGetSessionSnapshot,
 } from "@/lib/api"
+import { denormalizeSnapshot } from "@/lib/snapshot-denormalize"
 import type {
   AgentType,
   AcpAgentStatus,
@@ -41,6 +44,7 @@ import type {
 import { AGENT_LABELS } from "@/lib/types"
 import {
   CONNECTION_IDLE_TIMEOUT_MS,
+  CONNECTION_KEEPALIVE_INTERVAL_MS,
   IDLE_SWEEP_INTERVAL_MS,
 } from "@/lib/constants"
 import { sendSystemNotification } from "@/lib/notification"
@@ -126,6 +130,14 @@ export interface ConnectionState {
   pendingQuestion: PendingQuestion | null
   claudeApiRetry: ClaudeApiRetryState | null
   error: string | null
+  /**
+   * Highest envelope.seq applied to this connection. Used to dedup the
+   * live `acp://event` stream against the snapshot endpoint: a
+   * HYDRATE_FROM_SNAPSHOT sets this to snapshot.event_seq, and incoming
+   * envelopes with seq <= lastAppliedSeq are dropped as duplicates.
+   * Phase 3b initialises to 0 on CONNECTION_CREATED.
+   */
+  lastAppliedSeq: number
 }
 
 // ── Reducer actions ──
@@ -138,8 +150,14 @@ type Action =
       agentType: AgentType
       workingDir: string | null
     }
+  | {
+      type: "HYDRATE_FROM_SNAPSHOT"
+      contextKey: string
+      patch: import("@/lib/snapshot-denormalize").SnapshotPatch
+    }
   | { type: "CONNECTION_REMOVED"; contextKey: string }
   | { type: "REMOVE_ALL" }
+  | { type: "REKEY_CONNECTION"; fromKey: string; toKey: string }
   | {
       type: "STATUS_CHANGED"
       contextKey: string
@@ -262,6 +280,11 @@ type Action =
       type: "USAGE_UPDATE"
       contextKey: string
       usage: SessionUsageUpdateInfo
+    }
+  | {
+      type: "EVENT_APPLIED"
+      contextKey: string
+      seq: number
     }
 
 type StreamingAction =
@@ -572,12 +595,33 @@ function dedupeCommandsByName(
   return deduped ?? commands
 }
 
+/**
+ * Lazy-create a `LiveMessage` shell mirroring the backend's
+ * `ensure_live_message` semantic. Required because the backend only
+ * initializes `session_state.live_message` when the first `ContentDelta` /
+ * `Thinking` / `ToolCall` / `PlanUpdate` arrives — there's a window between
+ * `StatusChanged(Prompting)` and the first content event in which the
+ * snapshot reports `live_message: null`. After a browser refresh inside
+ * that window, the live `STATUS_CHANGED(prompting)` event won't re-fire
+ * (status is already prompting in the snapshot), so without this fallback
+ * the reducer would drop every subsequent delta / tool call / plan update.
+ */
+function ensureLiveMessage(prev: LiveMessage | null): LiveMessage {
+  if (prev) return prev
+  return {
+    id: randomUUID(),
+    role: "assistant",
+    content: [],
+    startedAt: Date.now(),
+  }
+}
+
 function applyStreamingAction(
   conn: ConnectionState,
   action: StreamingAction
 ): ConnectionState | null {
-  const prev = conn.liveMessage
-  if (!prev || action.text.length === 0) return null
+  if (action.text.length === 0) return null
+  const prev = ensureLiveMessage(conn.liveMessage)
 
   const lastBlock = prev.content[prev.content.length - 1]
   let newContent: LiveContentBlock[] | null = null
@@ -643,6 +687,55 @@ function connectionsReducer(
         pendingQuestion: null,
         claudeApiRetry: null,
         error: null,
+        lastAppliedSeq: 0,
+      })
+      return next
+    }
+
+    case "HYDRATE_FROM_SNAPSHOT": {
+      const current = state.get(action.contextKey)
+      if (!current) return state
+      // Race guard: the snapshot may have been generated BEFORE events
+      // that have since arrived and been applied to in-memory state.
+      // Hydrating from a stale snapshot would overwrite fresh state.
+      if (action.patch.eventSeq <= current.lastAppliedSeq) return state
+      const next = new Map(state)
+      next.set(action.contextKey, {
+        ...current,
+        status: action.patch.status,
+        sessionId: action.patch.sessionId,
+        modes: action.patch.modes,
+        configOptions: action.patch.configOptions,
+        availableCommands: action.patch.availableCommands,
+        usage: action.patch.usage,
+        liveMessage: action.patch.liveMessage,
+        pendingPermission: action.patch.pendingPermission,
+        promptCapabilities:
+          action.patch.promptCapabilities ?? current.promptCapabilities,
+        // Latches once on true. The `selectors_ready` event fires only once
+        // per connection lifetime; a fresh frontend (post-refresh) needs the
+        // snapshot to recover the bit, otherwise the init-session task is
+        // stuck forever.
+        selectorsReady: action.patch.selectorsReady || current.selectorsReady,
+        // Same monotonic-merge as `selectorsReady`. The agent emits
+        // `fork_supported` once during the initial handshake; a post-refresh
+        // frontend that missed the live event needs the snapshot to recover
+        // the capability — without this the Fork button stays hidden forever.
+        supportsFork: action.patch.supportsFork || current.supportsFork,
+        lastAppliedSeq: action.patch.eventSeq,
+      })
+      return next
+    }
+
+    case "EVENT_APPLIED": {
+      const current = state.get(action.contextKey)
+      if (!current) return state
+      // Idempotent: only advances if the new seq is strictly higher.
+      if (action.seq <= current.lastAppliedSeq) return state
+      const next = new Map(state)
+      next.set(action.contextKey, {
+        ...current,
+        lastAppliedSeq: action.seq,
       })
       return next
     }
@@ -655,6 +748,17 @@ function connectionsReducer(
 
     case "REMOVE_ALL":
       return new Map()
+
+    case "REKEY_CONNECTION": {
+      const conn = state.get(action.fromKey)
+      if (!conn) return state
+      // Defensive: if toKey already has an entry, do not clobber it.
+      if (state.has(action.toKey)) return state
+      const next = new Map(state)
+      next.delete(action.fromKey)
+      next.set(action.toKey, { ...conn, contextKey: action.toKey })
+      return next
+    }
 
     case "STATUS_CHANGED": {
       const conn = state.get(action.contextKey)
@@ -730,8 +834,8 @@ function connectionsReducer(
 
     case "TOOL_CALL": {
       const conn = state.get(action.contextKey)
-      if (!conn?.liveMessage) return state
-      const prev = conn.liveMessage
+      if (!conn) return state
+      const prev = ensureLiveMessage(conn.liveMessage)
       const existingIndex = prev.content.findIndex(
         (b) =>
           b.type === "tool_call" && b.info.tool_call_id === action.tool_call_id
@@ -798,8 +902,8 @@ function connectionsReducer(
 
     case "TOOL_CALL_UPDATE": {
       const conn = state.get(action.contextKey)
-      if (!conn?.liveMessage) return state
-      const prev = conn.liveMessage
+      if (!conn) return state
+      const prev = ensureLiveMessage(conn.liveMessage)
       const existingIndex = prev.content.findIndex(
         (b) =>
           b.type === "tool_call" && b.info.tool_call_id === action.tool_call_id
@@ -1145,8 +1249,8 @@ function connectionsReducer(
 
     case "PLAN_UPDATE": {
       const conn = state.get(action.contextKey)
-      if (!conn?.liveMessage) return state
-      const prev = conn.liveMessage
+      if (!conn) return state
+      const prev = ensureLiveMessage(conn.liveMessage)
       const nonPlanContent = prev.content.filter(
         (block) => block.type !== "plan"
       )
@@ -1326,6 +1430,61 @@ export function useAcpActions(): AcpActionsValue {
   return ctx
 }
 
+// ── Event subscriber context ──
+//
+// JS-level fanout of `acp://event` envelopes. The provider owns the single
+// physical Tauri/WebSocket subscription; consumers register callbacks here
+// instead of opening a second listener. See `useAcpEvent` below.
+
+type EventSubscriberHandler = (envelope: EventEnvelope) => void
+type EventSubscriberRef = { current: EventSubscriberHandler }
+
+interface AcpEventSubscriberApi {
+  subscribers: Set<EventSubscriberRef>
+}
+
+const AcpEventSubscriberContext = createContext<AcpEventSubscriberApi | null>(
+  null
+)
+
+/**
+ * Subscribe to `acp://event` envelopes via the provider's primary listener.
+ *
+ * The handler is invoked AFTER the context's reducer has dispatched its own
+ * actions for that envelope (state is consistent at fire time). It also
+ * inherits the provider's `seq` dedup — duplicates the primary listener
+ * would skip are skipped here too. Unmapped events (no `contextKey`) do
+ * NOT fan out.
+ *
+ * Stability: the latest `handler` is stored in a ref each render, so callers
+ * may pass an inline function. There is no need for caller-side refs to keep
+ * the subscription stable across renders.
+ *
+ * Errors thrown by `handler` are caught and logged so a single buggy
+ * subscriber cannot break the central listener.
+ */
+export function useAcpEvent(handler: EventSubscriberHandler): void {
+  const ctx = useContext(AcpEventSubscriberContext)
+  if (!ctx) {
+    throw new Error("useAcpEvent must be used within AcpConnectionsProvider")
+  }
+  const handlerRef = useRef(handler)
+  // Re-sync each render so the latest closure is used at fire time.
+  useEffect(() => {
+    handlerRef.current = handler
+  })
+  // Register / unregister exactly once. Set-of-refs (not Set-of-functions)
+  // so unmount cleanup matches the original entry even though `handler`
+  // identity may change between renders.
+  useEffect(() => {
+    const ref = handlerRef
+    ctx.subscribers.add(ref)
+    return () => {
+      ctx.subscribers.delete(ref)
+    }
+  }, [ctx])
+}
+
 // ── Helper: extract affected key from action ──
 
 function getAffectedKey(action: Action): string | null {
@@ -1453,6 +1612,11 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
   const pendingUnmappedEventsRef = useRef(new Map<string, EventEnvelope[]>())
   const listenerReadyRef = useRef(false)
   const listenerReadyWaitersRef = useRef<Array<() => void>>([])
+  // Set of refs (not callbacks) so unmount cleanup matches the original
+  // registration even when caller-side handler identity changes per render.
+  // Populated by the `useAcpEvent` hook; read by the primary `acp://event`
+  // listener and the buffered-events replay loop.
+  const eventSubscribersRef = useRef<Set<EventSubscriberRef>>(new Set())
 
   // ── Notify helpers ──
 
@@ -1495,6 +1659,9 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
         for (const key of keys) {
           notifyKeyListeners(key)
         }
+      } else if (action.type === "REKEY_CONNECTION") {
+        notifyKeyListeners(action.fromKey)
+        notifyKeyListeners(action.toKey)
       } else {
         const key = getAffectedKey(action)
         if (key) notifyKeyListeners(key)
@@ -2078,9 +2245,38 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      // Seq dedup: skip envelopes already accounted for by a snapshot or a
+      // prior delivery. snapshot.event_seq sets the lower bound; subsequent
+      // envelopes with seq <= lastAppliedSeq are no-op duplicates.
+      const conn = storeRef.current.connections.get(contextKey)
+      if (conn && envelope.seq <= conn.lastAppliedSeq) {
+        return
+      }
+
       // Touch activity on every incoming event
       lastActivityRef.current.set(contextKey, Date.now())
       handleMappedEvent(contextKey, envelope)
+
+      // Advance lastAppliedSeq after the event's effects have dispatched.
+      // EVENT_APPLIED is idempotent (only advances if higher).
+      dispatch({
+        type: "EVENT_APPLIED",
+        contextKey,
+        seq: envelope.seq,
+      })
+
+      // Fan out to JS-level subscribers (e.g. ConversationDetailPanel's
+      // background turn_complete handler). Runs AFTER the reducer dispatches
+      // and AFTER seq dedup, so subscribers see a consistent, deduped stream.
+      // Unmapped events return early above and never reach here. One bad
+      // subscriber must not kill the others — wrap each call in try/catch.
+      for (const ref of eventSubscribersRef.current) {
+        try {
+          ref.current(envelope)
+        } catch (err) {
+          console.error("[acp-context] subscriber threw:", err)
+        }
+      }
     })
       .then((fn) => {
         if (cancelled) {
@@ -2106,9 +2302,57 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
       }
       unlisten?.()
     }
-  }, [bufferUnmappedEvent, handleMappedEvent, resolveListenerReadyWaiters])
+  }, [
+    bufferUnmappedEvent,
+    dispatch,
+    handleMappedEvent,
+    resolveListenerReadyWaiters,
+  ])
+
+  // ── Backend keepalive timer ──
+  // Frontend is the only side that knows which conversation tabs the
+  // user has open. Without this, the backend's idle sweep
+  // (CODEG_ACP_IDLE_TIMEOUT_SECS, default 60s) would reap connections
+  // backing visible tabs whenever the user was just reading without
+  // sending — forcing them to re-spawn the agent on next message.
+  // Touching only bumps last_activity_at; it does not emit any event.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const currentActiveKey = storeRef.current.activeKey
+      const currentOpenTabKeys = openTabKeysRef.current
+      const seen = new Set<string>()
+      const toTouch: string[] = []
+      const consider = (contextKey: string) => {
+        if (seen.has(contextKey)) return
+        seen.add(contextKey)
+        const conn = storeRef.current.connections.get(contextKey)
+        if (!conn) return
+        // Prompting is already sweep-protected on the backend; touching
+        // is harmless but redundant. Connecting hasn't reached the
+        // sweep-eligible state yet. Only Connected matters.
+        if (conn.status !== "connected") return
+        toTouch.push(conn.connectionId)
+      }
+      if (currentActiveKey) consider(currentActiveKey)
+      for (const contextKey of currentOpenTabKeys) consider(contextKey)
+      for (const connectionId of toTouch) {
+        acpTouchConnection(connectionId).catch(() => {})
+      }
+    }, CONNECTION_KEEPALIVE_INTERVAL_MS)
+
+    return () => clearInterval(timer)
+  }, [])
 
   // ── Idle sweep timer ──
+  // Complements the backend keepalive: this sweep targets connections
+  // that are NOT in `openTabKeys ∪ {activeKey}` — i.e. connections the
+  // frontend opened but is no longer surfacing to the user (panel
+  // dismissed, navigated away). The backend's own idle sweep would
+  // reap them on its 60s cadence regardless; doing it here too keeps
+  // the React store free of stale entries and triggers an explicit
+  // disconnect rather than waiting for the backend's own timeout.
+  // Connections backing currently-open tabs are never reaped here —
+  // those are kept alive by the keepalive loop above.
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now()
@@ -2231,6 +2475,49 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // Orphan rescue: when no entry exists at this contextKey but an
+        // alive connection with the same sessionId exists at another
+        // contextKey, rekey instead of creating a fresh backend connection.
+        // This handles tab close+reopen for newly-created conversations:
+        // the original tab's contextKey (e.g. "new-XXXX") differs from
+        // the canonical sidebar-reopen contextKey (e.g. "conv-{folderId}-
+        // {agent}-{convId}"), and the orphaned connection holds the
+        // in-flight live state (live_message, pending_permission, etc.)
+        // that we want to preserve across the remount.
+        if (!existing && sessionId) {
+          let orphanKey: string | null = null
+          let orphanConn: ConnectionState | null = null
+          for (const [key, conn] of storeRef.current.connections) {
+            if (key === contextKey) continue
+            if (
+              conn.sessionId === sessionId &&
+              conn.agentType === agentType &&
+              conn.workingDir === nextWorkingDir &&
+              conn.status !== "disconnected" &&
+              conn.status !== "error"
+            ) {
+              orphanKey = key
+              orphanConn = conn
+              break
+            }
+          }
+          if (orphanKey && orphanConn) {
+            reverseMapRef.current.set(orphanConn.connectionId, contextKey)
+            const lastActivity = lastActivityRef.current.get(orphanKey)
+            lastActivityRef.current.delete(orphanKey)
+            lastActivityRef.current.set(contextKey, lastActivity ?? Date.now())
+            if (storeRef.current.activeKey === orphanKey) {
+              setActiveKey(contextKey)
+            }
+            dispatch({
+              type: "REKEY_CONNECTION",
+              fromKey: orphanKey,
+              toKey: contextKey,
+            })
+            return
+          }
+        }
+
         await waitForListenerReady()
         const connectionId = await acpConnect(agentType, workingDir, sessionId)
 
@@ -2251,11 +2538,55 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
           workingDir: nextWorkingDir,
         })
 
+        // Hydrate from backend snapshot. Non-blocking: if the snapshot
+        // response loses the race against the live event stream, the
+        // HYDRATE_FROM_SNAPSHOT reducer arm is a no-op (eventSeq guard).
+        // If the connection is brand-new and SessionState is empty, the
+        // snapshot is structurally empty and HYDRATE is also a no-op.
+        void acpGetSessionSnapshot(connectionId)
+          .then((snapshot) => {
+            if (!snapshot) return
+            const patch = denormalizeSnapshot(snapshot)
+            dispatch({
+              type: "HYDRATE_FROM_SNAPSHOT",
+              contextKey,
+              patch,
+            })
+          })
+          .catch((e: unknown) => {
+            console.warn(
+              "[acp-context] snapshot fetch failed for",
+              connectionId,
+              e
+            )
+          })
+
         const buffered = consumeBufferedEvents(connectionId)
         if (buffered.length > 0) {
           for (const event of buffered) {
+            // Mirror the live listener's seq dedup for symmetry. The
+            // synchronous snapshot fetch above is fire-and-forget, so
+            // HYDRATE has not landed yet at this loop entry — the guard
+            // is currently a no-op against a 0 lastAppliedSeq, but it
+            // guards future changes that may await snapshot before drain.
+            const conn = storeRef.current.connections.get(contextKey)
+            if (conn && event.seq <= conn.lastAppliedSeq) continue
             lastActivityRef.current.set(contextKey, Date.now())
             handleMappedEvent(contextKey, event)
+            dispatch({
+              type: "EVENT_APPLIED",
+              contextKey,
+              seq: event.seq,
+            })
+            // Mirror the live listener: fan out to JS-level subscribers
+            // after EVENT_APPLIED so subscribers inherit the same dedup.
+            for (const ref of eventSubscribersRef.current) {
+              try {
+                ref.current(event)
+              } catch (err) {
+                console.error("[acp-context] subscriber threw:", err)
+              }
+            }
           }
         }
       } catch (err) {
@@ -2305,6 +2636,7 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
       dispatch,
       handleMappedEvent,
       resolveConnectBlockState,
+      setActiveKey,
       t,
       waitForListenerReady,
     ]
@@ -2458,10 +2790,17 @@ export function AcpConnectionsProvider({ children }: { children: ReactNode }) {
     ]
   )
 
+  const eventSubscriberApi = useMemo<AcpEventSubscriberApi>(
+    () => ({ subscribers: eventSubscribersRef.current }),
+    []
+  )
+
   return (
     <AcpActionsContext.Provider value={actions}>
       <ConnectionStoreContext.Provider value={storeApi}>
-        {children}
+        <AcpEventSubscriberContext.Provider value={eventSubscriberApi}>
+          {children}
+        </AcpEventSubscriberContext.Provider>
       </ConnectionStoreContext.Provider>
     </AcpActionsContext.Provider>
   )
