@@ -46,9 +46,11 @@ import type {
   FileSaveResult,
   WorkspaceSnapshotResponse,
   GitLogResult,
+  AvailableTerminalShells,
   SystemLanguageSettings,
   SystemProxySettings,
   SystemRenderingSettings,
+  SystemTerminalSettings,
   GitCredentials,
   GitDetectResult,
   PackageManagerInfo,
@@ -485,6 +487,24 @@ export async function updateSystemLanguageSettings(
   settings: SystemLanguageSettings
 ): Promise<SystemLanguageSettings> {
   return getTransport().call("update_system_language_settings", { settings })
+}
+
+export async function getSystemTerminalSettings(): Promise<SystemTerminalSettings> {
+  return getTransport().call("get_system_terminal_settings")
+}
+
+export async function updateSystemTerminalSettings(
+  settings: SystemTerminalSettings
+): Promise<SystemTerminalSettings> {
+  return getTransport().call("update_system_terminal_settings", { settings })
+}
+
+export async function getAvailableTerminalShells(): Promise<AvailableTerminalShells> {
+  return getTransport().call("get_available_terminal_shells")
+}
+
+export async function probeTerminalShellPath(path: string): Promise<boolean> {
+  return getTransport().call("probe_terminal_shell_path", { path })
 }
 
 export async function getSystemRenderingSettings(): Promise<SystemRenderingSettings> {
@@ -1498,11 +1518,13 @@ export async function gitReset(
 
 export async function terminalSpawn(
   workingDir: string,
+  shell?: string,
   initialCommand?: string,
   terminalId?: string
 ): Promise<string> {
   return getTransport().call("terminal_spawn", {
     workingDir,
+    shell: shell ?? null,
     initialCommand: initialCommand ?? null,
     terminalId: terminalId ?? null,
   })
