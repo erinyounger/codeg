@@ -96,6 +96,7 @@ pub async fn acp_connect(
     // If the agent isn't ready, return SdkNotInstalled here so the frontend
     // can prompt the user to install it from Agent Settings.
     acp_commands::verify_agent_installed(params.agent_type)
+        .await
         .map_err(|e| AppCommandError::task_execution_failed(e.to_string()))?;
 
     let emitter = state.emitter.clone();
@@ -345,7 +346,7 @@ pub async fn acp_cancel(
 ) -> Result<Json<()>, AppCommandError> {
     let manager = &state.connection_manager;
     manager
-        .cancel(&params.connection_id)
+        .cancel(&state.db.conn, &params.connection_id)
         .await
         .map_err(|e| AppCommandError::task_execution_failed(e.to_string()))?;
     Ok(Json(()))
@@ -357,7 +358,7 @@ pub async fn acp_fork(
 ) -> Result<Json<ForkResultInfo>, AppCommandError> {
     let manager = &state.connection_manager;
     let result = manager
-        .fork_session(&params.connection_id)
+        .fork_session(&state.db, &params.connection_id)
         .await
         .map_err(|e| AppCommandError::task_execution_failed(e.to_string()))?;
     Ok(Json(result))

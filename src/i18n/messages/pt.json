@@ -403,7 +403,10 @@
       "saveSuccess": "Salvo",
       "saveFailed": "Falha ao salvar: {message}",
       "installed": "{name} instalado",
-      "installFailed": "Falha na instalação: {message}"
+      "installFailed": "Falha na instalação: {message}",
+      "serverIdRequired": "O Server ID é obrigatório",
+      "serverIdExists": "O Server ID \"{id}\" já existe. Edite a entrada existente ou escolha outro nome.",
+      "created": "MCP criado"
     },
     "installDialog": {
       "title": "Confirmar instalação do MCP",
@@ -425,7 +428,11 @@
       "viewDetails": "Ver detalhes",
       "save": "Salvar",
       "saving": "Salvando",
-      "install": "Instalar"
+      "install": "Instalar",
+      "refresh": "Atualizar",
+      "newMcp": "Novo MCP",
+      "create": "Criar",
+      "creating": "Criando..."
     },
     "tabs": {
       "local": "MCP local",
@@ -437,7 +444,11 @@
       "empty": "Nenhum MCP local detectado.",
       "description": "A configuração local de MCP pode ser editada e salva diretamente.",
       "enabledApps": "Apps habilitados",
-      "configJson": "Configuração MCP (JSON)"
+      "configJson": "Configuração MCP (JSON)",
+      "draftTitle": "Novo MCP",
+      "draftDescription": "Informe um Server ID e a configuração para criar um servidor MCP local.",
+      "serverIdLabel": "Server ID",
+      "serverIdPlaceholder": "Server ID (ex.: my-mcp)"
     },
     "market": {
       "selectMarketplace": "Selecionar marketplace",
@@ -715,6 +726,18 @@
   "SettingsPages": {
     "agentsLoading": "Carregando configurações de agentes..."
   },
+  "LoginPage": {
+    "documentTitle": "Entrar - codeg",
+    "brand": "Codeg",
+    "subtitle": "Digite seu token de acesso para conectar ao aplicativo de desktop",
+    "tokenPlaceholder": "Token de acesso",
+    "connect": "Conectar",
+    "connecting": "Conectando...",
+    "helpText": "Encontre seu token no app de desktop em Configurações → Serviço Web",
+    "invalidToken": "Token inválido. Verifique e tente novamente.",
+    "connectionFailed": "Falha na conexão (HTTP {status})",
+    "networkError": "Não foi possível conectar ao servidor"
+  },
   "CommitPage": {
     "title": "Confirmar",
     "invalidFolderId": "ID de pasta inválido",
@@ -821,7 +844,7 @@
       "sortByCreatedAt": "Data de criação",
       "sortByUpdatedAt": "Data de atualização",
       "statusRunningBadge": "Executando",
-      "statusFailedBadge": "Falhou",
+      "statusCancelledBadge": "Cancelado",
       "conversationCountUnit": "{count, plural, one {# conversa} other {# conversas}}",
       "emptyFolderHint": "Sem conversas",
       "noMatchingConversations": "Nenhuma conversa correspondente",
@@ -1546,7 +1569,13 @@
           "initializeTimeout": "O handshake de conexão de {agent} expirou (sem resposta após 60 segundos). Abra Configurações para verificar a configuração do agente e da rede.",
           "processExited": "O processo de {agent} encerrou inesperadamente.",
           "spawnFailed": "Falha ao iniciar {agent}: {message}",
-          "downloadFailed": "Falha no download de {agent}: {message}"
+          "downloadFailed": "Falha no download de {agent}: {message}",
+          "sessionLoadResourceNotFound": "Falha ao carregar a sessão de {agent}. Recarregue para tentar novamente ou inicie uma nova conversa.",
+          "turnFailedRefusal": "{agent} recusou continuar este turno. Costuma indicar um erro de backend ou gateway. Confira os logs do agente.",
+          "turnFailedMaxTokens": "{agent} atingiu o limite máximo de tokens para este turno.",
+          "turnFailedMaxTurnRequests": "{agent} atingiu o número máximo de solicitações permitidas para este turno.",
+          "turnFailedUnknown": "{agent} encerrou o turno com um motivo de parada desconhecido.",
+          "turnFailedEmpty": "{agent} encerrou o turno sem produzir nenhuma resposta. Confira a configuração do agente."
         },
         "unableReadAgentConfig": "Não foi possível ler a configuração do agente: {message}",
         "connectFailedTitle": "Falha na conexão de {agent}",
@@ -1698,10 +1727,15 @@
         "attachedResources": "Recursos anexados",
         "loading": "Carregando...",
         "error": "Erro: {message}",
+        "errorTitle": "Falha ao carregar a sessão",
+        "errorActionReload": "Recarregar",
+        "errorActionNewSession": "Nova conversa",
         "emptyConversation": "Nenhuma mensagem nesta conversa.",
         "systemMessage": "Mensagem do sistema",
         "copyMessage": "Copiar",
-        "copied": "Copiado"
+        "copied": "Copiado",
+        "downloadImage": "Baixar imagem",
+        "downloadFailed": "Falha no download: {message}"
       },
       "liveTurnStats": {
         "thinking": "Pensando...",

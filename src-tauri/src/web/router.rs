@@ -81,10 +81,6 @@ pub fn build_router(
             "/delete_conversation",
             post(handlers::conversations::delete_conversation),
         )
-        .route(
-            "/update_conversation_external_id",
-            post(handlers::conversations::update_conversation_external_id),
-        )
         // ─── Folders ───
         .route(
             "/load_folder_history",
@@ -377,10 +373,6 @@ pub fn build_router(
         .route(
             "/get_system_proxy_settings",
             post(handlers::system_settings::get_system_proxy_settings),
-        )
-        .route(
-            "/get_system_language_settings",
-            post(handlers::system_settings::get_system_language_settings),
         )
         .route(
             "/get_system_terminal_settings",
@@ -704,6 +696,16 @@ pub fn build_router(
         .layer(middleware::from_fn(move |req, next| {
             auth::require_token(req, next, token.clone())
         }));
+
+    // Public endpoints — no token required.
+    // The login page needs to read the user's preferred language before
+    // authenticating so it can render in their chosen locale.
+    let public_api = Router::new().route(
+        "/get_system_language_settings",
+        post(handlers::system_settings::get_system_language_settings),
+    );
+
+    let api = public_api.merge(api);
 
     // WebSocket route (auth via query param)
     let ws_route = Router::new()

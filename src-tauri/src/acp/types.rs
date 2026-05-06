@@ -154,6 +154,17 @@ pub enum AcpEvent {
         /// this code; otherwise it falls back to `message`.
         code: Option<String>,
     },
+    /// `session/load` failed in a non-recoverable way (e.g. the agent has no
+    /// record of this `session_id`). Emitted instead of silently falling back
+    /// to `session/new`, so the frontend can surface the failure with reload
+    /// / new-conversation actions.
+    SessionLoadFailed {
+        session_id: String,
+        message: String,
+        /// Stable machine-readable identifier — currently
+        /// `"resource_not_found"` for JSON-RPC -32002.
+        code: String,
+    },
     /// Available slash commands updated
     AvailableCommands {
         commands: Vec<AvailableCommandInfo>,
@@ -328,11 +339,24 @@ pub struct AvailableCommandInfo {
     pub input_hint: Option<String>,
 }
 
+/// Internal reply shape from the connection loop back to `manager.fork_session`
+/// — protocol-only, before any DB writes. The manager combines this with the
+/// freshly-created sibling row id to produce the wire-level `ForkResultInfo`.
+#[derive(Debug, Clone)]
+pub struct ForkProtocolResult {
+    pub forked_session_id: String,
+    pub original_session_id: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ForkResultInfo {
     pub forked_session_id: String,
     pub original_session_id: String,
+    /// DB id of the sibling conversation row that backend created to preserve
+    /// the pre-fork (S1) history. The current connection's conversation row
+    /// (still bound in `SessionState`) gets re-pointed to S2 in the same call.
+    pub sibling_conversation_id: i32,
 }
 
 #[cfg(test)]

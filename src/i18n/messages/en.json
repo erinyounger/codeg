@@ -403,7 +403,10 @@
       "saveSuccess": "Saved",
       "saveFailed": "Save failed: {message}",
       "installed": "{name} installed",
-      "installFailed": "Install failed: {message}"
+      "installFailed": "Install failed: {message}",
+      "serverIdRequired": "Server ID is required",
+      "serverIdExists": "Server ID \"{id}\" already exists. Edit the existing entry or pick a different name.",
+      "created": "MCP created"
     },
     "installDialog": {
       "title": "Confirm MCP Installation",
@@ -425,7 +428,11 @@
       "viewDetails": "View Details",
       "save": "Save",
       "saving": "Saving",
-      "install": "Install"
+      "install": "Install",
+      "refresh": "Refresh",
+      "newMcp": "New MCP",
+      "create": "Create",
+      "creating": "Creating..."
     },
     "tabs": {
       "local": "Local MCP",
@@ -437,7 +444,11 @@
       "empty": "No local MCP detected.",
       "description": "Local MCP configuration can be edited and saved directly.",
       "enabledApps": "Enabled Apps",
-      "configJson": "MCP Config (JSON)"
+      "configJson": "MCP Config (JSON)",
+      "draftTitle": "New MCP",
+      "draftDescription": "Provide a Server ID and configuration to create a local MCP server.",
+      "serverIdLabel": "Server ID",
+      "serverIdPlaceholder": "Server ID (e.g. my-mcp)"
     },
     "market": {
       "selectMarketplace": "Select marketplace",
@@ -715,6 +726,18 @@
   "SettingsPages": {
     "agentsLoading": "Loading agent settings..."
   },
+  "LoginPage": {
+    "documentTitle": "Login - codeg",
+    "brand": "Codeg",
+    "subtitle": "Enter your access token to connect to the desktop app",
+    "tokenPlaceholder": "Access Token",
+    "connect": "Connect",
+    "connecting": "Connecting...",
+    "helpText": "Find your token in the desktop app under Settings → Web Service",
+    "invalidToken": "Invalid token. Please check and try again.",
+    "connectionFailed": "Connection failed (HTTP {status})",
+    "networkError": "Unable to connect to the server"
+  },
   "CommitPage": {
     "title": "Commit",
     "invalidFolderId": "Invalid folder ID",
@@ -821,7 +844,7 @@
       "sortByCreatedAt": "Created time",
       "sortByUpdatedAt": "Updated time",
       "statusRunningBadge": "Running",
-      "statusFailedBadge": "Failed",
+      "statusCancelledBadge": "Cancelled",
       "conversationCountUnit": "{count, plural, one {# conversation} other {# conversations}}",
       "emptyFolderHint": "No conversations",
       "noMatchingConversations": "No matching conversations",
@@ -1546,7 +1569,13 @@
           "initializeTimeout": "{agent} connection handshake timed out after 60 seconds. Please open Settings to check Agent configuration and network settings.",
           "processExited": "{agent} process exited unexpectedly.",
           "spawnFailed": "Failed to start {agent}: {message}",
-          "downloadFailed": "{agent} download failed: {message}"
+          "downloadFailed": "{agent} download failed: {message}",
+          "sessionLoadResourceNotFound": "{agent} session failed to load. Reload to retry, or start a new conversation.",
+          "turnFailedRefusal": "{agent} refused to continue this turn. This often indicates a backend or gateway error — check the agent's logs.",
+          "turnFailedMaxTokens": "{agent} reached the maximum token limit for this turn.",
+          "turnFailedMaxTurnRequests": "{agent} reached the maximum number of allowed requests for this turn.",
+          "turnFailedUnknown": "{agent} ended the turn with an unrecognized stop reason.",
+          "turnFailedEmpty": "{agent} ended the turn without producing any response. Please check the agent's configuration."
         },
         "unableReadAgentConfig": "Unable to read Agent config: {message}",
         "connectFailedTitle": "{agent} connection failed",
@@ -1698,10 +1727,15 @@
         "attachedResources": "Attached resources",
         "loading": "Loading...",
         "error": "Error: {message}",
+        "errorTitle": "Session load failed",
+        "errorActionReload": "Reload",
+        "errorActionNewSession": "New conversation",
         "emptyConversation": "No messages in this conversation.",
         "systemMessage": "System message",
         "copyMessage": "Copy",
-        "copied": "Copied"
+        "copied": "Copied",
+        "downloadImage": "Download image",
+        "downloadFailed": "Download failed: {message}"
       },
       "liveTurnStats": {
         "thinking": "Thinking...",
