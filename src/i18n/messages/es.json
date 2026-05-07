@@ -390,7 +390,15 @@
       "fieldOutOfRange": "El valor de {field} está fuera del rango permitido",
       "jsonEmpty": "{name} no puede estar vacío",
       "jsonInvalid": "{name} no es un JSON válido: {message}",
-      "jsonMustBeObject": "{name} debe ser un objeto JSON"
+      "jsonMustBeObject": "{name} debe ser un objeto JSON",
+      "specMustBeObject": "La configuración de MCP debe ser un objeto JSON.",
+      "missingType": "Falta el campo type en la configuración de MCP. Indica uno de stdio, http (alias: streamable-http, streamableHttp), sse.",
+      "unsupportedType": "Tipo de MCP no admitido {type}. Compatibles: stdio, http (alias: streamable-http, streamableHttp), sse.",
+      "codexEntryUnsupportedType": "La entrada Codex MCP {id} tiene un tipo no admitido {type}. Compatibles: stdio, http (alias: streamable-http, streamableHttp), sse.",
+      "unsupportedTransportType": "Tipo de transport no admitido {type}. Compatibles: http (alias: streamable-http, streamableHttp), sse.",
+      "stdioCommandRequired": "Los MCP stdio requieren un campo command no vacío.",
+      "remoteUrlRequired": "Los MCP remotos requieren un campo url no vacío.",
+      "appsRequired": "Selecciona al menos una aplicación de destino."
     },
     "jsonNames": {
       "localConfig": "Configuración MCP",
@@ -448,7 +456,9 @@
       "draftTitle": "Nuevo MCP",
       "draftDescription": "Indica un Server ID y la configuración para crear un servidor MCP local.",
       "serverIdLabel": "Server ID",
-      "serverIdPlaceholder": "Server ID (p. ej. my-mcp)"
+      "serverIdPlaceholder": "Server ID (p. ej. my-mcp)",
+      "typeHint": "Tipos admitidos: stdio, http (alias: streamable-http, streamableHttp), sse. env solo se usa con stdio; para MCP remotos usa headers para llevar tokens de autenticación.",
+      "envOnRemoteWarning": "Se detectó env en un MCP remoto. Solo stdio usa env; los MCP remotos llevan los tokens de autenticación en headers, así que env se ignorará al guardar."
     },
     "market": {
       "selectMarketplace": "Seleccionar marketplace",
@@ -651,9 +661,9 @@
       "authMustBeObject": "auth.json debe ser un objeto JSON",
       "authInvalid": "Error de formato en auth.json: {message}",
       "providerIdPattern": "El ID de proveedor solo admite letras, números, guion bajo, punto y guion",
-      "providerExists": "El proveedor '{providerId}' ya existe",
+      "providerExists": "El proveedor {providerId} ya existe",
       "modelIdPattern": "El ID de modelo solo admite letras, números, guion bajo, punto, dos puntos y guion",
-      "modelExists": "El modelo '{modelId}' ya existe"
+      "modelExists": "El modelo {modelId} ya existe"
     },
     "warnings": {
       "nativeJsonRecoveredStructured": "La configuración JSON nativa es inválida; se restableció a configuración estructurada",
@@ -882,6 +892,7 @@
       "reloadFailed": "No se pudo recargar la conversación: {message}",
       "reloaded": "Conversación recargada",
       "reload": "Recargar",
+      "activeConversationIndicator": "Conversación activa",
       "newConversation": "Nueva conversación",
       "closeConversation": "Cerrar conversación",
       "copyText": "Copiar texto",
@@ -1852,6 +1863,19 @@
           "todosProgress": "Tareas ({done}/{total})",
           "skillWithName": "Skill: {name}",
           "genericWithContext": "{tool} ({context})"
+        },
+        "toolGroup": {
+          "search": "{count, plural, one {Exploró # búsqueda} other {Exploró # búsquedas}}",
+          "command": "{count, plural, one {Ejecutó # comando} other {Ejecutó # comandos}}",
+          "read": "{count, plural, one {Leyó # archivo} other {Leyó # archivos}}",
+          "edit": "{count, plural, one {Editó # archivo} other {Editó # archivos}}",
+          "fetch": "{count, plural, one {Recuperó # recurso} other {Recuperó # recursos}}",
+          "think": "{count, plural, one {Pensó # vez} other {Pensó # veces}}",
+          "todo": "{count, plural, one {Actualizó # tarea} other {Actualizó # tareas}}",
+          "task": "{count, plural, one {Ejecutó # tarea} other {Ejecutó # tareas}}",
+          "other": "{count, plural, one {Usó # herramienta} other {Usó # herramientas}}",
+          "errorSuffix": "{count, plural, one {# falló} other {# fallaron}}",
+          "joiner": " · "
         }
       }
     },
