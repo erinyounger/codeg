@@ -148,6 +148,7 @@
     "updating": "설치 중...",
     "downloading": "다운로드 중...",
     "upgradeTo": "v{version}로 업그레이드",
+    "viewRelease": "v{version} 릴리스 보기",
     "foundUpdate": "새 버전 v{version}을 찾았습니다",
     "alreadyLatest": "이미 최신 버전입니다",
     "checkUpdateFailed": "업데이트 확인 실패: {message}",
@@ -1744,7 +1745,15 @@
         "copyMessage": "복사",
         "copied": "복사됨",
         "downloadImage": "이미지 다운로드",
-        "downloadFailed": "다운로드 실패: {message}"
+        "downloadFailed": "다운로드 실패: {message}",
+        "model": "모델",
+        "tokenStats": "토큰 사용량",
+        "tokenInput": "입력",
+        "tokenOutput": "출력",
+        "tokenCacheRead": "캐시 읽기",
+        "tokenCacheWrite": "캐시 쓰기",
+        "duration": "소요 시간",
+        "jumpToPreviousUserMessage": "이전 사용자 메시지로 이동"
       },
       "liveTurnStats": {
         "thinking": "생각 중...",
@@ -1865,8 +1874,8 @@
         "toolGroup": {
           "search": "{count}회 검색",
           "command": "명령 {count}개 실행",
-          "read": "파일 {count}개 읽기",
-          "edit": "파일 {count}개 편집",
+          "read": "파일 {count}회 읽기",
+          "edit": "파일 {count}회 편집",
           "fetch": "리소스 {count}개 가져오기",
           "think": "{count}회 사고",
           "todo": "할 일 {count}개 업데이트",
@@ -2259,7 +2268,7 @@
       "active": "활성",
       "edit": "편집",
       "delete": "삭제",
-      "deleteConfirm": "이 펫을 삭제할까요? 디스크에서도 함께 제거됩니다.",
+      "deleteConfirm": "펫 \"{name}\"을(를) 삭제할까요? 디스크에서도 함께 제거됩니다.",
       "summon": "펫 창 호출",
       "openCodexHelp": "Codex 펫은 ~/.codex/pets/ 아래에 설치되어야 합니다. 찾을 수 없습니다.",
       "specRequirement": "스프라이트 시트는 1536x1872 PNG 또는 WebP(투명) 이어야 합니다.",
@@ -2282,7 +2291,9 @@
         "addFailed": "펫 추가에 실패했습니다",
         "updateFailed": "펫 갱신에 실패했습니다",
         "deleteFailed": "펫 삭제에 실패했습니다",
-        "loadFailed": "펫 목록 로드에 실패했습니다"
+        "loadFailed": "펫 목록 로드에 실패했습니다",
+        "setActiveFailed": "활성 펫 설정에 실패했습니다",
+        "summonFailed": "펫 창 호출에 실패했습니다"
       }
     },
     "import": {
@@ -2296,6 +2307,45 @@
       "imported": "가져오기 완료",
       "failed": "가져오기 실패",
       "close": "닫기"
+    },
+    "marketplace": {
+      "openMarketplace": "펫 마켓",
+      "title": "펫 마켓",
+      "description": "codex-pets.net 의 공개 펫을 둘러보고 로컬에 설치합니다.",
+      "search": "펫 검색",
+      "kindFilter": {
+        "all": "전체",
+        "object": "오브젝트",
+        "animal": "동물",
+        "person": "인물",
+        "creature": "생물"
+      },
+      "sortFilter": {
+        "latest": "최신",
+        "popular": "인기",
+        "views": "조회수순"
+      },
+      "refresh": "새로고침",
+      "install": "설치",
+      "installing": "설치 중",
+      "reinstall": "다시 설치",
+      "reinstallConfirm": "로컬 펫 \"{name}\" 을(를) 덮어쓰시겠습니까? 기존 데이터가 교체됩니다.",
+      "cancel": "취소",
+      "stats": {
+        "views": "조회수",
+        "downloads": "다운로드",
+        "likes": "좋아요"
+      },
+      "page": "{page} / {total} 페이지",
+      "prev": "이전",
+      "next": "다음",
+      "empty": "조건에 맞는 펫이 없습니다.",
+      "successInstalled": "\"{name}\" 을(를) 설치했습니다",
+      "errors": {
+        "loadFailed": "마켓을 불러오지 못했습니다",
+        "installFailed": "설치에 실패했습니다",
+        "alreadyInstalled": "해당 펫이 이미 존재합니다"
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 mod acp;
 pub use acp::{idle_sweep_task, idle_timeout_from_env, lifecycle_subscriber_task, SWEEP_INTERVAL_SECS};
+pub use network::proxy::init_proxy_from_db;
 mod app_error;
 pub mod app_state;
 pub mod chat_channel;
@@ -128,16 +129,7 @@ mod tauri_app {
 
                 // Restore and apply saved system proxy settings before any network operation.
                 let db = app.state::<db::AppDatabase>();
-                match tauri::async_runtime::block_on(system_settings::load_system_proxy_settings(
-                    &db.conn,
-                )) {
-                    Ok(settings) => {
-                        let _ = network::proxy::apply_system_proxy_settings(&settings);
-                    }
-                    Err(err) => {
-                        eprintln!("[Settings] failed to load system proxy settings: {err}");
-                    }
-                }
+                tauri::async_runtime::block_on(network::proxy::init_proxy_from_db(&db.conn));
 
                 // Load saved appearance settings before any window is created.
                 tauri::async_runtime::block_on(windows::load_saved_zoom(&db.conn));
@@ -255,6 +247,32 @@ mod tauri_app {
                 }
 
                 Ok(())
+            })
+            .on_menu_event(|app, event| {
+                // Dispatch native pet context-menu actions. Items live under
+                // the `pet:` id namespace; everything else (tray menus, future
+                // app menus) flows past untouched. We re-emit a webview event
+                // rather than acting in Rust so the existing frontend
+                // commands (pet_save_window_state, open_settings_window,
+                // close_pet_window) stay the single source of truth — the
+                // native menu is just a different *trigger*.
+                let id = event.id().as_ref().to_string();
+                if !id.starts_with(windows::PET_MENU_ID_PREFIX) {
+                    return;
+                }
+                let payload: serde_json::Value =
+                    if let Some(scale) = windows::pet_menu_scale_from_id(&id) {
+                        serde_json::json!({ "type": "scale", "value": scale })
+                    } else if id == windows::PET_MENU_ID_OPEN_MANAGER {
+                        serde_json::json!({ "type": "open_manager" })
+                    } else if id == windows::PET_MENU_ID_CLOSE {
+                        serde_json::json!({ "type": "close" })
+                    } else {
+                        // Header / unknown — nothing to do.
+                        return;
+                    };
+                use tauri::Emitter;
+                let _ = app.emit_to("pet", "pet://menu-action", payload);
             })
             .on_window_event(|window, event| {
                 let label = window.label().to_string();
@@ -444,6 +462,7 @@ mod tauri_app {
                 windows::open_pet_window,
                 windows::close_pet_window,
                 windows::pet_window_record_position,
+                windows::pet_show_context_menu,
                 windows::update_traffic_light_position,
                 windows::update_appearance_mode,
                 pet_commands::pet_list,
@@ -459,6 +478,9 @@ mod tauri_app {
                 pet_commands::pet_get_settings,
                 pet_commands::pet_set_active,
                 pet_commands::pet_save_window_state,
+                pet_commands::pet_marketplace_list,
+                pet_commands::pet_marketplace_install,
+                pet_commands::pet_celebrate,
                 project_boot::detect_package_manager,
                 project_boot::create_shadcn_project,
                 system_settings::get_system_proxy_settings,

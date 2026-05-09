@@ -15,11 +15,35 @@ fn main() {
         return;
     }
 
+    // When invoked as a git credential helper (by the script written via
+    // `git_credential::create_credential_helper_script`), respond to git's
+    // credential protocol on stdin and exit. Mirrors the desktop binary's
+    // early-exit in `main.rs` so server deployments don't accidentally try
+    // to start a second server instance per `git credential` invocation.
+    if args.iter().any(|a| a == "--credential-helper") {
+        codeg_lib::git_credential::run_credential_helper();
+        return;
+    }
+
     // PATH initialisation MUST happen before the tokio runtime is created.
     // std::env::set_var is not thread-safe (unsafe in Rust edition 2024);
     // #[tokio::main] would spawn worker threads before we reach this point.
     codeg_lib::process::ensure_node_in_path();
     codeg_lib::process::ensure_user_npm_prefix_in_path();
+
+    // Pin CODEG_DATA_DIR to an absolute path before any threads exist.
+    // The server's own `state.data_dir` is also absolutized below, but we
+    // need the env var itself to be absolute too: child processes (notably
+    // the credential helper subprocess invoked by git from inside the
+    // user's repo) inherit it and use it via `keyring_store::tokens_file_path`
+    // to find `tokens.json`. A relative `CODEG_DATA_DIR=data` would
+    // otherwise resolve against git's CWD, not the server's startup CWD,
+    // and the helper would silently miss the token file even though it
+    // found the database.
+    if let Ok(value) = std::env::var("CODEG_DATA_DIR") {
+        let abs = codeg_lib::git_credential::absolutize(&PathBuf::from(value));
+        std::env::set_var("CODEG_DATA_DIR", &abs);
+    }
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -47,6 +71,11 @@ async fn async_main() {
     let data_dir = std::env::var("CODEG_DATA_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| default_data_dir());
+    // Absolutize so a relative `CODEG_DATA_DIR` (or relative default) doesn't
+    // tie us to the server's startup CWD: subprocess credential helpers,
+    // terminals spawned in the user's repo, and other consumers all derive
+    // paths from `state.data_dir` and need a stable absolute root.
+    let data_dir = codeg_lib::git_credential::absolutize(&data_dir);
     let static_dir_env = std::env::var("CODEG_STATIC_DIR").ok();
 
     let static_dir = find_static_dir_standalone(static_dir_env.as_deref());
@@ -60,6 +89,11 @@ async fn async_main() {
     let db = codeg_lib::db::init_database(&data_dir, app_version)
         .await
         .expect("Failed to initialize database");
+
+    // Restore and apply saved system proxy settings before any network operation.
+    // reqwest clients (including the LazyLock in check_app_update) cache the proxy
+    // config at build time, so this must run before the first one is constructed.
+    codeg_lib::init_proxy_from_db(&db.conn).await;
 
     // Create shared broadcaster
     let broadcaster = Arc::new(WebEventBroadcaster::new());
@@ -114,6 +148,14 @@ async fn async_main() {
         state.db.conn.clone(),
         state.connection_manager.clone_ref(),
         state.event_broadcaster.clone(),
+    ));
+
+    // Spawn the desktop pet state mapper so server-mode browsers viewing
+    // /pet receive `pet://state` and `pet://oneshot` over the WebSocket
+    // bridge, just like the Tauri webview does in desktop mode.
+    tokio::spawn(codeg_lib::pet_state_mapper::pet_state_subscriber_task(
+        state.event_broadcaster.clone(),
+        state.emitter.clone(),
     ));
 
     // Spawn the idle sweep so connections abandoned without an explicit

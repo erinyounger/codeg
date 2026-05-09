@@ -33,6 +33,7 @@ tauri-runtime = [
 [[bin]]
 name = "codeg"
 path = "src/main.rs"
+required-features = ["tauri-runtime"]
 
 [[bin]]
 name = "codeg-server"
@@ -105,6 +106,7 @@ libc = "0.2"
 
 [dev-dependencies]
 tempfile = "3"
+tokio = { version = "1", features = ["test-util", "macros", "rt", "sync", "time"] }
 
 [patch.crates-io]
 sacp-tokio = { path = "vendor/sacp-tokio" }

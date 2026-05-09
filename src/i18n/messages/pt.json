@@ -148,6 +148,7 @@
     "updating": "Instalando...",
     "downloading": "Baixando...",
     "upgradeTo": "Atualizar para v{version}",
+    "viewRelease": "Ver lançamento v{version}",
     "foundUpdate": "Nova versão v{version} encontrada",
     "alreadyLatest": "Você já está na versão mais recente",
     "checkUpdateFailed": "Falha ao verificar atualizações: {message}",
@@ -1744,7 +1745,15 @@
         "copyMessage": "Copiar",
         "copied": "Copiado",
         "downloadImage": "Baixar imagem",
-        "downloadFailed": "Falha no download: {message}"
+        "downloadFailed": "Falha no download: {message}",
+        "model": "Modelo",
+        "tokenStats": "Uso de tokens",
+        "tokenInput": "Entrada",
+        "tokenOutput": "Saída",
+        "tokenCacheRead": "Leitura de cache",
+        "tokenCacheWrite": "Escrita de cache",
+        "duration": "Duração",
+        "jumpToPreviousUserMessage": "Ir para a mensagem do usuário"
       },
       "liveTurnStats": {
         "thinking": "Pensando...",
@@ -1865,8 +1874,8 @@
         "toolGroup": {
           "search": "{count, plural, one {Explorou # busca} other {Explorou # buscas}}",
           "command": "{count, plural, one {Executou # comando} other {Executou # comandos}}",
-          "read": "{count, plural, one {Leu # arquivo} other {Leu # arquivos}}",
-          "edit": "{count, plural, one {Editou # arquivo} other {Editou # arquivos}}",
+          "read": "{count, plural, one {Leu arquivos # vez} other {Leu arquivos # vezes}}",
+          "edit": "{count, plural, one {Editou arquivos # vez} other {Editou arquivos # vezes}}",
           "fetch": "{count, plural, one {Buscou # recurso} other {Buscou # recursos}}",
           "think": "{count, plural, one {Pensou # vez} other {Pensou # vezes}}",
           "todo": "{count, plural, one {Atualizou # tarefa} other {Atualizou # tarefas}}",
@@ -2259,7 +2268,7 @@
       "active": "Ativo",
       "edit": "Editar",
       "delete": "Excluir",
-      "deleteConfirm": "Excluir este pet? Será removido do disco.",
+      "deleteConfirm": "Excluir o pet \"{name}\"? Será removido do disco.",
       "summon": "Invocar janela do pet",
       "openCodexHelp": "Pets do Codex precisam estar em ~/.codex/pets/. Nenhum encontrado.",
       "specRequirement": "O sprite precisa ser PNG ou WebP 1536x1872 com transparência.",
@@ -2282,7 +2291,9 @@
         "addFailed": "Falha ao adicionar",
         "updateFailed": "Falha ao atualizar",
         "deleteFailed": "Falha ao excluir",
-        "loadFailed": "Falha ao carregar pets"
+        "loadFailed": "Falha ao carregar pets",
+        "setActiveFailed": "Falha ao ativar pet",
+        "summonFailed": "Falha ao abrir a janela do pet"
       }
     },
     "import": {
@@ -2296,6 +2307,45 @@
       "imported": "Importação concluída",
       "failed": "Falha no import",
       "close": "Fechar"
+    },
+    "marketplace": {
+      "openMarketplace": "Mercado de pets",
+      "title": "Mercado de pets",
+      "description": "Explore pets públicos do codex-pets.net e instale-os localmente.",
+      "search": "Buscar pets",
+      "kindFilter": {
+        "all": "Todos",
+        "object": "Objeto",
+        "animal": "Animal",
+        "person": "Pessoa",
+        "creature": "Criatura"
+      },
+      "sortFilter": {
+        "latest": "Recentes",
+        "popular": "Populares",
+        "views": "Mais vistos"
+      },
+      "refresh": "Atualizar",
+      "install": "Instalar",
+      "installing": "Instalando",
+      "reinstall": "Reinstalar",
+      "reinstallConfirm": "Sobrescrever o pet local \"{name}\"? Os dados existentes serão substituídos.",
+      "cancel": "Cancelar",
+      "stats": {
+        "views": "Visualizações",
+        "downloads": "Downloads",
+        "likes": "Curtidas"
+      },
+      "page": "Página {page} de {total}",
+      "prev": "Anterior",
+      "next": "Próxima",
+      "empty": "Nenhum pet corresponde.",
+      "successInstalled": "\"{name}\" instalado",
+      "errors": {
+        "loadFailed": "Falha ao carregar o mercado",
+        "installFailed": "Falha ao instalar o pet",
+        "alreadyInstalled": "O pet já existe localmente"
+      }
     }
   }
 }

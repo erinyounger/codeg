@@ -148,6 +148,7 @@
     "updating": "升级中...",
     "downloading": "下载中...",
     "upgradeTo": "升级到 v{version}",
+    "viewRelease": "查看 v{version} 发布",
     "foundUpdate": "发现新版本 v{version}",
     "alreadyLatest": "当前已经是最新版本",
     "checkUpdateFailed": "检查更新失败：{message}",
@@ -1744,7 +1745,15 @@
         "copyMessage": "复制",
         "copied": "已复制",
         "downloadImage": "下载图片",
-        "downloadFailed": "下载失败：{message}"
+        "downloadFailed": "下载失败：{message}",
+        "model": "模型",
+        "tokenStats": "Token 使用情况",
+        "tokenInput": "输入",
+        "tokenOutput": "输出",
+        "tokenCacheRead": "缓存读取",
+        "tokenCacheWrite": "缓存写入",
+        "duration": "耗时",
+        "jumpToPreviousUserMessage": "跳转到上一条用户消息"
       },
       "liveTurnStats": {
         "thinking": "思考中...",
@@ -1865,8 +1874,8 @@
         "toolGroup": {
           "search": "搜索 {count} 次",
           "command": "运行 {count} 个命令",
-          "read": "读取 {count} 个文件",
-          "edit": "编辑 {count} 个文件",
+          "read": "读取 {count} 次文件",
+          "edit": "编辑 {count} 次文件",
           "fetch": "抓取 {count} 个资源",
           "think": "思考 {count} 次",
           "todo": "更新 {count} 项待办",
@@ -2259,7 +2268,7 @@
       "active": "当前活跃",
       "edit": "编辑",
       "delete": "删除",
-      "deleteConfirm": "确认删除此宠物?会从磁盘上一并移除。",
+      "deleteConfirm": "确认删除宠物 \"{name}\" 吗？会从磁盘上一并移除。",
       "summon": "召唤宠物窗口",
       "openCodexHelp": "Codex 宠物需位于 ~/.codex/pets/ 目录下,但未找到。",
       "specRequirement": "精灵图必须是 1536x1872 像素的带透明通道 PNG 或 WebP。",
@@ -2282,7 +2291,9 @@
         "addFailed": "添加宠物失败",
         "updateFailed": "更新宠物失败",
         "deleteFailed": "删除宠物失败",
-        "loadFailed": "加载宠物列表失败"
+        "loadFailed": "加载宠物列表失败",
+        "setActiveFailed": "设置活跃宠物失败",
+        "summonFailed": "召唤宠物窗口失败"
       }
     },
     "import": {
@@ -2296,6 +2307,45 @@
       "imported": "导入完成",
       "failed": "导入失败",
       "close": "关闭"
+    },
+    "marketplace": {
+      "openMarketplace": "宠物市场",
+      "title": "宠物市场",
+      "description": "浏览 codex-pets.net 上的公共宠物,一键安装到本地。",
+      "search": "搜索宠物",
+      "kindFilter": {
+        "all": "全部",
+        "object": "物品",
+        "animal": "动物",
+        "person": "人物",
+        "creature": "生物"
+      },
+      "sortFilter": {
+        "latest": "最新",
+        "popular": "热门",
+        "views": "最多浏览"
+      },
+      "refresh": "刷新",
+      "install": "安装",
+      "installing": "安装中",
+      "reinstall": "替换重装",
+      "reinstallConfirm": "确认覆盖本地宠物 \"{name}\" 吗？现有数据将被替换。",
+      "cancel": "取消",
+      "stats": {
+        "views": "浏览",
+        "downloads": "下载",
+        "likes": "点赞"
+      },
+      "page": "第 {page} / {total} 页",
+      "prev": "上一页",
+      "next": "下一页",
+      "empty": "没有匹配的宠物。",
+      "successInstalled": "已安装 \"{name}\"",
+      "errors": {
+        "loadFailed": "加载市场失败",
+        "installFailed": "安装失败",
+        "alreadyInstalled": "该宠物已存在"
+      }
     }
   }
 }

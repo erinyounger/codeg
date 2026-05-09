@@ -148,6 +148,7 @@
     "updating": "Installation...",
     "downloading": "Téléchargement...",
     "upgradeTo": "Mettre à jour vers v{version}",
+    "viewRelease": "Voir la version v{version}",
     "foundUpdate": "Nouvelle version v{version} trouvée",
     "alreadyLatest": "Vous utilisez déjà la dernière version",
     "checkUpdateFailed": "Échec de la recherche de mises à jour : {message}",
@@ -1744,7 +1745,15 @@
         "copyMessage": "Copier",
         "copied": "Copié",
         "downloadImage": "Télécharger l'image",
-        "downloadFailed": "Échec du téléchargement : {message}"
+        "downloadFailed": "Échec du téléchargement : {message}",
+        "model": "Modèle",
+        "tokenStats": "Utilisation des tokens",
+        "tokenInput": "Entrée",
+        "tokenOutput": "Sortie",
+        "tokenCacheRead": "Lecture du cache",
+        "tokenCacheWrite": "Écriture du cache",
+        "duration": "Durée",
+        "jumpToPreviousUserMessage": "Aller au message utilisateur"
       },
       "liveTurnStats": {
         "thinking": "Réflexion...",
@@ -1865,8 +1874,8 @@
         "toolGroup": {
           "search": "{count, plural, one {A exploré # recherche} other {A exploré # recherches}}",
           "command": "{count, plural, one {A exécuté # commande} other {A exécuté # commandes}}",
-          "read": "{count, plural, one {A lu # fichier} other {A lu # fichiers}}",
-          "edit": "{count, plural, one {A modifié # fichier} other {A modifié # fichiers}}",
+          "read": "{count, plural, one {A lu des fichiers # fois} other {A lu des fichiers # fois}}",
+          "edit": "{count, plural, one {A modifié des fichiers # fois} other {A modifié des fichiers # fois}}",
           "fetch": "{count, plural, one {A récupéré # ressource} other {A récupéré # ressources}}",
           "think": "{count, plural, one {A réfléchi # fois} other {A réfléchi # fois}}",
           "todo": "{count, plural, one {A mis à jour # tâche} other {A mis à jour # tâches}}",
@@ -2259,7 +2268,7 @@
       "active": "Active",
       "edit": "Modifier",
       "delete": "Supprimer",
-      "deleteConfirm": "Supprimer cette mascotte ? Elle sera retirée du disque.",
+      "deleteConfirm": "Supprimer la mascotte « {name} » ? Elle sera retirée du disque.",
       "summon": "Invoquer la fenêtre de la mascotte",
       "openCodexHelp": "Les mascottes Codex doivent être dans ~/.codex/pets/. Aucune trouvée.",
       "specRequirement": "Le sprite doit être un PNG/WebP 1536x1872 avec transparence.",
@@ -2282,7 +2291,9 @@
         "addFailed": "Ajout impossible",
         "updateFailed": "Mise à jour impossible",
         "deleteFailed": "Suppression impossible",
-        "loadFailed": "Chargement impossible"
+        "loadFailed": "Chargement impossible",
+        "setActiveFailed": "Activation impossible",
+        "summonFailed": "Ouverture de la fenêtre impossible"
       }
     },
     "import": {
@@ -2296,6 +2307,45 @@
       "imported": "Import réussi",
       "failed": "Import échoué",
       "close": "Fermer"
+    },
+    "marketplace": {
+      "openMarketplace": "Marketplace de mascottes",
+      "title": "Marketplace de mascottes",
+      "description": "Parcourez les mascottes publiques de codex-pets.net et installez-les localement.",
+      "search": "Rechercher des mascottes",
+      "kindFilter": {
+        "all": "Toutes",
+        "object": "Objet",
+        "animal": "Animal",
+        "person": "Personne",
+        "creature": "Créature"
+      },
+      "sortFilter": {
+        "latest": "Récents",
+        "popular": "Populaires",
+        "views": "Vues"
+      },
+      "refresh": "Actualiser",
+      "install": "Installer",
+      "installing": "Installation",
+      "reinstall": "Réinstaller",
+      "reinstallConfirm": "Remplacer la mascotte locale « {name} » ? Les données existantes seront écrasées.",
+      "cancel": "Annuler",
+      "stats": {
+        "views": "Vues",
+        "downloads": "Téléchargements",
+        "likes": "J’aime"
+      },
+      "page": "Page {page} sur {total}",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "empty": "Aucune mascotte ne correspond.",
+      "successInstalled": "« {name} » installée",
+      "errors": {
+        "loadFailed": "Impossible de charger le marketplace",
+        "installFailed": "Échec de l’installation",
+        "alreadyInstalled": "La mascotte existe déjà localement"
+      }
     }
   }
 }

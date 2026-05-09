@@ -4,11 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Loader2 } from "lucide-react"
 import { getPet, getPetSettings, readPetSpritesheet } from "@/lib/pet/api"
-import type { PetDetail, PetSpriteAsset } from "@/lib/pet/types"
+import type { PetDetail } from "@/lib/pet/types"
+import {
+  createPetSpriteObjectUrl,
+  revokePetSpriteObjectUrl,
+} from "@/lib/pet/sprite-url"
 import { disposeTauriListener } from "@/lib/tauri-listener"
 import { isDesktop } from "@/lib/transport"
-import { PET_FRAME_DURATIONS_MS, type PetState } from "@/lib/pet/animation"
+import {
+  PET_FRAME_DURATIONS_MS,
+  PET_ONESHOT_LOOPS,
+  type PetState,
+} from "@/lib/pet/animation"
 import { usePetState } from "../_hooks/usePetState"
+import { usePetOneShot } from "../_hooks/usePetOneShot"
 import { usePetDrag } from "../_hooks/usePetDrag"
 import { PetSprite } from "./PetSprite"
 import { PetMenu } from "./PetMenu"
@@ -34,13 +43,22 @@ function sumDurations(state: PetState): number {
   return PET_FRAME_DURATIONS_MS[state].reduce((acc, d) => acc + d, 0)
 }
 
+// Oneshot animations from the backend (`pet://oneshot`) reuse the same
+// "hold for N loops then unstick" model as user interactions. Loop counts
+// live in `PET_ONESHOT_LOOPS` so designers can tune them without touching
+// component code.
+function oneShotDuration(state: "jumping" | "waving" | "failed"): number {
+  return sumDurations(state) * PET_ONESHOT_LOOPS[state] + INTERACTION_SLACK_MS
+}
+
 export function PetWindow({ petId }: PetWindowProps) {
   const t = useTranslations("Pet")
   const [pet, setPet] = useState<PetDetail | null>(null)
-  const [asset, setAsset] = useState<PetSpriteAsset | null>(null)
+  const [spritesheetUrl, setSpritesheetUrl] = useState<string | null>(null)
   const [scale, setScale] = useState<number>(1)
   const [error, setError] = useState<string | null>(null)
   const agentState = usePetState()
+  const oneShot = usePetOneShot()
 
   // Interaction-driven state takes priority over the agent-driven state so
   // a drag, hover, or click immediately wins over the ambient ACP animation.
@@ -81,8 +99,15 @@ export function PetWindow({ petId }: PetWindowProps) {
   // way of any active interaction (drag, click-and-hold). Listening on
   // `window` rather than the root div catches pointerup even when it
   // happens off-window mid-drag.
+  //
+  // Only the primary (left) button matters here — drag is left-only, and
+  // right-click is consumed by the native context menu, which eats the
+  // paired `pointerup`. If we tracked all buttons we'd get stuck "down"
+  // after every right-click and hover-waving would silently break until
+  // the user clicked again to clear it.
   useEffect(() => {
-    const onDown = () => {
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return
       pointerDownRef.current = true
     }
     const onUp = () => {
@@ -140,6 +165,17 @@ export function PetWindow({ petId }: PetWindowProps) {
     }
   }, [playOneShot, cancelInteraction])
 
+  // Backend-driven oneshot animations. Skipped while the user is actively
+  // pressing the mouse (drag / click-and-hold) so we don't yank a sprite
+  // out from under their finger; the backend event is fire-and-forget
+  // anyway, missing one mid-drag is fine. Reacts to `oneShot.key` rather
+  // than `oneShot.kind` so two same-kind events back-to-back replay.
+  useEffect(() => {
+    if (!oneShot) return
+    if (pointerDownRef.current) return
+    playOneShot(oneShot.kind, oneShotDuration(oneShot.kind))
+  }, [oneShot, playOneShot])
+
   useEffect(() => {
     return () => {
       if (interactionTimerRef.current) clearTimeout(interactionTimerRef.current)
@@ -155,7 +191,10 @@ export function PetWindow({ petId }: PetWindowProps) {
 
   useEffect(() => {
     let cancelled = false
+    let objectUrl: string | null = null
     setError(null)
+    setPet(null)
+    setSpritesheetUrl(null)
 
     async function load() {
       try {
@@ -164,9 +203,13 @@ export function PetWindow({ petId }: PetWindowProps) {
           readPetSpritesheet(petId),
           getPetSettings(),
         ])
-        if (cancelled) return
+        objectUrl = createPetSpriteObjectUrl(sprite)
+        if (cancelled) {
+          revokePetSpriteObjectUrl(objectUrl)
+          return
+        }
         setPet(detail)
-        setAsset(sprite)
+        setSpritesheetUrl(objectUrl)
         setScale(config.scale ?? 1)
       } catch (err) {
         if (!cancelled) setError(toMessage(err))
@@ -176,6 +219,7 @@ export function PetWindow({ petId }: PetWindowProps) {
     void load()
     return () => {
       cancelled = true
+      revokePetSpriteObjectUrl(objectUrl)
     }
   }, [petId])
 
@@ -226,7 +270,7 @@ export function PetWindow({ petId }: PetWindowProps) {
     )
   }
 
-  if (!pet || !asset) {
+  if (!pet || !spritesheetUrl) {
     return (
       <div
         className="flex h-screen w-screen items-center justify-center"
@@ -237,8 +281,6 @@ export function PetWindow({ petId }: PetWindowProps) {
     )
   }
 
-  const dataUrl = `data:${asset.mime};base64,${asset.dataBase64}`
-
   return (
     <div
       className="relative flex h-screen w-screen select-none items-center justify-center"
@@ -246,16 +288,12 @@ export function PetWindow({ petId }: PetWindowProps) {
       onPointerDown={drag.onPointerDown}
     >
       <PetSprite
-        spritesheetDataUrl={dataUrl}
+        spritesheetUrl={spritesheetUrl}
         state={renderState}
         scale={scale}
         label={pet.displayName}
       />
-      <PetMenu
-        scale={scale}
-        onScaleChange={setScale}
-        onOpenSettings={openManager}
-      />
+      <PetMenu onScaleChange={setScale} onOpenSettings={openManager} />
     </div>
   )
 }
