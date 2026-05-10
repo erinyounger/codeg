@@ -1746,6 +1746,9 @@
         "copied": "Kopiert",
         "downloadImage": "Bild herunterladen",
         "downloadFailed": "Download fehlgeschlagen: {message}",
+        "imageGeneration": "Bildgenerierung",
+        "imageGenerationPending": "Bild wird generiert…",
+        "imageGenerationFailed": "Bildgenerierung fehlgeschlagen",
         "model": "Modell",
         "tokenStats": "Token-Nutzung",
         "tokenInput": "Eingabe",
@@ -1753,6 +1756,7 @@
         "tokenCacheRead": "Cache-Lesen",
         "tokenCacheWrite": "Cache-Schreiben",
         "duration": "Dauer",
+        "completedAt": "Abgeschlossen um",
         "jumpToPreviousUserMessage": "Zur Benutzernachricht springen"
       },
       "liveTurnStats": {
@@ -2311,7 +2315,6 @@
     "marketplace": {
       "openMarketplace": "Pet-Marketplace",
       "title": "Pet-Marketplace",
-      "description": "Öffentliche Pets von codex-pets.net durchsuchen und lokal installieren.",
       "search": "Pets suchen",
       "kindFilter": {
         "all": "Alle",

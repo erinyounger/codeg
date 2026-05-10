@@ -15,7 +15,7 @@ use crate::commands::pet::{
 };
 use crate::models::pet::{
     ImportCodexPetsRequest, ImportCodexPetsResult, ImportablePet, NewPetInput, PetCelebrationKind,
-    PetDetail, PetSpriteAsset, PetSummary, PetWindowConfig, PetWindowStatePatch,
+    PetDetail, PetSpriteAsset, PetState, PetSummary, PetWindowConfig, PetWindowStatePatch,
 };
 use crate::pets::marketplace::{
     MarketplaceInstallRequest, MarketplaceInstallResponse, MarketplaceListParams,
@@ -103,7 +103,7 @@ pub async fn pet_set_active(
     Extension(state): Extension<Arc<AppState>>,
     Json(params): Json<PetSetActiveParams>,
 ) -> Result<Json<PetWindowConfig>, AppCommandError> {
-    pet_commands::pet_set_active_core(&state.db.conn, params.pet_id)
+    pet_commands::pet_set_active_core(&state.db.conn, &state.emitter, params.pet_id)
         .await
         .map(Json)
 }
@@ -143,4 +143,12 @@ pub async fn pet_marketplace_install(
     pet_commands::pet_marketplace_install_core(request)
         .await
         .map(Json)
+}
+
+pub async fn pet_get_current_state(
+    Extension(state): Extension<Arc<AppState>>,
+) -> Result<Json<PetState>, AppCommandError> {
+    Ok(Json(pet_commands::pet_get_current_state_core(
+        &state.pet_state,
+    )))
 }

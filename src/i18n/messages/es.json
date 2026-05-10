@@ -1746,6 +1746,9 @@
         "copied": "Copiado",
         "downloadImage": "Descargar imagen",
         "downloadFailed": "Descarga fallida: {message}",
+        "imageGeneration": "Generación de imágenes",
+        "imageGenerationPending": "Generando imagen…",
+        "imageGenerationFailed": "Error al generar la imagen",
         "model": "Modelo",
         "tokenStats": "Uso de tokens",
         "tokenInput": "Entrada",
@@ -1753,6 +1756,7 @@
         "tokenCacheRead": "Lectura de caché",
         "tokenCacheWrite": "Escritura de caché",
         "duration": "Duración",
+        "completedAt": "Completado a las",
         "jumpToPreviousUserMessage": "Ir al mensaje del usuario"
       },
       "liveTurnStats": {
@@ -2311,7 +2315,6 @@
     "marketplace": {
       "openMarketplace": "Mercado de mascotas",
       "title": "Mercado de mascotas",
-      "description": "Explora mascotas públicas de codex-pets.net e instálalas localmente.",
       "search": "Buscar mascotas",
       "kindFilter": {
         "all": "Todas",
