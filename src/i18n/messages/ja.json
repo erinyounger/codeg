@@ -822,6 +822,7 @@
       "expandAllGroups": "すべてのグループを展開",
       "collapseAllGroups": "すべてのグループを折りたたむ",
       "newConversation": "新しい会話",
+      "newConversationShort": "新規",
       "noConversationsFound": "会話が見つかりません。",
       "importLocalSessions": "ローカルセッションをインポート",
       "importing": "インポート中...",
@@ -863,6 +864,7 @@
       "folderHeaderMenu": {
         "manageConversations": "会話の管理…",
         "changeColor": "色を変更",
+        "useThemeColor": "アプリのテーマを使用",
         "removeFromWorkspace": "ワークスペースから削除"
       },
       "manageConversations": {
@@ -1651,7 +1653,13 @@
         "expertSkills": "エキスパートスキル",
         "expertsEmptyForAgent": "このエージェントで有効なエキスパートはありません。「設定 > エキスパート」から有効にしてください。",
         "slashSearchPlaceholder": "コマンドを検索...",
-        "slashSearchEmpty": "一致するコマンドがありません"
+        "slashSearchEmpty": "一致するコマンドがありません",
+        "attachLocalUpload": "ローカルファイルを添付",
+        "attachServerFile": "サーバーファイルを添付",
+        "attachUploadTooLarge": "{names} は {limit}MB のアップロード上限を超えたためスキップしました。",
+        "attachUploadFailed": "{names} のアップロードに失敗しました。",
+        "attachUploadNotAFile": "{names} は通常ファイルではなく（ディレクトリまたは特殊ファイル）、スキップされました。",
+        "attachUploadQuotaExceeded": "サーバーのアップロード容量が不足しているため、{names} をアップロードできませんでした。"
       },
       "messageQueue": {
         "addToQueue": "キューに追加",
@@ -2364,5 +2372,49 @@
         "alreadyInstalled": "そのペットは既に存在します"
       }
     }
+  },
+  "RemoteWorkspace": {
+    "openRemoteWorkspace": "Open remote workspace",
+    "manage": "Manage remote workspace",
+    "manageTitle": "Remote Workspace connections",
+    "empty": "No remote connections",
+    "searchPlaceholder": "Search remote workspaces",
+    "orderFailed": "Failed to save remote workspace order",
+    "dragSort": "Drag to sort",
+    "dragSortConnection": "Drag to sort {name}",
+    "newConnection": "New connection",
+    "loading": "Loading",
+    "loadingConnection": "Loading remote connection",
+    "name": "Name",
+    "baseUrl": "Service URL",
+    "token": "Access token",
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": {
+      "title": "Delete remote connection?",
+      "message": "This will remove \"{name}\" from this device. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "saved": "Remote connection saved.",
+    "deleted": "Remote connection deleted.",
+    "loadFailed": "Failed to load remote connections",
+    "saveFailed": "Failed to save remote connection",
+    "deleteFailed": "Failed to delete remote connection",
+    "openFailed": "Failed to open remote workspace",
+    "connectionLoadFailed": "Failed to load remote connection: {message}",
+    "connectionExpired": "Remote connection \"{name}\" is expired. Update its token and reload this window."
+  },
+  "ServerFileBrowser": {
+    "title": "サーバーファイルを選択",
+    "pathPlaceholder": "ディレクトリパスを入力...",
+    "goHome": "ホームディレクトリへ",
+    "navigateUp": "上の階層へ",
+    "select": "選択",
+    "cancel": "キャンセル",
+    "loading": "読み込み中...",
+    "emptyDirectory": "このディレクトリは空です",
+    "errorLoadingDir": "ディレクトリの読み込みに失敗しました",
+    "selectedCount": "{count} 件選択中"
   }
 }

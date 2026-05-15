@@ -26,6 +26,7 @@ import { getPetSettings, openPetWindow } from "@/lib/pet/api"
 import { useAppWorkspace } from "@/contexts/app-workspace-context"
 import { useActiveFolder } from "@/contexts/active-folder-context"
 import { isDesktop, openFileDialog } from "@/lib/platform"
+import { getActiveRemoteConnectionId } from "@/lib/transport"
 import { Button } from "@/components/ui/button"
 import { useSidebarContext } from "@/contexts/sidebar-context"
 import { useAuxPanelContext } from "@/contexts/aux-panel-context"
@@ -42,6 +43,7 @@ import { AppTitleBar } from "./app-title-bar"
 import { BranchDropdown } from "./branch-dropdown"
 import { CommandDropdown } from "./command-dropdown"
 import { NewFolderDropdown } from "./new-folder-dropdown"
+import { RemoteWorkspaceDropdown } from "./remote-workspace-dropdown"
 import { SearchCommandDialog } from "@/components/conversations/search-command-dialog"
 import { DirectoryBrowserDialog } from "@/components/shared/directory-browser-dialog"
 import { cn } from "@/lib/utils"
@@ -107,7 +109,12 @@ export function FolderTitleBar() {
   }, [])
 
   const handleOpenFolder = useCallback(async () => {
-    if (isDesktop()) {
+    // See NewFolderDropdown / SidebarConversationList for the same logic:
+    // the native Tauri dialog browses the LOCAL filesystem, so when the
+    // user is bound to a remote workspace we must fall through to the
+    // in-app DirectoryBrowserDialog (which browses the remote host via
+    // the proxied `list_directory_entries`).
+    if (isDesktop() && getActiveRemoteConnectionId() === null) {
       try {
         const result = await openFileDialog({
           directory: true,
@@ -318,6 +325,7 @@ export function FolderTitleBar() {
                 <Menu className="h-4 w-4" />
               </Button>
               <NewFolderDropdown />
+              <RemoteWorkspaceDropdown />
               <BranchDropdown />
             </div>
           ) : (
@@ -339,6 +347,7 @@ export function FolderTitleBar() {
                   <PanelLeft className="h-3.5 w-3.5" />
                 </Button>
                 <NewFolderDropdown />
+                <RemoteWorkspaceDropdown />
                 <Button
                   variant="ghost"
                   size="icon"

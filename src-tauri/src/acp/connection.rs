@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use sacp::schema::{HttpHeader, McpServer, McpServerHttp, McpServerSse, McpServerStdio};
 use sacp::schema::{
     BlobResourceContents, CancelNotification, ClientCapabilities, ContentBlock, ContentChunk,
     CreateTerminalRequest, CreateTerminalResponse, EmbeddedResource, EmbeddedResourceResource,
@@ -19,6 +18,7 @@ use sacp::schema::{
     ToolCallContent, WaitForTerminalExitRequest, WaitForTerminalExitResponse, WriteTextFileRequest,
     WriteTextFileResponse,
 };
+use sacp::schema::{HttpHeader, McpServer, McpServerHttp, McpServerSse, McpServerStdio};
 use sacp::util::MatchDispatch;
 use sacp::{
     on_receive_request, Agent, Client, ConnectionTo, Dispatch, Responder, SessionMessage,
@@ -89,7 +89,8 @@ pub enum ConnectionCommand {
         option_id: String,
     },
     Fork {
-        reply: tokio::sync::oneshot::Sender<Result<crate::acp::types::ForkProtocolResult, AcpError>>,
+        reply:
+            tokio::sync::oneshot::Sender<Result<crate::acp::types::ForkProtocolResult, AcpError>>,
     },
     Disconnect,
 }
@@ -374,6 +375,8 @@ pub async fn spawn_agent_connection(
     owner_window_label: String,
     emitter: EventEmitter,
     connections: Arc<tokio::sync::Mutex<HashMap<String, AgentConnection>>>,
+    preferred_mode_id: Option<String>,
+    preferred_config_values: BTreeMap<String, String>,
 ) -> Result<tokio::sync::oneshot::Receiver<()>, AcpError> {
     // Create the authoritative session state up front. Subsequent emit_with_state
     // calls write through this state and increment its seq counter so the first
@@ -459,6 +462,8 @@ pub async fn spawn_agent_connection(
             emitter_clone.clone(),
             Arc::clone(&state_clone),
             terminal_base_env,
+            preferred_mode_id,
+            preferred_config_values,
         )
         .await;
 
@@ -690,20 +695,6 @@ async fn emit_session_config_options_values(
     .await;
 }
 
-async fn emit_session_config_options(
-    state: &Arc<RwLock<SessionState>>,
-    emitter: &EventEmitter,
-    agent_type: AgentType,
-    config_options: &Option<Vec<SessionConfigOption>>,
-) {
-    // Always emit one config-options snapshot after session attach.
-    // Some agents (e.g. Gemini CLI) may not expose session config options
-    // and return `None`; emitting an empty list lets the frontend settle
-    // loading state instead of waiting forever.
-    let options = config_options.clone().unwrap_or_default();
-    emit_session_config_options_values(state, emitter, agent_type, options).await;
-}
-
 async fn emit_selectors_ready(state: &Arc<RwLock<SessionState>>, emitter: &EventEmitter) {
     emit_with_state(state, emitter, AcpEvent::SelectorsReady).await;
 }
@@ -932,6 +923,8 @@ async fn run_connection(
     emitter: EventEmitter,
     state: Arc<RwLock<SessionState>>,
     terminal_base_env: BTreeMap<String, String>,
+    preferred_mode_id: Option<String>,
+    preferred_config_values: BTreeMap<String, String>,
 ) -> Result<(), AcpError> {
     let pending_perms: PendingPermissions = Arc::new(tokio::sync::Mutex::new(HashMap::new()));
     // `terminal_base_env` already filtered to just the credential helper
@@ -1267,11 +1260,21 @@ async fn run_connection(
                         )
                         .await;
                         emit_session_modes(&state, &emitter_clone, session.modes()).await;
-                        emit_session_config_options(
+                        let updated_config_options = apply_preferred_session_options(
+                            &cx,
+                            &mut session,
+                            &state,
+                            &emitter_clone,
+                            preferred_mode_id.as_deref(),
+                            &preferred_config_values,
+                            initial_config_options.unwrap_or_default(),
+                        )
+                        .await;
+                        emit_session_config_options_values(
                             &state,
                             &emitter_clone,
                             agent_type,
-                            &initial_config_options,
+                            updated_config_options,
                         )
                         .await;
                         emit_selectors_ready(&state, &emitter_clone).await;
@@ -1394,11 +1397,21 @@ async fn run_connection(
                         )
                         .await;
                         emit_session_modes(&state, &emitter_clone, session.modes()).await;
-                        emit_session_config_options(
+                        let updated_config_options = apply_preferred_session_options(
+                            &cx,
+                            &mut session,
+                            &state,
+                            &emitter_clone,
+                            preferred_mode_id.as_deref(),
+                            &preferred_config_values,
+                            initial_config_options.unwrap_or_default(),
+                        )
+                        .await;
+                        emit_session_config_options_values(
                             &state,
                             &emitter_clone,
                             agent_type,
-                            &initial_config_options,
+                            updated_config_options,
                         )
                         .await;
                         emit_selectors_ready(&state, &emitter_clone).await;
@@ -1456,11 +1469,21 @@ async fn run_connection(
                 )
                 .await;
                 emit_session_modes(&state, &emitter_clone, session.modes()).await;
-                emit_session_config_options(
+                let updated_config_options = apply_preferred_session_options(
+                    &cx,
+                    &mut session,
+                    &state,
+                    &emitter_clone,
+                    preferred_mode_id.as_deref(),
+                    &preferred_config_values,
+                    initial_config_options.unwrap_or_default(),
+                )
+                .await;
+                emit_session_config_options_values(
                     &state,
                     &emitter_clone,
                     agent_type,
-                    &initial_config_options,
+                    updated_config_options,
                 )
                 .await;
                 emit_selectors_ready(&state, &emitter_clone).await;
@@ -1627,6 +1650,22 @@ async fn set_session_config_option(
     config_id: String,
     value_id: String,
 ) -> Result<(), sacp::Error> {
+    let updated = set_session_config_option_inner(cx, session_id, config_id, value_id).await?;
+    emit_session_config_options_values(state, emitter, agent_type, updated).await;
+    Ok(())
+}
+
+/// Wire-level half of `set_session_config_option`: send the JSON-RPC request and
+/// return the agent's new config-options list, without touching SessionState or
+/// emitting events. Used at session-init to apply saved preferences before the
+/// single emit_session_config_options call so the frontend never sees an
+/// "agent default → user preference" flicker.
+async fn set_session_config_option_inner(
+    cx: &ConnectionTo<Agent>,
+    session_id: &SessionId,
+    config_id: String,
+    value_id: String,
+) -> Result<Vec<SessionConfigOption>, sacp::Error> {
     let req = SetSessionConfigOptionRequest::new(session_id.clone(), config_id, value_id);
     let untyped_req = UntypedMessage::new("session/set_config_option", req).map_err(|e| {
         sacp::util::internal_error(format!("Failed to build config option request: {e}"))
@@ -1638,8 +1677,84 @@ async fn set_session_config_option(
             sacp::util::internal_error(format!("Failed to parse config option response: {e}"))
         })?;
 
-    emit_session_config_options_values(state, emitter, agent_type, response.config_options).await;
-    Ok(())
+    Ok(response.config_options)
+}
+
+/// Apply user-saved mode and config-option preferences to a freshly-attached
+/// session BEFORE the initial `session_modes` / `session_config_options`
+/// events are emitted to the frontend.
+///
+/// This is the single ownership point for "preference → agent state" — the
+/// frontend stores the user's last selections per agent_type and ships them
+/// to the backend on connect; we then call `session/set_mode` and
+/// `session/set_config_option` to align the agent process so the snapshot
+/// the frontend will see (whether via WS `snapshot` frame or fetched HTTP
+/// snapshot) already reflects the user's choices. No client-side
+/// "intercept event and rewrite then sync back" hack — single source of truth.
+///
+/// Returns the (possibly updated) list of config options that the caller
+/// should emit. Mode preferences trigger a `ModeChanged` event from
+/// `set_session_mode`, which the caller's `emit_session_modes` immediately
+/// precedes — so the frontend sees `SessionModes{default}` then
+/// `ModeChanged{preferred}` and converges to the preferred value before
+/// `SelectorsReady` fires. Failures on individual preferences are logged
+/// and skipped so a stale/invalid preference can't block session startup.
+#[allow(clippy::too_many_arguments)]
+async fn apply_preferred_session_options(
+    cx: &ConnectionTo<Agent>,
+    session: &mut sacp::ActiveSession<'_, Agent>,
+    state: &Arc<RwLock<SessionState>>,
+    emitter: &EventEmitter,
+    preferred_mode_id: Option<&str>,
+    preferred_config_values: &BTreeMap<String, String>,
+    initial_config_options: Vec<SessionConfigOption>,
+) -> Vec<SessionConfigOption> {
+    if let Some(pref_mode) = preferred_mode_id {
+        let needs_apply = session
+            .modes()
+            .as_ref()
+            .map(|m| m.current_mode_id.to_string() != pref_mode)
+            .unwrap_or(false);
+        if needs_apply {
+            if let Err(e) = set_session_mode(session, state, emitter, pref_mode.to_string()).await {
+                eprintln!("[ACP] failed to apply preferred mode '{pref_mode}' on connect: {e}");
+            }
+        }
+    }
+
+    if preferred_config_values.is_empty() {
+        return initial_config_options;
+    }
+
+    let session_id = session.session_id().clone();
+    let mut options = initial_config_options;
+    for (config_id, value_id) in preferred_config_values {
+        // Skip the round-trip when the agent's current value already matches.
+        // Note: Codex omits "mode" from its advertised options but accepts
+        // `set_config_option` for it (see `ensure_codex_mode_option`), so we
+        // do NOT skip on "config_id not in options" — let the agent decide.
+        let already_matches = options.iter().any(|o| {
+            o.id.to_string() == *config_id
+                && matches!(
+                    &o.kind,
+                    SessionConfigKind::Select(s) if s.current_value.to_string() == *value_id
+                )
+        });
+        if already_matches {
+            continue;
+        }
+        match set_session_config_option_inner(cx, &session_id, config_id.clone(), value_id.clone())
+            .await
+        {
+            Ok(updated) => options = updated,
+            Err(e) => eprintln!(
+                "[ACP] failed to apply preferred config '{config_id}'='{value_id}' \
+                 on connect: {e}"
+            ),
+        }
+    }
+
+    options
 }
 
 const TERMINAL_POLL_INTERVAL_MS: u64 = 200;
@@ -1720,11 +1835,9 @@ impl ToolCallOutputCache {
 
         // Update cache snapshot to current state so the next update can
         // still detect a prefix extension.
-        let tail = trim_partial_ansi_tail(truncate_tail_at_char_boundary(
-            curr,
-            MAX_CACHED_TAIL_BYTES,
-        ))
-        .to_string();
+        let tail =
+            trim_partial_ansi_tail(truncate_tail_at_char_boundary(curr, MAX_CACHED_TAIL_BYTES))
+                .to_string();
         let generation = self.next_generation;
         self.next_generation = self.next_generation.wrapping_add(1);
         self.entries.insert(
@@ -1745,11 +1858,9 @@ impl ToolCallOutputCache {
     /// treats `raw_output` as a full replacement.
     fn seed(&mut self, tool_call_id: &str, curr: &str) -> Option<String> {
         let (payload, _append) = build_emit_payload(curr, false);
-        let tail = trim_partial_ansi_tail(truncate_tail_at_char_boundary(
-            curr,
-            MAX_CACHED_TAIL_BYTES,
-        ))
-        .to_string();
+        let tail =
+            trim_partial_ansi_tail(truncate_tail_at_char_boundary(curr, MAX_CACHED_TAIL_BYTES))
+                .to_string();
         let generation = self.next_generation;
         self.next_generation = self.next_generation.wrapping_add(1);
         self.entries.insert(
@@ -1771,10 +1882,7 @@ impl ToolCallOutputCache {
     /// Drop cached state for a tool call that has finished. Keeps the
     /// session-scoped cache bounded in long-running sessions.
     fn remove_if_final(&mut self, tool_call_id: &str, status: Option<&str>) {
-        if matches!(
-            status,
-            Some("completed" | "failed" | "cancelled" | "error")
-        ) {
+        if matches!(status, Some("completed" | "failed" | "cancelled" | "error")) {
             self.entries.remove(tool_call_id);
         }
     }
@@ -1810,10 +1918,8 @@ impl ToolCallOutputCache {
 /// append)`. An empty `text` yields an empty `payload`; callers should
 /// decide whether to suppress the emission in that case.
 fn build_emit_payload(text: &str, append: bool) -> (String, bool) {
-    let truncated = trim_partial_ansi_tail(truncate_tail_at_char_boundary(
-        text,
-        MAX_SINGLE_EMIT_BYTES,
-    ));
+    let truncated =
+        trim_partial_ansi_tail(truncate_tail_at_char_boundary(text, MAX_SINGLE_EMIT_BYTES));
     let out = if truncated.len() < text.len() {
         format!("{TRUNCATION_MARKER}{truncated}")
     } else {
@@ -1859,11 +1965,11 @@ fn trim_partial_ansi_tail(s: &str) -> &str {
         return &s[..esc_pos];
     }
     let terminated = match after[0] {
-        b'[' => after[1..]
-            .iter()
-            .any(|&b| (0x40..=0x7E).contains(&b)),
-        b']' => after[1..].contains(&0x07)
-            || after[1..].windows(2).any(|w| w[0] == 0x1B && w[1] == b'\\'),
+        b'[' => after[1..].iter().any(|&b| (0x40..=0x7E).contains(&b)),
+        b']' => {
+            after[1..].contains(&0x07)
+                || after[1..].windows(2).any(|w| w[0] == 0x1B && w[1] == b'\\')
+        }
         // Two-byte escape sequences (ESC M, ESC D, …) are complete as
         // soon as the second byte is present.
         _ => true,
@@ -2157,14 +2263,8 @@ async fn poll_tracked_terminal_tool_calls(
         }
 
         if let Some(output) = poll_result.output {
-            emit_terminal_output_update(
-                state,
-                emitter,
-                &tool_call_id,
-                output,
-                poll_result.append,
-            )
-            .await;
+            emit_terminal_output_update(state, emitter, &tool_call_id, output, poll_result.append)
+                .await;
         }
 
         if (is_final_tool_call_status(entry.status.as_deref())
@@ -2274,10 +2374,12 @@ async fn handle_fork_or_exit(
 
     // Reply protocol-level result to manager.fork_session, which will combine
     // it with the freshly-created sibling row id to produce the wire ForkResultInfo.
-    let _ = fork_info.reply.send(Ok(crate::acp::types::ForkProtocolResult {
-        forked_session_id: new_sid.clone(),
-        original_session_id: fork_info.original_session_id,
-    }));
+    let _ = fork_info
+        .reply
+        .send(Ok(crate::acp::types::ForkProtocolResult {
+            forked_session_id: new_sid.clone(),
+            original_session_id: fork_info.original_session_id,
+        }));
 
     // Build a NewSessionResponse from the ForkSessionResponse so we can
     // attach directly — the forked session is already live on this process.
@@ -2297,7 +2399,13 @@ async fn handle_fork_or_exit(
     )
     .await;
     emit_session_modes(state, emitter, session.modes()).await;
-    emit_session_config_options(state, emitter, agent_type, &initial_config_options).await;
+    emit_session_config_options_values(
+        state,
+        emitter,
+        agent_type,
+        initial_config_options.unwrap_or_default(),
+    )
+    .await;
     emit_selectors_ready(state, emitter).await;
 
     let loop_result = run_conversation_loop(
@@ -2391,9 +2499,7 @@ fn turn_failure_error_event(reason_str: &str, agent_type: AgentType) -> Option<A
         ),
         "max_turn_requests" => (
             "turn_failed_max_turn_requests",
-            format!(
-                "{agent_type} reached the maximum number of allowed requests for this turn."
-            ),
+            format!("{agent_type} reached the maximum number of allowed requests for this turn."),
         ),
         "unknown" => (
             "turn_failed_unknown",
@@ -3174,12 +3280,7 @@ async fn emit_conversation_update(
             content: ContentBlock::Text(text),
             ..
         }) => {
-            emit_with_state(
-                state,
-                emitter,
-                AcpEvent::ContentDelta { text: text.text },
-            )
-            .await;
+            emit_with_state(state, emitter, AcpEvent::ContentDelta { text: text.text }).await;
         }
         SessionUpdate::AgentMessageChunk(_) => {
             // Non-text chunks are currently not surfaced in live streaming UI.
@@ -3188,12 +3289,7 @@ async fn emit_conversation_update(
             content: ContentBlock::Text(text),
             ..
         }) => {
-            emit_with_state(
-                state,
-                emitter,
-                AcpEvent::Thinking { text: text.text },
-            )
-            .await;
+            emit_with_state(state, emitter, AcpEvent::Thinking { text: text.text }).await;
         }
         SessionUpdate::AgentThoughtChunk(_) => {
             // Non-text thought chunks are currently ignored.
@@ -3313,13 +3409,8 @@ async fn emit_conversation_update(
             .await;
         }
         SessionUpdate::ConfigOptionUpdate(update) => {
-            emit_session_config_options_values(
-                state,
-                emitter,
-                agent_type,
-                update.config_options,
-            )
-            .await;
+            emit_session_config_options_values(state, emitter, agent_type, update.config_options)
+                .await;
         }
         SessionUpdate::AvailableCommandsUpdate(update) => {
             // Some agents (e.g. Claude Code with overlapping user/project slash
@@ -3343,12 +3434,7 @@ async fn emit_conversation_update(
                     }
                 })
                 .collect();
-            emit_with_state(
-                state,
-                emitter,
-                AcpEvent::AvailableCommands { commands },
-            )
-            .await;
+            emit_with_state(state, emitter, AcpEvent::AvailableCommands { commands }).await;
         }
         SessionUpdate::UsageUpdate(update) => {
             emit_with_state(
@@ -3403,8 +3489,7 @@ mod tests {
         )
         .unwrap();
 
-        let event =
-            map_claude_sdk_ext_notification(&raw).expect("valid sdk payload should map");
+        let event = map_claude_sdk_ext_notification(&raw).expect("valid sdk payload should map");
 
         match event {
             AcpEvent::ClaudeSdkMessage {
@@ -3484,8 +3569,7 @@ mod tests {
             "args": ["-y", "@mcp_hub_org/cli@latest", "run", "figma-developer-mcp"],
             "env": {"FIGMA_API_KEY": "secret"},
         });
-        let server =
-            canonical_spec_to_mcp_server("figma", &spec).expect("stdio spec should map");
+        let server = canonical_spec_to_mcp_server("figma", &spec).expect("stdio spec should map");
         match server {
             McpServer::Stdio(s) => {
                 assert_eq!(s.name, "figma");
@@ -3507,8 +3591,7 @@ mod tests {
             "type": "stdio",
             "command": "cargo",
         });
-        let server =
-            canonical_spec_to_mcp_server("x", &spec).expect("bare command should resolve");
+        let server = canonical_spec_to_mcp_server("x", &spec).expect("bare command should resolve");
         match server {
             McpServer::Stdio(s) => assert!(
                 s.command.is_absolute(),
@@ -3553,8 +3636,7 @@ mod tests {
             "command": "/usr/local/bin/npx",
             "args": ["-y", "@mcp_hub_org/cli@latest", "run", "figma-developer-mcp"],
         });
-        let server =
-            canonical_spec_to_mcp_server("figma", &spec).expect("stdio spec should map");
+        let server = canonical_spec_to_mcp_server("figma", &spec).expect("stdio spec should map");
         let json = serde_json::to_value(&server).expect("server should serialize");
         assert_eq!(json["name"], "figma");
         assert_eq!(json["command"], "/usr/local/bin/npx");
@@ -3624,7 +3706,10 @@ mod tests {
         let delta = "Z".repeat(16 * 1024);
         let second = format!("{first}{delta}");
         let (payload, append) = cache.consume("t1", &second).expect("should emit");
-        assert!(append, "extension beyond cached tail must still be detected");
+        assert!(
+            append,
+            "extension beyond cached tail must still be detected"
+        );
         // The emitted payload should carry the delta (or its tail when
         // truncated at MAX_SINGLE_EMIT_BYTES). For a 16 KB delta that's
         // well below the 64 KB cap, we expect it verbatim.

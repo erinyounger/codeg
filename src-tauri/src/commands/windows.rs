@@ -78,7 +78,7 @@ pub async fn load_saved_appearance_mode(conn: &DatabaseConnection) {
 }
 
 pub struct SettingsWindowState {
-    owner_window_label: Mutex<Option<String>>,
+    owner_by_settings_label: Mutex<HashMap<String, String>>,
 }
 
 pub struct CommitWindowState {
@@ -248,21 +248,21 @@ pub(crate) fn post_window_setup(window: &tauri::WebviewWindow) {
 impl SettingsWindowState {
     pub fn new() -> Self {
         Self {
-            owner_window_label: Mutex::new(None),
+            owner_by_settings_label: Mutex::new(HashMap::new()),
         }
     }
 
-    fn set_owner(&self, label: String) {
-        if let Ok(mut owner) = self.owner_window_label.lock() {
-            *owner = Some(label);
+    fn set_owner(&self, settings_label: String, owner_label: String) {
+        if let Ok(mut owners) = self.owner_by_settings_label.lock() {
+            owners.insert(settings_label, owner_label);
         }
     }
 
-    fn take_owner(&self) -> Option<String> {
-        self.owner_window_label
+    fn take_owner(&self, settings_label: &str) -> Option<String> {
+        self.owner_by_settings_label
             .lock()
             .ok()
-            .and_then(|mut owner| owner.take())
+            .and_then(|mut owners| owners.remove(settings_label))
     }
 }
 
@@ -333,6 +333,66 @@ fn resolve_settings_target(section: Option<&str>, agent_type: Option<&str>) -> S
         }
     }
     route.to_string()
+}
+
+fn append_query_param(route: String, key: &str, value: &str) -> String {
+    if route.contains('?') {
+        format!("{route}&{key}={value}")
+    } else {
+        format!("{route}?{key}={value}")
+    }
+}
+
+fn append_remote_context(
+    route: String,
+    remote_connection_id: Option<i32>,
+    remote_window_id: Option<&str>,
+) -> String {
+    let Some(id) = remote_connection_id else {
+        return route;
+    };
+    let route = append_query_param(route, "remoteConnectionId", &id.to_string());
+    match remote_window_id {
+        Some(window_id) => append_query_param(route, "remoteWindowId", window_id),
+        None => route,
+    }
+}
+
+fn route_with_new_remote_window(
+    route: String,
+    remote_connection_id: Option<i32>,
+) -> (String, Option<String>) {
+    let remote_window_id = remote_connection_id
+        .map(|_| crate::commands::remote_workspace::new_remote_window_instance_id());
+    let route = append_remote_context(route, remote_connection_id, remote_window_id.as_deref());
+    (route, remote_window_id)
+}
+
+fn remote_window_id_from_window(window: &tauri::WebviewWindow) -> Option<String> {
+    window.url().ok()?.query_pairs().find_map(|(key, value)| {
+        if key == "remoteWindowId" && !value.is_empty() {
+            Some(value.into_owned())
+        } else {
+            None
+        }
+    })
+}
+
+fn register_remote_window_cleanup(
+    app: &AppHandle,
+    window: &tauri::WebviewWindow,
+    remote_window_id: Option<&str>,
+) {
+    let Some(remote_window_id) = remote_window_id else {
+        return;
+    };
+    if let Some(proxy) =
+        app.try_state::<std::sync::Arc<crate::commands::remote_proxy::RemoteProxyState>>()
+    {
+        proxy
+            .inner()
+            .register_window_instance_cleanup(window, remote_window_id.to_string());
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -498,9 +558,13 @@ pub async fn open_commit_window(
     state: tauri::State<'_, CommitWindowState>,
     folder_id: i32,
     locale: Option<crate::models::system::AppLocale>,
+    remote_connection_id: Option<i32>,
 ) -> Result<(), AppCommandError> {
     let owner_label = window.label().to_string();
-    let label = format!("commit-{folder_id}");
+    let label = match remote_connection_id {
+        Some(remote_id) => format!("remote-commit-{remote_id}-{folder_id}"),
+        None => format!("commit-{folder_id}"),
+    };
 
     if let Some(existing) = app.get_webview_window(&label) {
         state.set_owner(label.clone(), owner_label);
@@ -511,27 +575,34 @@ pub async fn open_commit_window(
         return Ok(());
     }
 
-    let folder = crate::db::service::folder_service::get_folder_by_id(&db.conn, folder_id)
-        .await
-        .map_err(AppCommandError::from)?
-        .ok_or_else(|| {
-            AppCommandError::not_found(format!("Folder {folder_id} not found"))
-                .with_detail(format!("folder_id={folder_id}"))
-        })?;
-
     let titles = resolve_window_titles(&db.conn, locale).await;
-    let url = WebviewUrl::App(format!("commit?folderId={folder_id}").into());
+    let window_title = if remote_connection_id.is_some() {
+        titles.commit.to_string()
+    } else {
+        let folder = crate::db::service::folder_service::get_folder_by_id(&db.conn, folder_id)
+            .await
+            .map_err(AppCommandError::from)?
+            .ok_or_else(|| {
+                AppCommandError::not_found(format!("Folder {folder_id} not found"))
+                    .with_detail(format!("folder_id={folder_id}"))
+            })?;
+        format!("{} - {}", titles.commit, folder.name)
+    };
+    let (url_str, remote_window_id) =
+        route_with_new_remote_window(format!("commit?folderId={folder_id}"), remote_connection_id);
+    let url = WebviewUrl::App(url_str.into());
     let builder = WebviewWindowBuilder::new(&app, &label, url)
-        .title(format!("{} - {}", titles.commit, folder.name))
+        .title(window_title)
         .inner_size(1220.0, 820.0)
         .min_inner_size(980.0, 620.0)
         .center();
-    let builder = builder
-        .parent(&window)
-        .map_err(|e| AppCommandError::window("Failed to attach commit window to parent", e.to_string()))?;
+    let builder = builder.parent(&window).map_err(|e| {
+        AppCommandError::window("Failed to attach commit window to parent", e.to_string())
+    })?;
     let commit_window = apply_platform_window_style(builder)
         .build()
         .map_err(|e| AppCommandError::window("Failed to open commit window", e.to_string()))?;
+    register_remote_window_cleanup(&app, &commit_window, remote_window_id.as_deref());
     post_window_setup(&commit_window);
     state.set_owner(label, owner_label);
     commit_window
@@ -543,6 +614,7 @@ pub async fn open_commit_window(
 
 #[cfg(feature = "tauri-runtime")]
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
+#[allow(clippy::too_many_arguments)]
 pub async fn open_settings_window(
     app: AppHandle,
     window: tauri::WebviewWindow,
@@ -550,13 +622,32 @@ pub async fn open_settings_window(
     section: Option<String>,
     agent_type: Option<String>,
     locale: Option<crate::models::system::AppLocale>,
+    remote_connection_id: Option<i32>,
     state: tauri::State<'_, SettingsWindowState>,
 ) -> Result<(), AppCommandError> {
-    let target_route = resolve_settings_target(section.as_deref(), agent_type.as_deref());
+    let settings_label = match remote_connection_id {
+        Some(remote_id) => format!("remote-settings-{remote_id}"),
+        None => "settings".to_string(),
+    };
     let owner_label = window.label().to_string();
-    if let Some(existing) = app.get_webview_window("settings") {
+    if let Some(existing) = app.get_webview_window(&settings_label) {
         post_window_setup(&existing);
-        if section.is_some() || agent_type.is_some() {
+        if section.is_some() || agent_type.is_some() || remote_connection_id.is_some() {
+            let existing_remote_window_id = remote_window_id_from_window(&existing);
+            let generated_remote_window_id = remote_connection_id
+                .filter(|_| existing_remote_window_id.is_none())
+                .map(|_| crate::commands::remote_workspace::new_remote_window_instance_id());
+            let remote_window_id = existing_remote_window_id
+                .as_deref()
+                .or(generated_remote_window_id.as_deref());
+            if generated_remote_window_id.is_some() {
+                register_remote_window_cleanup(&app, &existing, remote_window_id);
+            }
+            let target_route = append_remote_context(
+                resolve_settings_target(section.as_deref(), agent_type.as_deref()),
+                remote_connection_id,
+                remote_window_id,
+            );
             let target_path = format!("/{target_route}");
             let target_json = serde_json::to_string(&target_path).map_err(|e| {
                 AppCommandError::window("Failed to build settings navigation target", e.to_string())
@@ -566,8 +657,8 @@ pub async fn open_settings_window(
                 AppCommandError::window("Failed to navigate settings window", e.to_string())
             })?;
         }
-        let _ = state.take_owner();
-        state.set_owner(owner_label);
+        let _ = state.take_owner(&settings_label);
+        state.set_owner(settings_label, owner_label);
         let _ = existing.unminimize();
         existing.set_focus().map_err(|e| {
             AppCommandError::window("Failed to focus settings window", e.to_string())
@@ -576,28 +667,37 @@ pub async fn open_settings_window(
     }
 
     let titles = resolve_window_titles(&db.conn, locale).await;
+    let (target_route, remote_window_id) = route_with_new_remote_window(
+        resolve_settings_target(section.as_deref(), agent_type.as_deref()),
+        remote_connection_id,
+    );
     let url = WebviewUrl::App(target_route.into());
-    let builder = WebviewWindowBuilder::new(&app, "settings", url)
+    let builder = WebviewWindowBuilder::new(&app, &settings_label, url)
         .title(titles.settings)
         .inner_size(1080.0, 700.0)
         .min_inner_size(1080.0, 600.0)
         .center();
-    let builder = builder
-        .parent(&window)
-        .map_err(|e| AppCommandError::window("Failed to attach settings window to parent", e.to_string()))?;
+    let builder = builder.parent(&window).map_err(|e| {
+        AppCommandError::window("Failed to attach settings window to parent", e.to_string())
+    })?;
     let settings_window = apply_platform_window_style(builder)
         .build()
         .map_err(|e| AppCommandError::window("Failed to open settings window", e.to_string()))?;
+    register_remote_window_cleanup(&app, &settings_window, remote_window_id.as_deref());
     post_window_setup(&settings_window);
-    state.set_owner(owner_label);
+    state.set_owner(settings_label, owner_label);
     settings_window
         .set_focus()
         .map_err(|e| AppCommandError::window("Failed to focus settings window", e.to_string()))?;
     Ok(())
 }
 
-pub fn restore_windows_after_settings(app: &AppHandle, state: &SettingsWindowState) {
-    if let Some(owner_label) = state.take_owner() {
+pub fn restore_windows_after_settings(
+    app: &AppHandle,
+    state: &SettingsWindowState,
+    settings_window_label: &str,
+) {
+    if let Some(owner_label) = state.take_owner(settings_window_label) {
         if let Some(window) = app.get_webview_window(&owner_label) {
             let _ = window.set_focus();
         }
@@ -649,6 +749,7 @@ impl Default for MergeWindowState {
 
 #[cfg(feature = "tauri-runtime")]
 #[cfg_attr(feature = "tauri-runtime", tauri::command)]
+#[allow(clippy::too_many_arguments)]
 pub async fn open_merge_window(
     app: AppHandle,
     window: tauri::WebviewWindow,
@@ -658,9 +759,13 @@ pub async fn open_merge_window(
     operation: String,
     upstream_commit: Option<String>,
     locale: Option<crate::models::system::AppLocale>,
+    remote_connection_id: Option<i32>,
 ) -> Result<(), AppCommandError> {
     let owner_label = window.label().to_string();
-    let label = format!("merge-{folder_id}");
+    let label = match remote_connection_id {
+        Some(remote_id) => format!("remote-merge-{remote_id}-{folder_id}"),
+        None => format!("merge-{folder_id}"),
+    };
 
     if let Some(existing) = app.get_webview_window(&label) {
         state.set_owner(label.clone(), owner_label);
@@ -671,31 +776,37 @@ pub async fn open_merge_window(
         return Ok(());
     }
 
-    let folder = crate::db::service::folder_service::get_folder_by_id(&db.conn, folder_id)
-        .await
-        .map_err(AppCommandError::from)?
-        .ok_or_else(|| {
-            AppCommandError::not_found(format!("Folder {folder_id} not found"))
-                .with_detail(format!("folder_id={folder_id}"))
-        })?;
-
     let titles = resolve_window_titles(&db.conn, locale).await;
+    let window_title = if remote_connection_id.is_some() {
+        titles.merge.to_string()
+    } else {
+        let folder = crate::db::service::folder_service::get_folder_by_id(&db.conn, folder_id)
+            .await
+            .map_err(AppCommandError::from)?
+            .ok_or_else(|| {
+                AppCommandError::not_found(format!("Folder {folder_id} not found"))
+                    .with_detail(format!("folder_id={folder_id}"))
+            })?;
+        format!("{} - {}", titles.merge, folder.name)
+    };
     let mut url_str = format!("merge?folderId={folder_id}&operation={operation}");
     if let Some(ref commit) = upstream_commit {
         url_str.push_str(&format!("&upstreamCommit={commit}"));
     }
+    let (url_str, remote_window_id) = route_with_new_remote_window(url_str, remote_connection_id);
     let url = WebviewUrl::App(url_str.into());
     let builder = WebviewWindowBuilder::new(&app, &label, url)
-        .title(format!("{} - {}", titles.merge, folder.name))
+        .title(window_title)
         .inner_size(1400.0, 900.0)
         .min_inner_size(1100.0, 650.0)
         .center();
-    let builder = builder
-        .parent(&window)
-        .map_err(|e| AppCommandError::window("Failed to attach merge window to parent", e.to_string()))?;
+    let builder = builder.parent(&window).map_err(|e| {
+        AppCommandError::window("Failed to attach merge window to parent", e.to_string())
+    })?;
     let merge_window = apply_platform_window_style(builder)
         .build()
         .map_err(|e| AppCommandError::window("Failed to open merge window", e.to_string()))?;
+    register_remote_window_cleanup(&app, &merge_window, remote_window_id.as_deref());
     post_window_setup(&merge_window);
     state.set_owner(label, owner_label);
     merge_window
@@ -771,8 +882,12 @@ pub async fn open_stash_window(
     db: tauri::State<'_, AppDatabase>,
     folder_id: i32,
     locale: Option<crate::models::system::AppLocale>,
+    remote_connection_id: Option<i32>,
 ) -> Result<(), AppCommandError> {
-    let label = format!("stash-{folder_id}");
+    let label = match remote_connection_id {
+        Some(remote_id) => format!("remote-stash-{remote_id}-{folder_id}"),
+        None => format!("stash-{folder_id}"),
+    };
 
     if let Some(existing) = app.get_webview_window(&label) {
         post_window_setup(&existing);
@@ -783,24 +898,31 @@ pub async fn open_stash_window(
         return Ok(());
     }
 
-    let folder = crate::db::service::folder_service::get_folder_by_id(&db.conn, folder_id)
-        .await
-        .map_err(AppCommandError::from)?
-        .ok_or_else(|| {
-            AppCommandError::not_found(format!("Folder {folder_id} not found"))
-                .with_detail(format!("folder_id={folder_id}"))
-        })?;
-
     let titles = resolve_window_titles(&db.conn, locale).await;
-    let url = WebviewUrl::App(format!("stash?folderId={folder_id}").into());
+    let window_title = if remote_connection_id.is_some() {
+        titles.stash.to_string()
+    } else {
+        let folder = crate::db::service::folder_service::get_folder_by_id(&db.conn, folder_id)
+            .await
+            .map_err(AppCommandError::from)?
+            .ok_or_else(|| {
+                AppCommandError::not_found(format!("Folder {folder_id} not found"))
+                    .with_detail(format!("folder_id={folder_id}"))
+            })?;
+        format!("{} - {}", titles.stash, folder.name)
+    };
+    let (url_str, remote_window_id) =
+        route_with_new_remote_window(format!("stash?folderId={folder_id}"), remote_connection_id);
+    let url = WebviewUrl::App(url_str.into());
     let builder = WebviewWindowBuilder::new(&app, &label, url)
-        .title(format!("{} - {}", titles.stash, folder.name))
+        .title(window_title)
         .inner_size(1100.0, 700.0)
         .min_inner_size(800.0, 500.0)
         .center();
     let stash_window = apply_platform_window_style(builder)
         .build()
         .map_err(|e| AppCommandError::window("Failed to open stash window", e.to_string()))?;
+    register_remote_window_cleanup(&app, &stash_window, remote_window_id.as_deref());
     post_window_setup(&stash_window);
 
     Ok(())
@@ -814,8 +936,12 @@ pub async fn open_push_window(
     db: tauri::State<'_, AppDatabase>,
     folder_id: i32,
     locale: Option<crate::models::system::AppLocale>,
+    remote_connection_id: Option<i32>,
 ) -> Result<(), AppCommandError> {
-    let label = format!("push-{folder_id}");
+    let label = match remote_connection_id {
+        Some(remote_id) => format!("remote-push-{remote_id}-{folder_id}"),
+        None => format!("push-{folder_id}"),
+    };
 
     if let Some(existing) = app.get_webview_window(&label) {
         post_window_setup(&existing);
@@ -826,27 +952,34 @@ pub async fn open_push_window(
         return Ok(());
     }
 
-    let folder = crate::db::service::folder_service::get_folder_by_id(&db.conn, folder_id)
-        .await
-        .map_err(AppCommandError::from)?
-        .ok_or_else(|| {
-            AppCommandError::not_found(format!("Folder {folder_id} not found"))
-                .with_detail(format!("folder_id={folder_id}"))
-        })?;
-
     let titles = resolve_window_titles(&db.conn, locale).await;
-    let url = WebviewUrl::App(format!("push?folderId={folder_id}").into());
+    let window_title = if remote_connection_id.is_some() {
+        titles.push.to_string()
+    } else {
+        let folder = crate::db::service::folder_service::get_folder_by_id(&db.conn, folder_id)
+            .await
+            .map_err(AppCommandError::from)?
+            .ok_or_else(|| {
+                AppCommandError::not_found(format!("Folder {folder_id} not found"))
+                    .with_detail(format!("folder_id={folder_id}"))
+            })?;
+        format!("{} - {}", titles.push, folder.name)
+    };
+    let (url_str, remote_window_id) =
+        route_with_new_remote_window(format!("push?folderId={folder_id}"), remote_connection_id);
+    let url = WebviewUrl::App(url_str.into());
     let builder = WebviewWindowBuilder::new(&app, &label, url)
-        .title(format!("{} - {}", titles.push, folder.name))
+        .title(window_title)
         .inner_size(1100.0, 700.0)
         .min_inner_size(800.0, 500.0)
         .center();
-    let builder = builder
-        .parent(&window)
-        .map_err(|e| AppCommandError::window("Failed to attach push window to parent", e.to_string()))?;
+    let builder = builder.parent(&window).map_err(|e| {
+        AppCommandError::window("Failed to attach push window to parent", e.to_string())
+    })?;
     let push_window = apply_platform_window_style(builder)
         .build()
         .map_err(|e| AppCommandError::window("Failed to open push window", e.to_string()))?;
+    register_remote_window_cleanup(&app, &push_window, remote_window_id.as_deref());
     post_window_setup(&push_window);
 
     Ok(())
@@ -859,9 +992,14 @@ pub async fn open_project_boot_window(
     db: tauri::State<'_, AppDatabase>,
     source: Option<String>,
     locale: Option<crate::models::system::AppLocale>,
+    remote_connection_id: Option<i32>,
 ) -> Result<(), AppCommandError> {
     let _ = source;
-    if let Some(existing) = app.get_webview_window("project-boot") {
+    let label = match remote_connection_id {
+        Some(id) => format!("remote-project-boot-{id}"),
+        None => "project-boot".to_string(),
+    };
+    if let Some(existing) = app.get_webview_window(&label) {
         post_window_setup(&existing);
         let _ = existing.unminimize();
         existing.set_focus().map_err(|e| {
@@ -871,8 +1009,10 @@ pub async fn open_project_boot_window(
     }
 
     let titles = resolve_window_titles(&db.conn, locale).await;
-    let url = WebviewUrl::App("project-boot".into());
-    let builder = WebviewWindowBuilder::new(&app, "project-boot", url)
+    let (url_str, remote_window_id) =
+        route_with_new_remote_window("project-boot".to_string(), remote_connection_id);
+    let url = WebviewUrl::App(url_str.into());
+    let builder = WebviewWindowBuilder::new(&app, &label, url)
         .title(titles.project_boot)
         .inner_size(1400.0, 900.0)
         .min_inner_size(1100.0, 700.0)
@@ -880,6 +1020,7 @@ pub async fn open_project_boot_window(
     let window = apply_platform_window_style(builder).build().map_err(|e| {
         AppCommandError::window("Failed to open project boot window", e.to_string())
     })?;
+    register_remote_window_cleanup(&app, &window, remote_window_id.as_deref());
     post_window_setup(&window);
 
     Ok(())
@@ -940,8 +1081,7 @@ pub async fn open_pet_window(
     app: AppHandle,
     db: tauri::State<'_, AppDatabase>,
 ) -> Result<(), AppCommandError> {
-    let mut config =
-        crate::commands::pet::pet_get_settings_core(&db.conn).await?;
+    let mut config = crate::commands::pet::pet_get_settings_core(&db.conn).await?;
     let pet_id = config
         .active_pet_id
         .clone()
@@ -1065,10 +1205,8 @@ fn spawn_pet_hover_watcher(app: AppHandle) {
             let Ok(cursor) = app.cursor_position() else {
                 continue;
             };
-            let inside = cursor.x >= x_min
-                && cursor.x < x_max
-                && cursor.y >= y_min
-                && cursor.y < y_max;
+            let inside =
+                cursor.x >= x_min && cursor.x < x_max && cursor.y >= y_min && cursor.y < y_max;
             let was_inside = PET_HOVER_WAS_INSIDE.load(AtomicOrdering::Relaxed);
             if inside && !was_inside {
                 let _ = app.emit(PET_HOVER_ENTER_EVENT, ());
@@ -1187,8 +1325,7 @@ pub async fn pet_show_context_menu(
     let config = crate::commands::pet::pet_get_settings_core(&db.conn).await?;
     let current = config.scale;
 
-    let menu_err =
-        |stage: &str, e: tauri::Error| AppCommandError::window(stage, e.to_string());
+    let menu_err = |stage: &str, e: tauri::Error| AppCommandError::window(stage, e.to_string());
 
     // Disabled header acts as a "Scale" section label. macOS renders this as
     // dimmed gray text, Linux/Windows as a non-clickable item — close enough
@@ -1224,14 +1361,8 @@ pub async fn pet_show_context_menu(
         None::<&str>,
     )
     .map_err(|e| menu_err("Failed to build pet menu manager item", e))?;
-    let close_item = MenuItem::with_id(
-        &app,
-        PET_MENU_ID_CLOSE,
-        &labels.close,
-        true,
-        None::<&str>,
-    )
-    .map_err(|e| menu_err("Failed to build pet menu close item", e))?;
+    let close_item = MenuItem::with_id(&app, PET_MENU_ID_CLOSE, &labels.close, true, None::<&str>)
+        .map_err(|e| menu_err("Failed to build pet menu close item", e))?;
 
     let mut builder = MenuBuilder::new(&app).item(&header).item(&sep1);
     for item in &scale_items {
@@ -1320,8 +1451,7 @@ pub async fn update_appearance_mode(
 /// (light, dark, accent). The colored window icon won't get this
 /// treatment and looks out of place next to other system icons.
 #[cfg(all(feature = "tauri-runtime", target_os = "macos"))]
-const MACOS_TRAY_TEMPLATE_PNG: &[u8] =
-    include_bytes!("../../icons/tray-icon-template.png");
+const MACOS_TRAY_TEMPLATE_PNG: &[u8] = include_bytes!("../../icons/tray-icon-template.png");
 
 #[cfg(all(feature = "tauri-runtime", target_os = "macos"))]
 fn load_macos_tray_template_icon() -> Result<tauri::image::Image<'static>, String> {
@@ -1454,8 +1584,7 @@ pub fn install_tray_icon(
         None::<&str>,
     )?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let quit_item =
-        MenuItem::with_id(app, TRAY_MENU_ID_QUIT, labels.quit, true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, TRAY_MENU_ID_QUIT, labels.quit, true, None::<&str>)?;
     let menu = MenuBuilder::new(app)
         .items(&[&show_item, &separator, &quit_item])
         .build()?;
@@ -1535,8 +1664,7 @@ pub fn refresh_tray_menu(
         None::<&str>,
     )?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let quit_item =
-        MenuItem::with_id(app, TRAY_MENU_ID_QUIT, labels.quit, true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, TRAY_MENU_ID_QUIT, labels.quit, true, None::<&str>)?;
     let menu = MenuBuilder::new(app)
         .items(&[&show_item, &separator, &quit_item])
         .build()?;

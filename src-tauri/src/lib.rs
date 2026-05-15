@@ -1,5 +1,7 @@
-mod acp;
-pub use acp::{idle_sweep_task, idle_timeout_from_env, lifecycle_subscriber_task, SWEEP_INTERVAL_SECS};
+pub mod acp;
+pub use acp::{
+    idle_sweep_task, idle_timeout_from_env, lifecycle_subscriber_task, SWEEP_INTERVAL_SECS,
+};
 pub use network::proxy::init_proxy_from_db;
 mod app_error;
 pub mod app_state;
@@ -39,13 +41,14 @@ mod tauri_app {
     use crate::commands::{
         acp as acp_commands, chat_channel as chat_channel_commands, conversations,
         experts as experts_commands, file_io, folder_commands, folders, mcp as mcp_commands,
-        model_provider as model_provider_commands, notification, pet as pet_commands,
-        project_boot, quick_messages as quick_messages_commands, system_settings,
+        model_provider as model_provider_commands, notification, pet as pet_commands, project_boot,
+        quick_messages as quick_messages_commands, remote_proxy as remote_proxy_commands,
+        remote_workspace as remote_workspace_commands, system_settings,
         terminal as terminal_commands, version_control, windows,
         workspace_state as workspace_state_commands,
     };
     use crate::terminal::manager::TerminalManager;
-    use crate::{db, network, process, web};
+    use crate::{db, git_credential, network, paths, process, web};
     use tauri::Manager;
 
     static APP_QUITTING: AtomicBool = AtomicBool::new(false);
@@ -101,10 +104,7 @@ mod tauri_app {
         }
 
         let mut tokens: Vec<String> = match std::env::var(ENV_KEY) {
-            Ok(prev) => prev
-                .split_whitespace()
-                .map(str::to_string)
-                .collect(),
+            Ok(prev) => prev.split_whitespace().map(str::to_string).collect(),
             Err(_) => Vec::new(),
         };
         for arg in DISABLE_GPU_ARGS {
@@ -161,16 +161,100 @@ mod tauri_app {
             .manage(windows::CommitWindowState::new())
             .manage(windows::MergeWindowState::new())
             .manage(web::WebServerState::new())
+            // Remote-workspace IPC proxy. Routes HTTP / WS for windows
+            // opened against a remote codeg-server through Rust so we
+            // bypass webview mixed-content blocking and can centrally
+            // manage per-window subscriptions.
+            .manage(std::sync::Arc::new(
+                crate::commands::remote_proxy::RemoteProxyState::new(),
+            ))
             .manage(std::sync::Arc::new(
                 web::event_bridge::WebEventBroadcaster::new(),
             ))
+            // In-process ACP event bus — typed `Arc<EventEnvelope>` delivery
+            // to lifecycle / pet / chat-channel subscribers. Distinct from
+            // the JSON-shape `WebEventBroadcaster` above. The metrics handle
+            // lives inside the bus so the `/debug/event_metrics` endpoint
+            // and shutdown logs can read it.
+            .manage({
+                let metrics =
+                    std::sync::Arc::new(crate::acp::EventBusMetrics::default());
+                std::sync::Arc::new(crate::acp::InternalEventBus::new(metrics))
+            })
             .manage(crate::pet_state_mapper::new_pet_state_handle())
             .setup(|app| {
                 let app_data_dir = app.path().app_data_dir()?;
+
+                // Unify the data root across every consumer:
+                //   * SQLite database (initialised below)
+                //   * `paths::codeg_uploads_root` / `codeg_pets_root`
+                //   * `AppState.data_dir` and every desktop command
+                //     that injects a git credential helper / askpass
+                //     into a subprocess (terminal, ACP, folder ops)
+                //
+                // The contract is "one effective root, end of story."
+                // `paths::resolve_effective_data_dir` is the single
+                // source of truth; every desktop call site that
+                // historically read `app.path().app_data_dir()` and
+                // passed it to a credential helper has been migrated
+                // to the same helper so a pre-set `CODEG_DATA_DIR` is
+                // honored end-to-end.
+                //
+                // We also write the absolutized value back to the env,
+                // even when the operator pre-set it, so:
+                //   * subprocesses inherit an absolute path (a relative
+                //     `CODEG_DATA_DIR` would otherwise re-resolve
+                //     against the subprocess CWD, which may differ
+                //     from ours), and
+                //   * any future caller that reaches for the env
+                //     directly sees the same value the in-process
+                //     resolver returns.
+                //
+                // `set_var` is `unsafe` in edition 2024. We are still
+                // single-threaded at this point: `setup` runs on the
+                // main thread before any window or async runtime task
+                // reads the var, the Tauri plugins registered above
+                // (window state, opener, dialog, updater, process,
+                // notification) do not read `CODEG_DATA_DIR`, and the
+                // value is never mutated again for the lifetime of the
+                // process.
+                let effective_data_dir = paths::resolve_effective_data_dir(&app_data_dir);
+                // SAFETY: see the rationale block above — still
+                // single-threaded at setup; edition 2024 will require
+                // the `unsafe` block, mirroring the WebView2 rendering
+                // override.
+                unsafe {
+                    std::env::set_var("CODEG_DATA_DIR", &effective_data_dir);
+                }
+
+                // `CODEG_HOME` overrides `CODEG_DATA_DIR` inside
+                // `paths::codeg_uploads_root` / `codeg_pets_root` for
+                // backwards-compatibility with the legacy `~/.codeg/`
+                // layout. If both are set and point at different roots,
+                // uploads/pets land on `CODEG_HOME` while the database
+                // lands on `CODEG_DATA_DIR` — a silent split. The
+                // backup story here is "loud warning, no automatic
+                // override": the operator likely meant one of them, but
+                // we don't know which.
+                if let Some(home) = std::env::var_os("CODEG_HOME").filter(|s| !s.is_empty()) {
+                    let home_path = git_credential::absolutize(std::path::Path::new(&home));
+                    if home_path != effective_data_dir {
+                        eprintln!(
+                            "[paths][WARN] CODEG_HOME ({}) and CODEG_DATA_DIR ({}) point at different roots. \
+                             Uploads/pets follow CODEG_HOME; the database follows CODEG_DATA_DIR. \
+                             Unset one or align them to avoid split state.",
+                            home_path.display(),
+                            effective_data_dir.display()
+                        );
+                    }
+                }
+
                 let app_version = env!("CARGO_PKG_VERSION");
-                let database =
-                    tauri::async_runtime::block_on(db::init_database(&app_data_dir, app_version))
-                        .map_err(|e| e.to_string())?;
+                let database = tauri::async_runtime::block_on(db::init_database(
+                    &effective_data_dir,
+                    app_version,
+                ))
+                .map_err(|e| e.to_string())?;
                 app.manage(database);
 
                 // Restore and apply saved system proxy settings before any network operation.
@@ -234,18 +318,28 @@ mod tauri_app {
                     let db_conn = app.state::<db::AppDatabase>().conn.clone();
                     let ccm_ref = ccm.clone_ref();
                     let br = broadcaster.inner().clone();
+                    let bus = app
+                        .state::<std::sync::Arc<crate::acp::InternalEventBus>>()
+                        .inner()
+                        .clone();
                     let cm = app.state::<ConnectionManager>().clone_ref();
                     let emitter = web::event_bridge::EventEmitter::Tauri(app.handle().clone());
                     tauri::async_runtime::spawn(async move {
-                        ccm_ref.start_background(br, db_conn, cm, emitter).await;
+                        ccm_ref.start_background(br, bus, db_conn, cm, emitter).await;
                     });
                 }
 
                 // Spawn the desktop pet state mapper: subscribes to ACP events
-                // and emits `pet://state` whenever the aggregated pet state
+                // (typed envelopes via the in-process bus) AND folder/app
+                // side-channel notifications (JSON via the broadcaster), and
+                // emits `pet://state` whenever the aggregated pet state
                 // changes. The renderer in the floating pet window listens
                 // for these events to drive its sprite animation row.
                 {
+                    let bus = app
+                        .state::<std::sync::Arc<crate::acp::InternalEventBus>>()
+                        .inner()
+                        .clone();
                     let broadcaster = app
                         .state::<std::sync::Arc<web::event_bridge::WebEventBroadcaster>>()
                         .inner()
@@ -255,11 +349,14 @@ mod tauri_app {
                         .state::<crate::pet_state_mapper::PetStateHandle>()
                         .inner()
                         .clone();
-                    tauri::async_runtime::spawn(crate::pet_state_mapper::pet_state_subscriber_task(
-                        broadcaster,
-                        emitter,
-                        pet_state_handle,
-                    ));
+                    tauri::async_runtime::spawn(
+                        crate::pet_state_mapper::pet_state_subscriber_task(
+                            bus,
+                            broadcaster,
+                            emitter,
+                            pet_state_handle,
+                        ),
+                    );
                 }
 
                 // Spawn the LifecycleSubscriber: persists cross-connection DB state
@@ -271,14 +368,12 @@ mod tauri_app {
                 {
                     let db_conn = app.state::<db::AppDatabase>().conn.clone();
                     let cm = app.state::<ConnectionManager>().clone_ref();
-                    let broadcaster = app
-                        .state::<std::sync::Arc<web::event_bridge::WebEventBroadcaster>>()
+                    let bus = app
+                        .state::<std::sync::Arc<crate::acp::InternalEventBus>>()
                         .inner()
                         .clone();
                     tauri::async_runtime::spawn(crate::acp::lifecycle_subscriber_task(
-                        db_conn,
-                        cm,
-                        broadcaster,
+                        db_conn, cm, bus,
                     ));
                 }
 
@@ -376,7 +471,7 @@ mod tauri_app {
             .on_window_event(|window, event| {
                 let label = window.label().to_string();
 
-                if label == "settings"
+                if (label == "settings" || label.starts_with("remote-settings-"))
                     && matches!(
                         event,
                         tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
@@ -384,11 +479,11 @@ mod tauri_app {
                 {
                     let app = window.app_handle();
                     if let Some(state) = app.try_state::<windows::SettingsWindowState>() {
-                        windows::restore_windows_after_settings(app, &state);
+                        windows::restore_windows_after_settings(app, &state, &label);
                     }
                 }
 
-                if label.starts_with("commit-")
+                if (label.starts_with("commit-") || label.starts_with("remote-commit-"))
                     && matches!(
                         event,
                         tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
@@ -400,7 +495,7 @@ mod tauri_app {
                     }
                 }
 
-                if label.starts_with("merge-")
+                if (label.starts_with("merge-") || label.starts_with("remote-merge-"))
                     && matches!(
                         event,
                         tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
@@ -410,18 +505,19 @@ mod tauri_app {
                     if let Some(state) = app.try_state::<windows::MergeWindowState>() {
                         windows::restore_window_after_merge(app, &state, &label);
                     }
-                    let app_clone = window.app_handle().clone();
-                    let label_clone = label.clone();
-                    tauri::async_runtime::spawn(async move {
-                        windows::cleanup_dangling_merge(&app_clone, &label_clone).await;
-                    });
+                    if label.starts_with("merge-") {
+                        let app_clone = window.app_handle().clone();
+                        let label_clone = label.clone();
+                        tauri::async_runtime::spawn(async move {
+                            windows::cleanup_dangling_merge(&app_clone, &label_clone).await;
+                        });
+                    }
                 }
 
                 if label == "pet"
                     && matches!(
                         event,
-                        tauri::WindowEvent::CloseRequested { .. }
-                            | tauri::WindowEvent::Destroyed
+                        tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
                     )
                 {
                     // Persist `enabled = false` so the next launch doesn't
@@ -580,6 +676,7 @@ mod tauri_app {
                 workspace_state_commands::get_workspace_snapshot,
                 folders::get_home_directory,
                 folders::list_directory_entries,
+                folders::list_directory_with_files,
                 folders::get_file_tree,
                 folders::read_file_base64,
                 folders::read_file_preview,
@@ -598,6 +695,20 @@ mod tauri_app {
                 windows::open_stash_window,
                 windows::open_push_window,
                 windows::open_project_boot_window,
+                remote_workspace_commands::list_remote_workspace_connections,
+                remote_workspace_commands::create_remote_workspace_connection,
+                remote_workspace_commands::update_remote_workspace_connection,
+                remote_workspace_commands::delete_remote_workspace_connection,
+                remote_workspace_commands::test_remote_workspace_connection,
+                remote_workspace_commands::get_remote_workspace_connection,
+                remote_workspace_commands::reorder_remote_workspace_connections,
+                remote_workspace_commands::open_remote_workspace,
+                remote_proxy_commands::remote_http_call,
+                remote_proxy_commands::remote_upload_attachment,
+                remote_proxy_commands::read_local_file_for_upload,
+                remote_proxy_commands::remote_ws_subscribe,
+                remote_proxy_commands::remote_ws_unsubscribe,
+                remote_proxy_commands::remote_ws_send_text,
                 windows::open_pet_window,
                 windows::close_pet_window,
                 windows::pet_window_record_position,

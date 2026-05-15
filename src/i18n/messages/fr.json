@@ -822,6 +822,7 @@
       "expandAllGroups": "Développer tous les groupes",
       "collapseAllGroups": "Réduire tous les groupes",
       "newConversation": "Nouvelle conversation",
+      "newConversationShort": "Nouvelle",
       "noConversationsFound": "Aucune conversation trouvée.",
       "importLocalSessions": "Importer les sessions locales",
       "importing": "Import en cours...",
@@ -863,6 +864,7 @@
       "folderHeaderMenu": {
         "manageConversations": "Gérer les conversations…",
         "changeColor": "Changer la couleur",
+        "useThemeColor": "Utiliser le thème de l'app",
         "removeFromWorkspace": "Retirer de l'espace de travail"
       },
       "manageConversations": {
@@ -1651,7 +1653,13 @@
         "expertSkills": "Compétences d'expert",
         "expertsEmptyForAgent": "Cet agent n'a aucun expert activé. Activez-les dans Paramètres > Experts.",
         "slashSearchPlaceholder": "Rechercher des commandes...",
-        "slashSearchEmpty": "Aucune commande correspondante"
+        "slashSearchEmpty": "Aucune commande correspondante",
+        "attachLocalUpload": "Téléverser un fichier local",
+        "attachServerFile": "Sélectionner un fichier serveur",
+        "attachUploadTooLarge": "{names} dépasse la limite de téléversement de {limit} Mo et a été ignoré.",
+        "attachUploadFailed": "Échec du téléversement de {names}.",
+        "attachUploadNotAFile": "{names} n'est pas un fichier régulier (répertoire ou fichier spécial) et a été ignoré.",
+        "attachUploadQuotaExceeded": "Le serveur n'a plus d'espace pour les téléversements ; {names} n'a pas pu être envoyé."
       },
       "messageQueue": {
         "addToQueue": "Mettre en file",
@@ -2364,5 +2372,49 @@
         "alreadyInstalled": "La mascotte existe déjà localement"
       }
     }
+  },
+  "RemoteWorkspace": {
+    "openRemoteWorkspace": "Open remote workspace",
+    "manage": "Manage remote workspace",
+    "manageTitle": "Remote Workspace connections",
+    "empty": "No remote connections",
+    "searchPlaceholder": "Search remote workspaces",
+    "orderFailed": "Failed to save remote workspace order",
+    "dragSort": "Drag to sort",
+    "dragSortConnection": "Drag to sort {name}",
+    "newConnection": "New connection",
+    "loading": "Loading",
+    "loadingConnection": "Loading remote connection",
+    "name": "Name",
+    "baseUrl": "Service URL",
+    "token": "Access token",
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": {
+      "title": "Delete remote connection?",
+      "message": "This will remove \"{name}\" from this device. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "saved": "Remote connection saved.",
+    "deleted": "Remote connection deleted.",
+    "loadFailed": "Failed to load remote connections",
+    "saveFailed": "Failed to save remote connection",
+    "deleteFailed": "Failed to delete remote connection",
+    "openFailed": "Failed to open remote workspace",
+    "connectionLoadFailed": "Failed to load remote connection: {message}",
+    "connectionExpired": "Remote connection \"{name}\" is expired. Update its token and reload this window."
+  },
+  "ServerFileBrowser": {
+    "title": "Sélectionner un fichier serveur",
+    "pathPlaceholder": "Saisir le chemin du dossier...",
+    "goHome": "Aller au dossier personnel",
+    "navigateUp": "Aller au dossier parent",
+    "select": "Sélectionner",
+    "cancel": "Annuler",
+    "loading": "Chargement...",
+    "emptyDirectory": "Ce dossier est vide",
+    "errorLoadingDir": "Échec du chargement du dossier",
+    "selectedCount": "{count} sélectionné(s)"
   }
 }

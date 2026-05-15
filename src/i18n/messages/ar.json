@@ -822,6 +822,7 @@
       "expandAllGroups": "توسيع كل المجموعات",
       "collapseAllGroups": "طي كل المجموعات",
       "newConversation": "محادثة جديدة",
+      "newConversationShort": "جديدة",
       "noConversationsFound": "لم يتم العثور على محادثات.",
       "importLocalSessions": "استيراد الجلسات المحلية",
       "importing": "جارٍ الاستيراد...",
@@ -863,6 +864,7 @@
       "folderHeaderMenu": {
         "manageConversations": "إدارة المحادثات…",
         "changeColor": "تغيير اللون",
+        "useThemeColor": "استخدام سمة التطبيق",
         "removeFromWorkspace": "إزالة من مساحة العمل"
       },
       "manageConversations": {
@@ -1651,7 +1653,13 @@
         "expertSkills": "مهارات الخبراء",
         "expertsEmptyForAgent": "لا يحتوي هذا العميل على خبراء مفعّلين. فعّلهم من الإعدادات > الخبراء.",
         "slashSearchPlaceholder": "البحث عن الأوامر...",
-        "slashSearchEmpty": "لا توجد أوامر مطابقة"
+        "slashSearchEmpty": "لا توجد أوامر مطابقة",
+        "attachLocalUpload": "تحميل ملف محلي",
+        "attachServerFile": "اختيار ملف من الخادم",
+        "attachUploadTooLarge": "{names} يتجاوز حد التحميل {limit}MB وتم تخطيه.",
+        "attachUploadFailed": "فشل تحميل {names}.",
+        "attachUploadNotAFile": "{names} ليس ملفاً عادياً (مجلد أو ملف خاص) وتم تخطيه.",
+        "attachUploadQuotaExceeded": "نفدت مساحة التحميل على الخادم، تعذر رفع {names}."
       },
       "messageQueue": {
         "addToQueue": "إضافة للقائمة",
@@ -2364,5 +2372,49 @@
         "alreadyInstalled": "هذا الحيوان موجود بالفعل"
       }
     }
+  },
+  "RemoteWorkspace": {
+    "openRemoteWorkspace": "Open remote workspace",
+    "manage": "Manage remote workspace",
+    "manageTitle": "Remote Workspace connections",
+    "empty": "No remote connections",
+    "searchPlaceholder": "Search remote workspaces",
+    "orderFailed": "Failed to save remote workspace order",
+    "dragSort": "Drag to sort",
+    "dragSortConnection": "Drag to sort {name}",
+    "newConnection": "New connection",
+    "loading": "Loading",
+    "loadingConnection": "Loading remote connection",
+    "name": "Name",
+    "baseUrl": "Service URL",
+    "token": "Access token",
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": {
+      "title": "Delete remote connection?",
+      "message": "This will remove \"{name}\" from this device. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "saved": "Remote connection saved.",
+    "deleted": "Remote connection deleted.",
+    "loadFailed": "Failed to load remote connections",
+    "saveFailed": "Failed to save remote connection",
+    "deleteFailed": "Failed to delete remote connection",
+    "openFailed": "Failed to open remote workspace",
+    "connectionLoadFailed": "Failed to load remote connection: {message}",
+    "connectionExpired": "Remote connection \"{name}\" is expired. Update its token and reload this window."
+  },
+  "ServerFileBrowser": {
+    "title": "اختر ملفًا من الخادم",
+    "pathPlaceholder": "أدخل مسار الدليل...",
+    "goHome": "اذهب إلى المجلد الرئيسي",
+    "navigateUp": "اذهب إلى المجلد الأعلى",
+    "select": "اختر",
+    "cancel": "إلغاء",
+    "loading": "جارٍ التحميل...",
+    "emptyDirectory": "هذا المجلد فارغ",
+    "errorLoadingDir": "فشل تحميل المجلد",
+    "selectedCount": "{count} محدد"
   }
 }

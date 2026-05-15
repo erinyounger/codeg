@@ -1,10 +1,50 @@
 use std::collections::BTreeMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::db::error::DbError;
 
-#[derive(Debug, Clone, Copy, Serialize)]
+// ─── Shared i18n keys ─────────────────────────────────────────────────
+//
+// The wire-format strings that backend errors stamp via `with_i18n` and
+// the frontend branches on via `extractAppCommandError(err).i18n_key`.
+// They live here — not in any individual command module — because the
+// same key can be emitted from multiple Rust sites (e.g.
+// `errors.upload.tooLarge` comes from `commands/remote_proxy.rs` AND
+// from `web/handlers/files.rs`) and consumed by a single TS branch.
+//
+// **MUST stay in lockstep with the TypeScript constants** in
+// `src/lib/api.ts` (`UPLOAD_I18N_KEY_TOO_LARGE` /
+// `UPLOAD_I18N_KEY_NOT_A_FILE`). The unit test in
+// `commands/remote_proxy.rs::tests::upload_i18n_keys_have_expected_values`
+// asserts the literal values on the Rust side so an accidental rename
+// becomes a loud CI failure rather than a silent demotion to the
+// generic "upload failed" toast.
+
+/// Error key emitted when an upload payload exceeds `UPLOAD_MAX_BYTES`,
+/// at any of three layers (local pre-read, base64 pre-decode, post-decode).
+/// Frontend params: `size`, `limit`.
+pub const UPLOAD_I18N_KEY_TOO_LARGE: &str = "errors.upload.tooLarge";
+
+/// Error key emitted when `read_local_file_for_upload` is handed a path
+/// that resolves to a directory, FIFO, device node, or other non-regular
+/// file. No params.
+///
+/// Only `commands/remote_proxy.rs` emits this today (the command is gated
+/// on `feature = "tauri-runtime"`), so the server-only build won't see a
+/// use site. The constant still has to exist there because it is part of
+/// the wire-format contract the frontend depends on, hence `allow(dead_code)`.
+#[allow(dead_code)]
+pub const UPLOAD_I18N_KEY_NOT_A_FILE: &str = "errors.upload.notAFile";
+
+/// Error key emitted when accepting one more upload would push the
+/// `uploads_root/` directory past `CODEG_UPLOAD_MAX_TOTAL_BYTES`. The
+/// per-file 2 MiB cap protects against one big payload; this cap
+/// protects against an attacker accumulating many small ones.
+/// Frontend params: `used`, `limit` (both byte counts as strings).
+pub const UPLOAD_I18N_KEY_QUOTA_EXCEEDED: &str = "errors.upload.quotaExceeded";
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AppErrorCode {
     InvalidInput,
@@ -24,21 +64,21 @@ pub enum AppErrorCode {
     TaskExecutionFailed,
 }
 
-#[derive(Debug, Clone, Serialize, thiserror::Error)]
+#[derive(Debug, Clone, Serialize, Deserialize, thiserror::Error)]
 #[error("{message}")]
 pub struct AppCommandError {
     pub code: AppErrorCode,
     pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
     /// Optional dotted i18n key (e.g. `"mcp.errors.unsupportedType"`) the
     /// frontend can use to render a localized message. When absent, the
     /// frontend falls back to `message` (English).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub i18n_key: Option<String>,
     /// Optional named parameters substituted into the localized template.
     /// All values are pre-stringified so the wire format stays JSON-safe.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub i18n_params: Option<BTreeMap<String, String>>,
 }
 
@@ -60,11 +100,7 @@ impl AppCommandError {
 
     /// Attach a localized rendering hint. The frontend prefers this over
     /// `message` when displaying the error to the user. `params` may be empty.
-    pub fn with_i18n(
-        mut self,
-        key: impl Into<String>,
-        params: BTreeMap<String, String>,
-    ) -> Self {
+    pub fn with_i18n(mut self, key: impl Into<String>, params: BTreeMap<String, String>) -> Self {
         self.i18n_key = Some(key.into());
         if !params.is_empty() {
             self.i18n_params = Some(params);

@@ -31,18 +31,65 @@ fn main() {
     codeg_lib::process::ensure_node_in_path();
     codeg_lib::process::ensure_user_npm_prefix_in_path();
 
-    // Pin CODEG_DATA_DIR to an absolute path before any threads exist.
-    // The server's own `state.data_dir` is also absolutized below, but we
-    // need the env var itself to be absolute too: child processes (notably
-    // the credential helper subprocess invoked by git from inside the
-    // user's repo) inherit it and use it via `keyring_store::tokens_file_path`
-    // to find `tokens.json`. A relative `CODEG_DATA_DIR=data` would
-    // otherwise resolve against git's CWD, not the server's startup CWD,
-    // and the helper would silently miss the token file even though it
-    // found the database.
-    if let Ok(value) = std::env::var("CODEG_DATA_DIR") {
-        let abs = codeg_lib::git_credential::absolutize(&PathBuf::from(value));
-        std::env::set_var("CODEG_DATA_DIR", &abs);
+    // Resolve and pin `CODEG_DATA_DIR` before any threads exist.
+    //
+    // Two things matter here, both single-shot:
+    //
+    // 1. Absolutize: child processes (notably the credential helper
+    //    subprocess invoked by git from inside the user's repo) inherit
+    //    the env var and use it via `keyring_store::tokens_file_path` to
+    //    find `tokens.json`. A relative `CODEG_DATA_DIR=data` would
+    //    otherwise resolve against git's CWD, not the server's startup
+    //    CWD, and the helper would silently miss the token file even
+    //    though we found the database.
+    //
+    // 2. Fill in the default if unset, so every downstream resolver —
+    //    `paths::codeg_uploads_root`, `paths::codeg_pets_root`,
+    //    the credential subprocess — converges on the same root the
+    //    server itself chose for the database. Without this, a default
+    //    deployment (env var unset) puts the DB under
+    //    `dirs::data_dir()/codeg` but uploads under `~/.codeg/uploads`,
+    //    splitting the persistent surface across two filesystem roots
+    //    and silently breaking single-volume backups, container mounts,
+    //    and any `file://` URI in session history that points at an
+    //    upload.
+    //
+    // `std::env::set_var` is not thread-safe (unsafe in Rust edition
+    // 2024); doing this before the tokio runtime is built guarantees we
+    // are still single-threaded.
+    let resolved_data_dir = std::env::var("CODEG_DATA_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| default_data_dir());
+    let resolved_data_dir = codeg_lib::git_credential::absolutize(&resolved_data_dir);
+    std::env::set_var("CODEG_DATA_DIR", &resolved_data_dir);
+
+    // `CODEG_HOME` overrides `CODEG_DATA_DIR` for uploads/pets inside
+    // `paths::codeg_*_root` (legacy `~/.codeg/` layout). If both are set
+    // and resolve to different roots, the database and uploads land on
+    // different filesystems — a silent split. Warn loudly so the
+    // operator notices before relying on a backup or volume mount that
+    // only covers one of them.
+    if let Some(home) = std::env::var_os("CODEG_HOME").filter(|s| !s.is_empty()) {
+        let home_path = codeg_lib::git_credential::absolutize(std::path::Path::new(&home));
+        if home_path != resolved_data_dir {
+            eprintln!(
+                "[paths][WARN] CODEG_HOME ({}) and CODEG_DATA_DIR ({}) point at different roots. \
+                 Uploads/pets follow CODEG_HOME; the database follows CODEG_DATA_DIR. \
+                 Unset one or align them to avoid split state.",
+                home_path.display(),
+                resolved_data_dir.display()
+            );
+        }
+    }
+
+    // Strict-mode quota validation runs before any I/O. Failing fast
+    // here means a misconfigured strict deployment never reaches the
+    // tokio runtime, never binds a port, and never persists config —
+    // the operator sees the FATAL line and a clean exit code 2.
+    codeg_lib::web::handlers::files::log_upload_quota_config_at_startup();
+    if let Err(err) = codeg_lib::web::handlers::files::validate_upload_quota_config() {
+        eprintln!("[uploads][FATAL] {err}; aborting startup.");
+        std::process::exit(2);
     }
 
     tokio::runtime::Builder::new_multi_thread()
@@ -68,14 +115,11 @@ async fn async_main() {
         .unwrap_or(3080);
     let host = std::env::var("CODEG_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let token = std::env::var("CODEG_TOKEN").unwrap_or_else(|_| generate_random_token());
-    let data_dir = std::env::var("CODEG_DATA_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| default_data_dir());
-    // Absolutize so a relative `CODEG_DATA_DIR` (or relative default) doesn't
-    // tie us to the server's startup CWD: subprocess credential helpers,
-    // terminals spawned in the user's repo, and other consumers all derive
-    // paths from `state.data_dir` and need a stable absolute root.
-    let data_dir = codeg_lib::git_credential::absolutize(&data_dir);
+    // CODEG_DATA_DIR was already resolved and absolutized in `main()` so
+    // all path resolvers across the process see the same root. Read it
+    // back rather than re-deriving the default.
+    let data_dir =
+        PathBuf::from(std::env::var("CODEG_DATA_DIR").expect("CODEG_DATA_DIR set by main()"));
     let static_dir_env = std::env::var("CODEG_STATIC_DIR").ok();
 
     let static_dir = find_static_dir_standalone(static_dir_env.as_deref());
@@ -95,9 +139,13 @@ async fn async_main() {
     // config at build time, so this must run before the first one is constructed.
     codeg_lib::init_proxy_from_db(&db.conn).await;
 
-    // Create shared broadcaster
+    // Create shared broadcaster + internal ACP event bus.
     let broadcaster = Arc::new(WebEventBroadcaster::new());
-    let emitter = EventEmitter::WebOnly(broadcaster.clone());
+    let event_bus_metrics = Arc::new(codeg_lib::acp::EventBusMetrics::default());
+    let acp_event_bus = Arc::new(codeg_lib::acp::InternalEventBus::new(
+        event_bus_metrics.clone(),
+    ));
+    let emitter = EventEmitter::web_only(broadcaster.clone(), acp_event_bus.clone());
 
     // Build AppState
     let pet_state_handle = codeg_lib::pet_state_mapper::new_pet_state_handle();
@@ -106,6 +154,7 @@ async fn async_main() {
         connection_manager: codeg_lib::app_state::default_connection_manager(),
         terminal_manager: codeg_lib::app_state::default_terminal_manager(),
         event_broadcaster: broadcaster,
+        acp_event_bus: acp_event_bus.clone(),
         emitter,
         data_dir,
         web_server_state: WebServerState::new(),
@@ -139,6 +188,7 @@ async fn async_main() {
         .chat_channel_manager
         .start_background(
             state.event_broadcaster.clone(),
+            state.acp_event_bus.clone(),
             state.db.conn.clone(),
             state.connection_manager.clone_ref(),
             state.emitter.clone(),
@@ -149,13 +199,16 @@ async fn async_main() {
     tokio::spawn(codeg_lib::lifecycle_subscriber_task(
         state.db.conn.clone(),
         state.connection_manager.clone_ref(),
-        state.event_broadcaster.clone(),
+        state.acp_event_bus.clone(),
     ));
 
     // Spawn the desktop pet state mapper so server-mode browsers viewing
     // /pet receive `pet://state` and `pet://oneshot` over the WebSocket
-    // bridge, just like the Tauri webview does in desktop mode.
+    // bridge, just like the Tauri webview does in desktop mode. ACP events
+    // come through the typed bus; folder/app side-channels stay on the
+    // JSON broadcaster.
     tokio::spawn(codeg_lib::pet_state_mapper::pet_state_subscriber_task(
+        state.acp_event_bus.clone(),
         state.event_broadcaster.clone(),
         state.emitter.clone(),
         pet_state_handle,
@@ -172,6 +225,12 @@ async fn async_main() {
             std::time::Duration::from_secs(codeg_lib::SWEEP_INTERVAL_SECS),
         ));
     }
+
+    // Sweep abandoned upload staging files from any prior run before
+    // serving the first request. The quota log/validate ran earlier in
+    // `main` so strict-mode misconfigurations abort before we touch
+    // disk; no second log line here.
+    codeg_lib::web::handlers::files::purge_upload_staging().await;
 
     // Build router
     let shutdown_signal = state.web_server_state.shutdown_signal();

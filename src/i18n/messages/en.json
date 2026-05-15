@@ -822,6 +822,7 @@
       "expandAllGroups": "Expand All Groups",
       "collapseAllGroups": "Collapse All Groups",
       "newConversation": "New Conversation",
+      "newConversationShort": "New",
       "noConversationsFound": "No conversations found.",
       "importLocalSessions": "Import local sessions",
       "importing": "Importing...",
@@ -863,6 +864,7 @@
       "folderHeaderMenu": {
         "manageConversations": "Manage conversations…",
         "changeColor": "Change color",
+        "useThemeColor": "Use app theme",
         "removeFromWorkspace": "Remove from workspace"
       },
       "manageConversations": {
@@ -1634,6 +1636,8 @@
         "askAnything": "Ask anything...",
         "removeAttachmentAria": "Remove {name}",
         "attachFiles": "Attach files",
+        "attachLocalUpload": "Upload local file",
+        "attachServerFile": "Pick server file",
         "addActions": "Add",
         "quickMessages": "Quick messages",
         "quickMessagesEmpty": "No quick messages yet",
@@ -1651,7 +1655,11 @@
         "expertSkills": "Expert skills",
         "expertsEmptyForAgent": "This agent has no enabled experts. Enable them in Settings > Experts.",
         "slashSearchPlaceholder": "Search commands...",
-        "slashSearchEmpty": "No matching commands"
+        "slashSearchEmpty": "No matching commands",
+        "attachUploadTooLarge": "{names} exceeds the {limit}MB upload limit and was skipped.",
+        "attachUploadFailed": "Failed to upload {names}.",
+        "attachUploadNotAFile": "{names} isn't a regular file (directory or special file) and was skipped.",
+        "attachUploadQuotaExceeded": "The server is out of upload storage; {names} couldn't be uploaded."
       },
       "messageQueue": {
         "addToQueue": "Queue message",
@@ -2038,6 +2046,18 @@
     "errorLoadingDir": "Failed to load directory",
     "permissionDenied": "Permission denied"
   },
+  "ServerFileBrowser": {
+    "title": "Pick server file",
+    "pathPlaceholder": "Enter directory path...",
+    "goHome": "Go to home directory",
+    "navigateUp": "Go to parent directory",
+    "select": "Select",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "emptyDirectory": "This directory is empty",
+    "errorLoadingDir": "Failed to load directory",
+    "selectedCount": "{count} selected"
+  },
   "ChatChannelSettings": {
     "loading": "Loading...",
     "sectionTitle": "Chat Channels",
@@ -2364,5 +2384,37 @@
         "alreadyInstalled": "Pet already exists locally"
       }
     }
+  },
+  "RemoteWorkspace": {
+    "openRemoteWorkspace": "Open remote workspace",
+    "manage": "Manage remote workspace",
+    "manageTitle": "Remote Workspace connections",
+    "empty": "No remote connections",
+    "searchPlaceholder": "Search remote workspaces",
+    "orderFailed": "Failed to save remote workspace order",
+    "dragSort": "Drag to sort",
+    "dragSortConnection": "Drag to sort {name}",
+    "newConnection": "New connection",
+    "loading": "Loading",
+    "loadingConnection": "Loading remote connection",
+    "name": "Name",
+    "baseUrl": "Service URL",
+    "token": "Access token",
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": {
+      "title": "Delete remote connection?",
+      "message": "This will remove \"{name}\" from this device. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "saved": "Remote connection saved.",
+    "deleted": "Remote connection deleted.",
+    "loadFailed": "Failed to load remote connections",
+    "saveFailed": "Failed to save remote connection",
+    "deleteFailed": "Failed to delete remote connection",
+    "openFailed": "Failed to open remote workspace",
+    "connectionLoadFailed": "Failed to load remote connection: {message}",
+    "connectionExpired": "Remote connection \"{name}\" is expired. Update its token and reload this window."
   }
 }

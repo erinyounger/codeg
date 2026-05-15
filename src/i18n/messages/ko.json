@@ -822,6 +822,7 @@
       "expandAllGroups": "모든 그룹 펼치기",
       "collapseAllGroups": "모든 그룹 접기",
       "newConversation": "새 대화",
+      "newConversationShort": "새로 만들기",
       "noConversationsFound": "대화를 찾을 수 없습니다.",
       "importLocalSessions": "로컬 세션 가져오기",
       "importing": "가져오는 중...",
@@ -863,6 +864,7 @@
       "folderHeaderMenu": {
         "manageConversations": "대화 관리…",
         "changeColor": "색상 변경",
+        "useThemeColor": "앱 테마 사용",
         "removeFromWorkspace": "워크스페이스에서 제거"
       },
       "manageConversations": {
@@ -1651,7 +1653,13 @@
         "expertSkills": "전문가 스킬",
         "expertsEmptyForAgent": "이 에이전트에 활성화된 전문가가 없습니다. 설정 > 전문가에서 활성화하세요.",
         "slashSearchPlaceholder": "명령 검색...",
-        "slashSearchEmpty": "일치하는 명령이 없습니다"
+        "slashSearchEmpty": "일치하는 명령이 없습니다",
+        "attachLocalUpload": "로컬 파일 첨부",
+        "attachServerFile": "서버 파일 첨부",
+        "attachUploadTooLarge": "{names}이(가) {limit}MB 업로드 한도를 초과하여 건너뛰었습니다.",
+        "attachUploadFailed": "{names} 업로드 실패.",
+        "attachUploadNotAFile": "{names} 은(는) 일반 파일이 아니므로(디렉터리 또는 특수 파일) 건너뛰었습니다.",
+        "attachUploadQuotaExceeded": "서버 업로드 저장 공간이 부족하여 {names} 을(를) 업로드하지 못했습니다."
       },
       "messageQueue": {
         "addToQueue": "대기열에 추가",
@@ -2364,5 +2372,49 @@
         "alreadyInstalled": "해당 펫이 이미 존재합니다"
       }
     }
+  },
+  "RemoteWorkspace": {
+    "openRemoteWorkspace": "Open remote workspace",
+    "manage": "Manage remote workspace",
+    "manageTitle": "Remote Workspace connections",
+    "empty": "No remote connections",
+    "searchPlaceholder": "Search remote workspaces",
+    "orderFailed": "Failed to save remote workspace order",
+    "dragSort": "Drag to sort",
+    "dragSortConnection": "Drag to sort {name}",
+    "newConnection": "New connection",
+    "loading": "Loading",
+    "loadingConnection": "Loading remote connection",
+    "name": "Name",
+    "baseUrl": "Service URL",
+    "token": "Access token",
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": {
+      "title": "Delete remote connection?",
+      "message": "This will remove \"{name}\" from this device. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "saved": "Remote connection saved.",
+    "deleted": "Remote connection deleted.",
+    "loadFailed": "Failed to load remote connections",
+    "saveFailed": "Failed to save remote connection",
+    "deleteFailed": "Failed to delete remote connection",
+    "openFailed": "Failed to open remote workspace",
+    "connectionLoadFailed": "Failed to load remote connection: {message}",
+    "connectionExpired": "Remote connection \"{name}\" is expired. Update its token and reload this window."
+  },
+  "ServerFileBrowser": {
+    "title": "서버 파일 선택",
+    "pathPlaceholder": "디렉토리 경로 입력...",
+    "goHome": "홈 디렉토리로",
+    "navigateUp": "상위 디렉토리로",
+    "select": "선택",
+    "cancel": "취소",
+    "loading": "로드 중...",
+    "emptyDirectory": "이 디렉토리는 비어 있습니다",
+    "errorLoadingDir": "디렉토리 로드 실패",
+    "selectedCount": "{count}개 선택됨"
   }
 }

@@ -153,22 +153,13 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
                   status={status}
                   size="sm"
                   className="absolute -right-0.5 -bottom-0.5 ring-2 ring-sidebar"
-                >
-                  {isOpenInTab ? (
-                    <span
-                      aria-hidden
-                      className="block h-[0.1875rem] w-[0.1875rem] rounded-full bg-sidebar"
-                    />
-                  ) : null}
-                </ConversationStatusDot>
+                />
               </div>
 
               <span
                 className={cn(
-                  "relative min-w-0 flex-1 truncate text-[0.875rem]",
-                  isSelected
-                    ? "font-semibold tracking-[-0.00625rem]"
-                    : "font-normal"
+                  "relative min-w-0 flex-1 truncate text-[0.875rem] font-normal",
+                  isOpenInTab && "text-primary"
                 )}
               >
                 {conversation.title || t("untitledConversation")}
