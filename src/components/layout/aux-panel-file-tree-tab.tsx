@@ -21,9 +21,12 @@ import { useWorkspaceContext } from "@/contexts/workspace-context"
 import { useWorkspaceStateStore } from "@/hooks/use-workspace-state-store"
 import { AuxPanelNoFolderEmpty } from "@/components/layout/aux-panel-no-folder-empty"
 import { WorkspaceDegradedBanner } from "@/components/layout/workspace-degraded-banner"
+import { WorkspaceUploadDialog } from "@/components/layout/workspace-upload-dialog"
 import {
   createFileTreeEntry,
   deleteFileTreeEntry,
+  downloadWorkspaceDir,
+  downloadWorkspaceFile,
   gitAddFiles,
   getFileTree,
   getGitBranch,
@@ -35,7 +38,9 @@ import {
   openCommitWindow,
   renameFileTreeEntry,
   saveFileCopy,
+  WORKSPACE_DOWNLOAD_CANCELLED,
 } from "@/lib/api"
+import { isDesktop, isRemoteDesktopMode } from "@/lib/transport"
 import { emitAttachFileToSession } from "@/lib/session-attachment-events"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { FileTreeNode, GitBranchList, GitStatusEntry } from "@/lib/types"
@@ -86,7 +91,13 @@ function parentDir(filePath: string): string {
   const slashIndex = filePath.lastIndexOf("/")
   const backslashIndex = filePath.lastIndexOf("\\")
   const splitIndex = Math.max(slashIndex, backslashIndex)
-  if (splitIndex < 0) return filePath
+  // No separator at all: the input is a leaf living at its root. For an
+  // OS path that's a degenerate "C:" / "foo" — we can't navigate above
+  // it, so the caller treated the result as the path itself. For a
+  // workspace-relative path like "README.md" the answer is "workspace
+  // root", encoded as empty string. The empty-string convention is the
+  // safer default and matches what every caller currently expects.
+  if (splitIndex < 0) return ""
   if (splitIndex === 0) return filePath.slice(0, 1)
   return filePath.slice(0, splitIndex)
 }
@@ -436,6 +447,8 @@ interface RenderNodeProps {
   workspacePath: string
   activeSessionTabId: string | null
   gitEnabled: boolean
+  webMode: boolean
+  folderUploadSupported: boolean
   gitStatusByPath: ReadonlyMap<string, string>
   gitChangedDirPaths: ReadonlySet<string>
   untrackedDirPaths: ReadonlySet<string>
@@ -453,6 +466,9 @@ interface RenderNodeProps {
   onRequestRename: (target: FileActionTarget) => void
   onRequestCreate: (parentPath: string, kind: "file" | "dir") => void
   onRequestDelete: (target: FileActionTarget) => void
+  onRequestUpload: (targetPath: string) => void
+  onRequestDownloadFile: (target: FileActionTarget) => void
+  onRequestDownloadDir: (target: FileActionTarget) => void
   onRefresh: () => void
 }
 
@@ -462,6 +478,8 @@ function RenderNode({
   workspacePath,
   activeSessionTabId,
   gitEnabled,
+  webMode,
+  folderUploadSupported,
   gitStatusByPath,
   gitChangedDirPaths,
   untrackedDirPaths,
@@ -479,6 +497,9 @@ function RenderNode({
   onRequestCreate,
   onRequestRename,
   onRequestDelete,
+  onRequestUpload,
+  onRequestDownloadFile,
+  onRequestDownloadDir,
   onRefresh,
 }: RenderNodeProps) {
   const t = useTranslations("Folder.fileTreeTab")
@@ -621,6 +642,18 @@ function RenderNode({
               </ContextMenuItem>
             </ContextMenuSubContent>
           </ContextMenuSub>
+          {webMode && (
+            <>
+              <ContextMenuItem
+                onSelect={() => onRequestUpload(parentDir(node.path))}
+              >
+                {t("upload")}
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={() => onRequestDownloadFile(node)}>
+                {t("download")}
+              </ContextMenuItem>
+            </>
+          )}
           <ContextMenuItem
             onSelect={() => onRequestDelete(node)}
             variant="destructive"
@@ -682,6 +715,8 @@ function RenderNode({
                   workspacePath={workspacePath}
                   activeSessionTabId={activeSessionTabId}
                   gitEnabled={gitEnabled}
+                  webMode={webMode}
+                  folderUploadSupported={folderUploadSupported}
                   gitStatusByPath={gitStatusByPath}
                   gitChangedDirPaths={gitChangedDirPaths}
                   untrackedDirPaths={untrackedDirPaths}
@@ -699,6 +734,9 @@ function RenderNode({
                   onRequestAddToVcs={onRequestAddToVcs}
                   onRequestRename={onRequestRename}
                   onRequestDelete={onRequestDelete}
+                  onRequestUpload={onRequestUpload}
+                  onRequestDownloadFile={onRequestDownloadFile}
+                  onRequestDownloadDir={onRequestDownloadDir}
                   onRefresh={onRefresh}
                 />
               ))
@@ -781,6 +819,16 @@ function RenderNode({
             </ContextMenuItem>
           </ContextMenuSubContent>
         </ContextMenuSub>
+        {webMode && (
+          <>
+            <ContextMenuItem onSelect={() => onRequestUpload(node.path)}>
+              {t("upload")}
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => onRequestDownloadDir(node)}>
+              {t("downloadAsZip")}
+            </ContextMenuItem>
+          </>
+        )}
         <ContextMenuItem onSelect={onRefresh}>
           {t("reloadFromDisk")}
         </ContextMenuItem>
@@ -1370,6 +1418,95 @@ export function FileTreeTab() {
   const handleRequestDelete = useCallback((target: FileActionTarget) => {
     setDeleteTarget(target)
   }, [])
+
+  // ─── Web upload / download (issue #179) ───
+  // In web mode the user has no native file dialog, so the file-tree
+  // context menu opens `WorkspaceUploadDialog`, which owns the queue,
+  // progress UI, and cancellation. We only track which directory the
+  // user right-clicked from and whether the dialog is open.
+  const [webMode, setWebMode] = useState(false)
+  // `webkitdirectory` is non-standard. Chromium, Edge, Firefox, and
+  // desktop Safari support it; iOS Safari does not, and historically
+  // some embedded webviews lacked it too. Feature-detect at mount and
+  // hide the "Select folder" affordance where the picker would silently
+  // fall back to single-file selection — that would surprise the user
+  // mid-flow and risk corrupting the relative-path contract.
+  const [folderUploadSupported, setFolderUploadSupported] = useState(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [uploadDialogTarget, setUploadDialogTarget] = useState("")
+  useEffect(() => {
+    // "webMode" here is a misnomer for "needs in-app upload/download
+    // affordances because there's no native OS file picker for the
+    // *destination/source* filesystem". That's true in pure-web mode
+    // AND in remote-desktop mode (where the workspace lives on the
+    // remote server, not on the local disk the OS dialog would target).
+    setWebMode(!isDesktop() || isRemoteDesktopMode())
+    setFolderUploadSupported(
+      "webkitdirectory" in document.createElement("input")
+    )
+  }, [])
+
+  const handleRequestUpload = useCallback((targetPath: string) => {
+    setUploadDialogTarget(targetPath)
+    setUploadDialogOpen(true)
+  }, [])
+
+  const handleUploadComplete = useCallback(() => {
+    void fetchTree()
+  }, [fetchTree])
+
+  const handleRequestDownloadFile = useCallback(
+    async (target: FileActionTarget) => {
+      const folderPath = folder?.path
+      if (!folderPath) return
+      try {
+        const result = await downloadWorkspaceFile(
+          folderPath,
+          target.path,
+          target.name
+        )
+        // Remote-desktop downloads flow through a save-dialog; surface
+        // the cancel-vs-saved outcome instead of silently doing nothing.
+        if (result.status === "started") return
+        if (result.status === WORKSPACE_DOWNLOAD_CANCELLED) return
+        if (result.savedPath) {
+          toast.success(t("toasts.downloadSaved", { name: target.name }), {
+            description: result.savedPath,
+          })
+        }
+      } catch (error) {
+        const message = toErrorMessage(error)
+        toast.error(t("toasts.downloadFailed", { name: target.name }), {
+          description: message,
+        })
+      }
+    },
+    [folder?.path, t]
+  )
+
+  const handleRequestDownloadDir = useCallback(
+    async (target: FileActionTarget) => {
+      const folderPath = folder?.path
+      if (!folderPath) return
+      const name = target.name || baseName(folderPath) || "workspace"
+      try {
+        const result = await downloadWorkspaceDir(folderPath, target.path, name)
+        if (result.status === "started") return
+        if (result.status === WORKSPACE_DOWNLOAD_CANCELLED) return
+        if (result.savedPath) {
+          toast.success(t("toasts.downloadSaved", { name }), {
+            description: result.savedPath,
+          })
+        }
+      } catch (error) {
+        const message = toErrorMessage(error)
+        toast.error(t("toasts.downloadFailed", { name }), {
+          description: message,
+        })
+      }
+    },
+    [folder?.path, t]
+  )
 
   const resetDirectoryGitActionDialog = useCallback(() => {
     setDirectoryGitActionType(null)
@@ -2166,6 +2303,8 @@ export function FileTreeTab() {
                           workspacePath={folder.path}
                           activeSessionTabId={activeSessionTabId}
                           gitEnabled={gitEnabled}
+                          webMode={webMode}
+                          folderUploadSupported={folderUploadSupported}
                           gitStatusByPath={gitStatusByPath}
                           gitChangedDirPaths={gitChangedDirPaths}
                           untrackedDirPaths={untrackedDirPaths}
@@ -2193,6 +2332,13 @@ export function FileTreeTab() {
                           onRequestAddToVcs={handleAddToVcs}
                           onRequestRename={handleRequestRename}
                           onRequestDelete={handleRequestDelete}
+                          onRequestUpload={handleRequestUpload}
+                          onRequestDownloadFile={(target) =>
+                            void handleRequestDownloadFile(target)
+                          }
+                          onRequestDownloadDir={(target) =>
+                            void handleRequestDownloadDir(target)
+                          }
                           onRefresh={fetchTree}
                         />
                       ))}
@@ -2289,6 +2435,22 @@ export function FileTreeTab() {
                         </ContextMenuItem>
                       </ContextMenuSubContent>
                     </ContextMenuSub>
+                    {webMode && (
+                      <>
+                        <ContextMenuItem
+                          onSelect={() => handleRequestUpload("")}
+                        >
+                          {t("upload")}
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onSelect={() =>
+                            void handleRequestDownloadDir(rootTarget)
+                          }
+                        >
+                          {t("downloadAsZip")}
+                        </ContextMenuItem>
+                      </>
+                    )}
                   </ContextMenuContent>
                 </ContextMenu>
               )}
@@ -2307,6 +2469,11 @@ export function FileTreeTab() {
               </ContextMenuItem>
             </ContextMenuSubContent>
           </ContextMenuSub>
+          {webMode && (
+            <ContextMenuItem onSelect={() => handleRequestUpload("")}>
+              {t("upload")}
+            </ContextMenuItem>
+          )}
           <ContextMenuItem
             onSelect={() => {
               void fetchTree()
@@ -2316,6 +2483,16 @@ export function FileTreeTab() {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+      {webMode && folder?.path && (
+        <WorkspaceUploadDialog
+          open={uploadDialogOpen}
+          onOpenChange={setUploadDialogOpen}
+          rootPath={folder.path}
+          targetPath={uploadDialogTarget}
+          folderUploadSupported={folderUploadSupported}
+          onComplete={handleUploadComplete}
+        />
+      )}
 
       <Dialog
         open={createParentPath !== null}
