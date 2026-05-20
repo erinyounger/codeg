@@ -367,7 +367,7 @@
       "gemini": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Skill Name\n\nInstructions for the agent when this skill is active.\n\n## Workflow\n\n1. Add actionable step one.\n2. Add actionable step two.\n",
       "openCode": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Purpose\n\nDescribe what this skill helps with.\n\n# Steps\n\n1. Add actionable step one.\n2. Add actionable step two.\n",
       "openClaw": "---\nname: example-skill\ndescription: Describe when this skill should be used.\nuser-invocable: true\ndisable-model-invocation: false\n---\n\n# Purpose\n\nDescribe what this skill helps with.\n\n# Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n",
-      "default": "# Skill: example-skill\n\n## When to use\n\n- Describe trigger conditions.\n\n## Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n"
+      "default": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Skill: example-skill\n\n## When to use\n\n- Describe trigger conditions.\n\n## Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n"
     }
   },
   "McpSettings": {
@@ -600,7 +600,6 @@
       "emptyProvider": "暫無 Provider，輸入 ID 後點擊「新增 Provider」建立。",
       "providerEnabledState": "{providerId} 啟用狀態",
       "selectProviderNpm": "選擇 provider.npm",
-      "notSet": "未設定",
       "modelManagement": "模型管理",
       "modelCount": "共 {count} 個",
       "modelDescription": "對齊 OpenCode `provider.models` 結構。目前支援 `name` / `id` 快速管理；其它進階欄位會保留，可在下方原生 JSON 中繼續編輯。",
@@ -842,7 +841,8 @@
         "openFolderFailed": "開啟資料夾失敗",
         "removeFolderFailed": "移除資料夾失敗：{message}",
         "reorderFoldersFailed": "重新排序資料夾失敗：{message}",
-        "changeFolderColorFailed": "修改顏色失敗：{message}"
+        "changeFolderColorFailed": "修改顏色失敗：{message}",
+        "changeFolderDefaultAgentFailed": "設定預設智能體失敗：{message}"
       },
       "statsLabel": "{folders} 個資料夾 · {convos} 個對話",
       "reorderHandle": "拖拽排序",
@@ -865,6 +865,10 @@
         "manageConversations": "會話管理…",
         "changeColor": "修改顏色",
         "useThemeColor": "使用設定主題",
+        "setDefaultAgent": "設定預設智能體",
+        "defaultAgentNone": "不設定（使用全域預設）",
+        "agentUnavailableSuffix": "（不可用）",
+        "loadingAgents": "正在載入代理…",
         "removeFromWorkspace": "從工作區移除"
       },
       "manageConversations": {
@@ -1706,7 +1710,7 @@
         "askAnythingPlaceholder": "請開始輸入..."
       },
       "welcomePanel": {
-        "title": "歡迎使用 Codeg",
+        "greeting": "今天打算<highlight>做些什麼</highlight>呢？",
         "tips": {
           "tileTabs": "右鍵點擊會話標籤選擇「平鋪顯示」，可同螢幕對比多個會話",
           "pinTab": "雙擊會話標籤可將其固定，避免被新開啟的會話自動取代",

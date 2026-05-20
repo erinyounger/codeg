@@ -367,7 +367,7 @@
       "gemini": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Skill Name\n\nInstructions for the agent when this skill is active.\n\n## Workflow\n\n1. Add actionable step one.\n2. Add actionable step two.\n",
       "openCode": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Purpose\n\nDescribe what this skill helps with.\n\n# Steps\n\n1. Add actionable step one.\n2. Add actionable step two.\n",
       "openClaw": "---\nname: example-skill\ndescription: Describe when this skill should be used.\nuser-invocable: true\ndisable-model-invocation: false\n---\n\n# Purpose\n\nDescribe what this skill helps with.\n\n# Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n",
-      "default": "# Skill: example-skill\n\n## When to use\n\n- Describe trigger conditions.\n\n## Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n"
+      "default": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Skill: example-skill\n\n## When to use\n\n- Describe trigger conditions.\n\n## Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n"
     }
   },
   "McpSettings": {
@@ -600,7 +600,6 @@
       "emptyProvider": "Aún no hay proveedor. Introduce un ID y haz clic en \"Agregar proveedor\".",
       "providerEnabledState": "Estado habilitado de {providerId}",
       "selectProviderNpm": "Seleccionar provider.npm",
-      "notSet": "No establecido",
       "modelManagement": "Gestión de modelos",
       "modelCount": "{count} modelos",
       "modelDescription": "Alineado con `provider.models` de OpenCode. La gestión rápida actualmente soporta `name` / `id`; otros campos avanzados se conservan y se pueden editar en el JSON nativo de abajo.",
@@ -842,7 +841,8 @@
         "openFolderFailed": "Error al abrir carpeta",
         "removeFolderFailed": "Error al eliminar carpeta: {message}",
         "reorderFoldersFailed": "Error al reordenar carpetas: {message}",
-        "changeFolderColorFailed": "Error al cambiar el color: {message}"
+        "changeFolderColorFailed": "Error al cambiar el color: {message}",
+        "changeFolderDefaultAgentFailed": "Error al establecer agente predeterminado: {message}"
       },
       "statsLabel": "{folders} carpetas · {convos} conversaciones",
       "reorderHandle": "Arrastrar para reordenar",
@@ -865,6 +865,10 @@
         "manageConversations": "Gestionar conversaciones…",
         "changeColor": "Cambiar color",
         "useThemeColor": "Usar tema de la app",
+        "setDefaultAgent": "Establecer agente predeterminado",
+        "defaultAgentNone": "Sin valor (usar predeterminado global)",
+        "agentUnavailableSuffix": "(no disponible)",
+        "loadingAgents": "Cargando agentes…",
         "removeFromWorkspace": "Quitar del espacio de trabajo"
       },
       "manageConversations": {
@@ -1706,7 +1710,7 @@
         "askAnythingPlaceholder": "Pregunta lo que sea..."
       },
       "welcomePanel": {
-        "title": "Bienvenido a Codeg",
+        "greeting": "¿Qué te gustaría <highlight>hacer hoy</highlight>?",
         "tips": {
           "tileTabs": "Haz clic derecho en una pestaña de conversación y elige Vista en mosaico para comparar varias sesiones lado a lado.",
           "pinTab": "Haz doble clic en una pestaña de conversación para fijarla y que una sesión nueva no la reemplace automáticamente.",

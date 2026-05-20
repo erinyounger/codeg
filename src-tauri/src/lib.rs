@@ -11,9 +11,9 @@ pub mod db;
 pub mod git_credential;
 pub mod git_repo;
 pub mod keyring_store;
-mod models;
+pub mod models;
 mod network;
-mod parsers;
+pub mod parsers;
 pub mod paths;
 pub mod pet_state_mapper;
 pub mod pets;
@@ -627,6 +627,7 @@ mod tauri_app {
                 folders::remove_folder_from_workspace,
                 folders::reorder_folders,
                 folders::update_folder_color,
+                folders::update_folder_default_agent,
                 folders::add_folder_to_history,
                 folders::remove_folder_from_history,
                 folders::create_folder_directory,

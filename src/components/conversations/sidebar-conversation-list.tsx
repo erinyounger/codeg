@@ -17,6 +17,7 @@ import { Reorder, useDragControls, type DragControls } from "motion/react"
 import type { OverlayScrollbarsComponentRef } from "overlayscrollbars-react"
 import {
   Folder,
+  Bot,
   Check,
   Download,
   ExternalLink,
@@ -35,17 +36,24 @@ import { useTabContext } from "@/contexts/tab-context"
 import { useTaskContext } from "@/contexts/task-context"
 import { useTerminalContext } from "@/contexts/terminal-context"
 import { useThemeColor, useZoomLevel } from "@/hooks/use-appearance"
+import { useSortedAvailableAgents } from "@/hooks/use-sorted-available-agents"
 import {
   importLocalConversations,
   openProjectBootWindow,
   updateConversationTitle,
   updateConversationStatus,
   updateFolderColor,
+  updateFolderDefaultAgent,
   deleteConversation,
 } from "@/lib/api"
 import { isDesktop, openFileDialog, revealItemInDir } from "@/lib/platform"
 import { getActiveRemoteConnectionId } from "@/lib/transport"
-import type { ConversationStatus, DbConversationSummary } from "@/lib/types"
+import type {
+  AgentType,
+  ConversationStatus,
+  DbConversationSummary,
+} from "@/lib/types"
+import { AGENT_LABELS } from "@/lib/types"
 import {
   loadFolderExpanded,
   saveFolderExpanded,
@@ -176,12 +184,16 @@ const FolderHeader = memo(function FolderHeader({
   importing,
   themeColor,
   appThemeColor,
+  currentDefaultAgent,
+  availableAgents,
+  availableAgentsFresh,
   onToggle,
   onRemoveFromWorkspace,
   onNewConversation,
   onImport,
   onManageConversations,
   onChangeColor,
+  onSetDefaultAgent,
   onOpenInSystemExplorer,
   onOpenInTerminal,
   isDragging,
@@ -196,18 +208,37 @@ const FolderHeader = memo(function FolderHeader({
   importing: boolean
   themeColor: FolderThemeColor
   appThemeColor: ThemeColor
+  currentDefaultAgent: AgentType | null
+  availableAgents: AgentType[]
+  /**
+   * False while `useSortedAvailableAgents` is still serving the
+   * localStorage seed (i.e. `acpListAgents()` has not yet succeeded this
+   * session). The "Set default agent" submenu disables agent selection
+   * while not fresh — otherwise the user could persist a folder default
+   * pointing at a stale/uninstalled agent. The "No default" option stays
+   * usable since clearing a default doesn't depend on the live list.
+   */
+  availableAgentsFresh: boolean
   onToggle: (folderId: number) => void
   onRemoveFromWorkspace: (folderId: number) => void
   onNewConversation: (folderId: number) => void
   onImport: (folderId: number) => void
   onManageConversations: (folderId: number) => void
   onChangeColor: (folderId: number, color: FolderThemeColor) => void
+  onSetDefaultAgent: (folderId: number, agentType: AgentType | null) => void
   onOpenInSystemExplorer: (folderId: number) => void
   onOpenInTerminal: (folderId: number) => void
   isDragging?: boolean
   dragControls: DragControls
   t: ReturnType<typeof useTranslations>
 }) {
+  // Only flag a stale default once the live list is known; before fresh,
+  // `availableAgents` is the localStorage seed and may legitimately omit a
+  // newly-enabled agent.
+  const showStaleDefault =
+    availableAgentsFresh &&
+    currentDefaultAgent !== null &&
+    !availableAgents.includes(currentDefaultAgent)
   const tFileTree = useTranslations("Folder.fileTreeTab")
   const systemExplorerLabel =
     typeof navigator === "undefined"
@@ -346,6 +377,65 @@ const FolderHeader = memo(function FolderHeader({
         </ContextMenuItem>
         <ContextMenuSub>
           <ContextMenuSubTrigger>
+            <Bot className="h-4 w-4" />
+            {t("folderHeaderMenu.setDefaultAgent")}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="min-w-[12rem]">
+            <ContextMenuItem
+              onSelect={() => onSetDefaultAgent(folderId, null)}
+              className="gap-2"
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {t("folderHeaderMenu.defaultAgentNone")}
+              </span>
+              {currentDefaultAgent === null ? (
+                <Check className="h-3.5 w-3.5 shrink-0" />
+              ) : null}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            {availableAgentsFresh ? (
+              <>
+                {availableAgents.map((agent) => {
+                  const active = currentDefaultAgent === agent
+                  return (
+                    <ContextMenuItem
+                      key={agent}
+                      onSelect={() => onSetDefaultAgent(folderId, agent)}
+                      className="gap-2"
+                    >
+                      <span className="min-w-0 flex-1 truncate">
+                        {AGENT_LABELS[agent]}
+                      </span>
+                      {active ? (
+                        <Check className="h-3.5 w-3.5 shrink-0" />
+                      ) : null}
+                    </ContextMenuItem>
+                  )
+                })}
+                {showStaleDefault && currentDefaultAgent !== null ? (
+                  <ContextMenuItem
+                    key={currentDefaultAgent}
+                    disabled
+                    className="gap-2 opacity-60"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {`${AGENT_LABELS[currentDefaultAgent]} ${t("folderHeaderMenu.agentUnavailableSuffix")}`}
+                    </span>
+                    <Check className="h-3.5 w-3.5 shrink-0" />
+                  </ContextMenuItem>
+                ) : null}
+              </>
+            ) : (
+              <ContextMenuItem disabled className="gap-2 opacity-60">
+                <span className="min-w-0 flex-1 truncate">
+                  {t("folderHeaderMenu.loadingAgents")}
+                </span>
+              </ContextMenuItem>
+            )}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
             <Palette className="h-4 w-4" />
             {t("folderHeaderMenu.changeColor")}
           </ContextMenuSubTrigger>
@@ -420,6 +510,9 @@ interface FolderGroupItemProps {
   openTabKeys: Set<string>
   themeColor: FolderThemeColor
   appThemeColor: ThemeColor
+  currentDefaultAgent: AgentType | null
+  availableAgents: AgentType[]
+  availableAgentsFresh: boolean
   darkMode: boolean
   onToggle: (folderId: number) => void
   onRemoveFromWorkspace: (folderId: number) => void
@@ -427,6 +520,7 @@ interface FolderGroupItemProps {
   onImport: (folderId: number) => void
   onManageConversations: (folderId: number) => void
   onChangeColor: (folderId: number, color: FolderThemeColor) => void
+  onSetDefaultAgent: (folderId: number, agentType: AgentType | null) => void
   onOpenInSystemExplorer: (folderId: number) => void
   onOpenInTerminal: (folderId: number) => void
   onSelect: (id: number, agentType: string) => void
@@ -458,6 +552,9 @@ function FolderGroupItem({
   openTabKeys,
   themeColor,
   appThemeColor,
+  currentDefaultAgent,
+  availableAgents,
+  availableAgentsFresh,
   darkMode,
   onToggle,
   onRemoveFromWorkspace,
@@ -465,6 +562,7 @@ function FolderGroupItem({
   onImport,
   onManageConversations,
   onChangeColor,
+  onSetDefaultAgent,
   onOpenInSystemExplorer,
   onOpenInTerminal,
   onSelect,
@@ -542,12 +640,16 @@ function FolderGroupItem({
             importing={importing}
             themeColor={themeColor}
             appThemeColor={appThemeColor}
+            currentDefaultAgent={currentDefaultAgent}
+            availableAgents={availableAgents}
+            availableAgentsFresh={availableAgentsFresh}
             onToggle={handleToggle}
             onRemoveFromWorkspace={onRemoveFromWorkspace}
             onNewConversation={onNewConversationForFolder}
             onImport={onImport}
             onManageConversations={onManageConversations}
             onChangeColor={onChangeColor}
+            onSetDefaultAgent={onSetDefaultAgent}
             onOpenInSystemExplorer={onOpenInSystemExplorer}
             onOpenInTerminal={onOpenInTerminal}
             isDragging={dragging}
@@ -647,9 +749,22 @@ export function SidebarConversationList({
   const { addTask, updateTask } = useTaskContext()
 
   const folderIndex = useMemo(() => {
-    const map = new Map<number, { name: string; path: string; color: string }>()
+    const map = new Map<
+      number,
+      {
+        name: string
+        path: string
+        color: string
+        defaultAgentType: AgentType | null
+      }
+    >()
     for (const f of allFolders)
-      map.set(f.id, { name: f.name, path: f.path, color: f.color })
+      map.set(f.id, {
+        name: f.name,
+        path: f.path,
+        color: f.color,
+        defaultAgentType: f.default_agent_type,
+      })
     return map
   }, [allFolders])
 
@@ -673,6 +788,8 @@ export function SidebarConversationList({
   }, [tabs])
 
   const [importing, setImporting] = useState(false)
+  const { sortedTypes: availableAgents, fresh: availableAgentsFresh } =
+    useSortedAvailableAgents()
   const [folderExpanded, setFolderExpanded] = useState<Record<number, boolean>>(
     {}
   )
@@ -705,6 +822,21 @@ export function SidebarConversationList({
       } catch (err) {
         const msg = toErrorMessage(err)
         toast.error(t("toasts.changeFolderColorFailed", { message: msg }))
+      }
+    },
+    [refreshFolder, t]
+  )
+
+  const handleChangeFolderDefaultAgent = useCallback(
+    async (folderId: number, agentType: AgentType | null) => {
+      try {
+        await updateFolderDefaultAgent(folderId, agentType)
+        await refreshFolder(folderId)
+      } catch (err) {
+        const msg = toErrorMessage(err)
+        toast.error(
+          t("toasts.changeFolderDefaultAgentFailed", { message: msg })
+        )
       }
     },
     [refreshFolder, t]
@@ -1173,6 +1305,8 @@ export function SidebarConversationList({
                     )
                     const folderName = folderEntry?.name ?? String(folderId)
                     const folderPath = folderEntry?.path ?? ""
+                    const currentDefaultAgent =
+                      folderEntry?.defaultAgentType ?? null
                     const convs = byFolder.get(folderId) ?? []
                     const expanded = folderExpanded[folderId] ?? true
                     const convsWithKey = convs.map((conv) => ({
@@ -1203,6 +1337,9 @@ export function SidebarConversationList({
                         openTabKeys={openTabKeys}
                         themeColor={themeColor}
                         appThemeColor={appThemeColor}
+                        currentDefaultAgent={currentDefaultAgent}
+                        availableAgents={availableAgents}
+                        availableAgentsFresh={availableAgentsFresh}
                         darkMode={resolvedTheme === "dark"}
                         onToggle={toggleFolder}
                         onRemoveFromWorkspace={handleRemoveFolder}
@@ -1212,6 +1349,7 @@ export function SidebarConversationList({
                         onImport={handleImportForFolder}
                         onManageConversations={handleManageConversations}
                         onChangeColor={handleChangeFolderColor}
+                        onSetDefaultAgent={handleChangeFolderDefaultAgent}
                         onOpenInSystemExplorer={
                           handleOpenFolderInSystemExplorer
                         }

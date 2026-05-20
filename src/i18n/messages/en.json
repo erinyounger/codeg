@@ -367,7 +367,7 @@
       "gemini": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Skill Name\n\nInstructions for the agent when this skill is active.\n\n## Workflow\n\n1. Add actionable step one.\n2. Add actionable step two.\n",
       "openCode": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Purpose\n\nDescribe what this skill helps with.\n\n# Steps\n\n1. Add actionable step one.\n2. Add actionable step two.\n",
       "openClaw": "---\nname: example-skill\ndescription: Describe when this skill should be used.\nuser-invocable: true\ndisable-model-invocation: false\n---\n\n# Purpose\n\nDescribe what this skill helps with.\n\n# Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n",
-      "default": "# Skill: example-skill\n\n## When to use\n\n- Describe trigger conditions.\n\n## Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n"
+      "default": "---\nname: example-skill\ndescription: Describe when this skill should be used.\n---\n\n# Skill: example-skill\n\n## When to use\n\n- Describe trigger conditions.\n\n## Instructions\n\n1. Add actionable instruction one.\n2. Add actionable instruction two.\n"
     }
   },
   "McpSettings": {
@@ -600,7 +600,6 @@
       "emptyProvider": "No provider yet. Enter an ID then click \"Add Provider\".",
       "providerEnabledState": "{providerId} enabled state",
       "selectProviderNpm": "Select provider.npm",
-      "notSet": "Not set",
       "modelManagement": "Model Management",
       "modelCount": "{count} models",
       "modelDescription": "Aligned with OpenCode `provider.models`. Fast management currently supports `name` / `id`; other advanced fields are preserved and can be edited in native JSON below.",
@@ -842,7 +841,8 @@
         "openFolderFailed": "Failed to open folder",
         "removeFolderFailed": "Failed to remove folder: {message}",
         "reorderFoldersFailed": "Failed to reorder folders: {message}",
-        "changeFolderColorFailed": "Failed to change folder color: {message}"
+        "changeFolderColorFailed": "Failed to change folder color: {message}",
+        "changeFolderDefaultAgentFailed": "Failed to set default agent: {message}"
       },
       "statsLabel": "{folders} folders · {convos} conversations",
       "reorderHandle": "Drag to reorder",
@@ -865,6 +865,10 @@
         "manageConversations": "Manage conversations…",
         "changeColor": "Change color",
         "useThemeColor": "Use app theme",
+        "setDefaultAgent": "Set default agent",
+        "defaultAgentNone": "No default (use global)",
+        "agentUnavailableSuffix": "(unavailable)",
+        "loadingAgents": "Loading agents…",
         "removeFromWorkspace": "Remove from workspace"
       },
       "manageConversations": {
@@ -1706,7 +1710,7 @@
         "askAnythingPlaceholder": "Ask anything..."
       },
       "welcomePanel": {
-        "title": "Welcome to Codeg",
+        "greeting": "What would you like to <highlight>do today</highlight>?",
         "tips": {
           "tileTabs": "Right-click any conversation tab and choose Tile Display to see multiple sessions side by side.",
           "pinTab": "Double-click a conversation tab to pin it, so a newly opened session won't auto-replace it.",

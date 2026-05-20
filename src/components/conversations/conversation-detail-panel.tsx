@@ -35,7 +35,11 @@ import { MessageListView } from "@/components/message/message-list-view"
 import { ConversationShell } from "@/components/chat/conversation-shell"
 import { AgentSelector } from "@/components/chat/agent-selector"
 import { ChatInput } from "@/components/chat/chat-input"
-import { WelcomeHero } from "@/components/chat/welcome-hero"
+import {
+  WelcomeBackdrop,
+  WelcomeHero,
+  WelcomeTip,
+} from "@/components/chat/welcome-hero"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { acpFork, createConversation, openSettingsWindow } from "@/lib/api"
 import { useConversationRuntime } from "@/contexts/conversation-runtime-context"
@@ -125,16 +129,6 @@ function buildOptimisticUserTurnFromDraft(
   }
 }
 
-function normalizeErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return String(error)
-}
-
-function isExpectedConnectError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false
-  return (error as { alerted?: unknown }).alerted === true
-}
-
 function buildVirtualConversationId(seed: string): number {
   let hash = 0
   for (let i = 0; i < seed.length; i += 1) {
@@ -165,6 +159,8 @@ const ConversationTabView = memo(function ConversationTabView({
     pinTab,
     openNewConversationTab,
     closeTab,
+    confirmDraftAgent,
+    setDraftAgentFromFallback,
   } = useTabContext()
   const { setSessionStats } = useSessionStats()
   const {
@@ -255,6 +251,21 @@ const ConversationTabView = memo(function ConversationTabView({
     selectedAgentRef.current = selectedAgent
   }, [selectedAgent])
 
+  // Sync the agentType prop into draftAgentType for draft tabs. The prop
+  // changes when openNewConversationTab re-points an existing draft at a
+  // different folder's default agent (or when any other external mutation
+  // updates tab.agentType). Without this mirror, the local draftAgentType
+  // would stay frozen at its mount value and the UI/connection would not
+  // follow. Persisted conversations read agentType directly from the prop
+  // via selectedAgent, so they are unaffected.
+  useEffect(() => {
+    if (conversationId != null) return
+    if (agentType === selectedAgentRef.current) return
+    setDraftAgentType(agentType)
+    setModeId(getSavedModeId(agentType))
+    setAgentConnectError(null)
+  }, [agentType, conversationId])
+
   const {
     detail,
     loading: detailLoading,
@@ -330,12 +341,7 @@ const ConversationTabView = memo(function ConversationTabView({
         ? externalId
         : undefined,
   })
-  const {
-    status: connStatus,
-    connect: connConnect,
-    disconnect: connDisconnect,
-    sessionId: connSessionId,
-  } = conn
+  const { status: connStatus, sessionId: connSessionId } = conn
   const messageQueue = useMessageQueue()
   const {
     queue: msgQueue,
@@ -709,6 +715,15 @@ const ConversationTabView = memo(function ConversationTabView({
     })
   }, [selectedAgent])
 
+  // Manual agent switch only updates local draft state. The single source of
+  // truth for (dis)connecting is `useConnectionLifecycle`'s auto-connect
+  // effect: when `selectedAgent` changes, the hook re-fires `connect()`,
+  // which internally disconnects the old agent's connection at the same
+  // contextKey before creating the new one (acp-connections-context.tsx).
+  // Doing the disconnect+reconnect here too would race the lifecycle path:
+  // a late-returning disconnect would dispatch CONNECTION_REMOVED by
+  // contextKey and wipe the new connection's frontend state, leaving a
+  // backend orphan.
   const handleAgentSelect = useCallback(
     (nextAgentType: AgentType) => {
       if (nextAgentType === selectedAgentRef.current) return
@@ -717,35 +732,30 @@ const ConversationTabView = memo(function ConversationTabView({
       setDraftAgentType(nextAgentType)
       setModeId(getSavedModeId(nextAgentType))
       setAgentConnectError(null)
-
-      const s = connStatusRef.current
-      const doConnect = () => {
-        if (!workingDirForConnection) return
-        connConnect(nextAgentType, workingDirForConnection, undefined)
-          .then(() => {
-            setAgentConnectError(null)
-          })
-          .catch((e) => {
-            setAgentConnectError(normalizeErrorMessage(e))
-            if (!isExpectedConnectError(e)) {
-              console.error("[ConversationTabView] switch agent:", e)
-            }
-          })
-      }
-
-      // If not yet connected, directly attempt to connect with the new agent.
-      if (!s || s === "disconnected" || s === "error") {
-        doConnect()
-        return
-      }
-
-      connDisconnect()
-        .catch((e) =>
-          console.error("[ConversationTabView] disconnect old agent:", e)
-        )
-        .finally(doConnect)
+      // Real user click — clear the provisional flag so TabProvider's
+      // correction effect leaves this tab alone.
+      confirmDraftAgent(tabId, nextAgentType)
     },
-    [connConnect, connDisconnect, workingDirForConnection]
+    [confirmDraftAgent, tabId]
+  )
+
+  // AgentSelector auto-fallback: the requested default agent was missing
+  // or unavailable, so it picked a substitute on its own. Sync local UI
+  // state (so the connection points at the right agent immediately) but
+  // mark the tab as still provisional — TabProvider's correction effect
+  // will re-resolve against the folder's saved default once all three
+  // hydration gates are open, and overwrite this substitute if needed.
+  const handleAgentFallback = useCallback(
+    (nextAgentType: AgentType) => {
+      if (nextAgentType === selectedAgentRef.current) return
+      if (dbConvIdRef.current) return
+
+      setDraftAgentType(nextAgentType)
+      setModeId(getSavedModeId(nextAgentType))
+      setAgentConnectError(null)
+      setDraftAgentFromFallback(tabId, nextAgentType)
+    },
+    [setDraftAgentFromFallback, tabId]
   )
 
   const handleModeChange = useCallback(
@@ -843,7 +853,12 @@ const ConversationTabView = memo(function ConversationTabView({
   // runs against the result of the first.
   const handleOpenNewSession = useCallback(() => {
     if (!folder) return
-    openNewConversationTab(folder.id, workingDirForConnection ?? folder.path)
+    // Retry-from-error: user wants a fresh draft in the same conversation
+    // context, so inherit the active tab's agent when the folder has no
+    // pinned default.
+    openNewConversationTab(folder.id, workingDirForConnection ?? folder.path, {
+      inheritFromActive: true,
+    })
     closeTab(tabId)
   }, [closeTab, folder, openNewConversationTab, tabId, workingDirForConnection])
 
@@ -914,15 +929,16 @@ const ConversationTabView = memo(function ConversationTabView({
       }
     >
       {isWelcomeMode ? (
-        <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-          <div className="m-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8">
+        <div className="relative isolate flex h-full min-h-0 flex-col overflow-x-hidden overflow-y-auto">
+          <WelcomeBackdrop />
+          <div className="flex-1" />
+          <div className="mx-auto flex w-full max-w-2xl shrink-0 flex-col gap-6 px-4 py-4">
             <WelcomeHero />
-            <div className="flex flex-col gap-4">
+            <div className="flex justify-center">
               <AgentSelector
-                defaultAgentType={
-                  conversationId != null ? selectedAgent : undefined
-                }
+                defaultAgentType={selectedAgent}
                 onSelect={handleAgentSelect}
+                onFallback={handleAgentFallback}
                 onAgentsLoaded={(agents) => {
                   setAgentsLoaded(true)
                   setUsableAgentCount(
@@ -933,53 +949,56 @@ const ConversationTabView = memo(function ConversationTabView({
                 onOpenAgentsSettings={handleOpenAgentsSettings}
                 disabled={isConnecting || dbConversationId != null}
               />
-              {autoConnectError || agentConnectError ? (
-                <button
-                  type="button"
-                  onClick={handleOpenAgentsSettings}
-                  className="w-full cursor-pointer rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-center text-xs text-destructive transition-colors hover:bg-destructive/10"
-                >
-                  <div
-                    className="overflow-hidden text-ellipsis whitespace-nowrap text-center"
-                    title={autoConnectError ?? agentConnectError ?? ""}
-                  >
-                    {autoConnectError ?? agentConnectError}
-                  </div>
-                </button>
-              ) : null}
-              <ChatInput
-                status={connStatus}
-                promptCapabilities={conn.promptCapabilities}
-                defaultPath={workingDirForConnection}
-                agentName={AGENT_LABELS[selectedAgent]}
-                onFocus={handleFocus}
-                onSend={handleSend}
-                onCancel={handleCancel}
-                modes={connectionModes}
-                configOptions={connectionConfigOptions}
-                modeLoading={modeLoading}
-                configOptionsLoading={configOptionsLoading}
-                selectorsLoading={selectorsLoading}
-                selectedModeId={selectedModeId}
-                onModeChange={handleModeChange}
-                onConfigOptionChange={handleSetConfigOption}
-                agentType={selectedAgent}
-                availableCommands={connectionCommands}
-                attachmentTabId={tabId}
-                draftStorageKey={draftStorageKey}
-                isActive={isActive}
-              />
             </div>
+            {autoConnectError || agentConnectError ? (
+              <button
+                type="button"
+                onClick={handleOpenAgentsSettings}
+                className="w-full cursor-pointer rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-center text-xs text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <div
+                  className="overflow-hidden text-ellipsis whitespace-nowrap text-center"
+                  title={autoConnectError ?? agentConnectError ?? ""}
+                >
+                  {autoConnectError ?? agentConnectError}
+                </div>
+              </button>
+            ) : null}
+            <ChatInput
+              status={connStatus}
+              promptCapabilities={conn.promptCapabilities}
+              defaultPath={workingDirForConnection}
+              agentName={AGENT_LABELS[selectedAgent]}
+              onFocus={handleFocus}
+              onSend={handleSend}
+              onCancel={handleCancel}
+              modes={connectionModes}
+              configOptions={connectionConfigOptions}
+              modeLoading={modeLoading}
+              configOptionsLoading={configOptionsLoading}
+              selectorsLoading={selectorsLoading}
+              selectedModeId={selectedModeId}
+              onModeChange={handleModeChange}
+              onConfigOptionChange={handleSetConfigOption}
+              agentType={selectedAgent}
+              availableCommands={connectionCommands}
+              attachmentTabId={tabId}
+              draftStorageKey={draftStorageKey}
+              isActive={isActive}
+            />
+          </div>
+          <div className="flex-1" />
+          <div className="mx-auto w-full max-w-2xl shrink-0 px-4 pb-6">
+            <WelcomeTip />
           </div>
         </div>
       ) : showDraftHeader ? (
         <div className="flex h-full min-h-0 flex-col">
           <div className="px-4 pt-3 pb-2">
             <AgentSelector
-              defaultAgentType={
-                conversationId != null ? selectedAgent : undefined
-              }
+              defaultAgentType={selectedAgent}
               onSelect={handleAgentSelect}
+              onFallback={handleAgentFallback}
               onAgentsLoaded={(agents) => {
                 setAgentsLoaded(true)
                 setUsableAgentCount(
@@ -1225,7 +1244,9 @@ export function ConversationDetailPanel() {
 
   const handleNewConversation = useCallback(() => {
     if (!folder) return
-    openNewConversationTab(folder.id, folder.path)
+    // Right-click "new conversation" inside a conversation tab: keep the
+    // active agent when the target folder has no pinned default.
+    openNewConversationTab(folder.id, folder.path, { inheritFromActive: true })
   }, [folder, openNewConversationTab])
 
   const handleCloseActiveTab = useCallback(() => {
