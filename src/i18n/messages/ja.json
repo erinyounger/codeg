@@ -1777,14 +1777,6 @@
         "thoughtForSeconds": "考えた"
       },
       "linkSafety": {
-        "localFileTitle": "ローカルファイルを開きますか？",
-        "externalLinkTitle": "外部リンクを開きますか？",
-        "localFileDescription": "ファイルパネルでローカルファイルを開こうとしています。",
-        "externalLinkDescription": "外部ウェブサイトにアクセスしようとしています。",
-        "cancel": "キャンセル",
-        "opening": "開いています…",
-        "openFile": "ファイルを開く",
-        "openLink": "リンクを開く",
         "errorCannotOpen": "ローカルファイルを開けません",
         "errorNoWorkspace": "現在アクティブなワークスペースフォルダがありません。",
         "errorOutsideWorkspace": "ファイルが現在のワークスペースフォルダの外にあります。",
@@ -1938,6 +1930,7 @@
           "search": "{count} 件を検索",
           "command": "{count} 件のコマンドを実行",
           "read": "ファイルを {count} 回読み取り",
+          "memory": "{count} 件の記憶を呼び出し",
           "edit": "ファイルを {count} 回編集",
           "fetch": "{count} 件のリソースを取得",
           "think": "{count} 回思考",

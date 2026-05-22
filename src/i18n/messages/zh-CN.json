@@ -1777,14 +1777,6 @@
         "thoughtForSeconds": "思考"
       },
       "linkSafety": {
-        "localFileTitle": "打开本地文件？",
-        "externalLinkTitle": "打开外部链接？",
-        "localFileDescription": "即将在文件面板中打开一个本地文件。",
-        "externalLinkDescription": "即将访问一个外部网站。",
-        "cancel": "取消",
-        "opening": "正在打开…",
-        "openFile": "打开文件",
-        "openLink": "打开链接",
         "errorCannotOpen": "无法打开本地文件",
         "errorNoWorkspace": "当前没有活跃的工作区文件夹。",
         "errorOutsideWorkspace": "该文件不在当前工作区文件夹内。",
@@ -1938,6 +1930,7 @@
           "search": "搜索 {count} 次",
           "command": "运行 {count} 个命令",
           "read": "读取 {count} 次文件",
+          "memory": "回忆 {count} 项记忆",
           "edit": "编辑 {count} 次文件",
           "fetch": "抓取 {count} 个资源",
           "think": "思考 {count} 次",

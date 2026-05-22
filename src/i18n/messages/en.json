@@ -1777,14 +1777,6 @@
         "thoughtForSeconds": "Thought"
       },
       "linkSafety": {
-        "localFileTitle": "Open local file?",
-        "externalLinkTitle": "Open external link?",
-        "localFileDescription": "You're about to open a local file in the Files panel.",
-        "externalLinkDescription": "You're about to visit an external website.",
-        "cancel": "Cancel",
-        "opening": "Opening...",
-        "openFile": "Open file",
-        "openLink": "Open link",
         "errorCannotOpen": "Cannot open local file",
         "errorNoWorkspace": "No workspace folder is currently active.",
         "errorOutsideWorkspace": "The file is outside the current workspace folder.",
@@ -1938,6 +1930,7 @@
           "search": "{count, plural, one {Explored # search} other {Explored # searches}}",
           "command": "{count, plural, one {Ran # command} other {Ran # commands}}",
           "read": "{count, plural, one {Read files # time} other {Read files # times}}",
+          "memory": "{count, plural, one {Recalled # memory} other {Recalled # memories}}",
           "edit": "{count, plural, one {Edited files # time} other {Edited files # times}}",
           "fetch": "{count, plural, one {Fetched # resource} other {Fetched # resources}}",
           "think": "{count, plural, one {Thought # time} other {Thought # times}}",
