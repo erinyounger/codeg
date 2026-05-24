@@ -1,6 +1,6 @@
 [package]
 name = "codeg"
-version = "0.13.10"
+version = "0.14.1"
 description = "Agent Code Generation App"
 authors = ["feitao"]
 edition = "2021"
@@ -44,6 +44,11 @@ required-features = ["tauri-runtime"]
 [[bin]]
 name = "codeg-server"
 path = "src/bin/codeg_server.rs"
+required-features = []
+
+[[bin]]
+name = "codeg-mcp"
+path = "src/bin/codeg_mcp.rs"
 required-features = []
 
 [build-dependencies]
