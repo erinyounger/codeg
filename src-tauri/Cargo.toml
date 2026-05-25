@@ -1,6 +1,6 @@
 [package]
 name = "codeg"
-version = "0.14.1"
+version = "0.14.2"
 description = "Agent Code Generation App"
 authors = ["feitao"]
 edition = "2021"
@@ -114,7 +114,7 @@ tauri-plugin-single-instance = { version = "2", optional = true }
 mac-notification-sys = "0.6"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_Storage_FileSystem", "Win32_Foundation"] }
+windows-sys = { version = "0.59", features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Threading"] }
 junction = "1"
 
 [target.'cfg(unix)'.dependencies]
