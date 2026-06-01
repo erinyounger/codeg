@@ -481,6 +481,8 @@
       "enableHint": "Wenn deaktiviert, wird das Tool delegate_to_agent im MCP-Toolkatalog des Agenten ausgeblendet.",
       "depthLimit": "Maximale Delegationstiefe",
       "depthHint": "Zulässiger Bereich: {min}–{max}. Begrenzt, wie tief eine Delegationskette (Root → Kind → Enkel …) rekursieren kann.",
+      "completedCacheLabel": "Cache abgeschlossener Ergebnisse (MB)",
+      "completedCacheHint": "In-Memory-Cache abgeschlossener Subagent-Ergebnisse, der nur gehalten wird, solange die Delegationssitzung läuft, und beim Ende dieser Sitzung automatisch freigegeben wird. Bei Überschreitung dieses Budgets werden die ältesten Ergebnisse zuerst aus dem Speicher verworfen (weiterhin in der eigenen Sitzung des Subagenten einsehbar); 0 = unbegrenzt (wird trotzdem beim Sitzungsende freigegeben).",
       "save": "Speichern",
       "saving": "Wird gespeichert…",
       "saved": "Delegationseinstellungen gespeichert",
@@ -1882,9 +1884,15 @@
         "openDetail": "Konversation anzeigen",
         "detailTitle": "Unteragent-Konversation",
         "detailDescription": "Schreibgeschützte Ansicht der delegierten Unteragent-Konversation.",
+        "waitForResult": "Warte auf das Ergebnis von Aufgabe {task}",
+        "waitForResultNoTask": "Warte auf das Aufgabenergebnis",
+        "cancelTask": "Aufgabe {task} wird abgebrochen",
+        "cancelTaskNoTask": "Aufgabe wird abgebrochen",
         "status": {
           "starting": "startet",
           "running": "läuft",
+          "checked": "geprüft",
+          "waiting": "Genehmigung ausstehend",
           "ok": "fertig",
           "err": {
             "default": "fehlgeschlagen",
@@ -1899,7 +1907,8 @@
             "child_max_tokens": "Subagent: Token-Limit",
             "child_max_turn_requests": "Subagent: Anfragelimit",
             "child_empty": "Subagent ohne Ausgabe",
-            "child_unknown": "Subagent: Fehler"
+            "child_unknown": "Subagent: Fehler",
+            "unknown": "unbekannte Aufgabe"
           }
         }
       },
