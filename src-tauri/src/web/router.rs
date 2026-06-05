@@ -513,6 +513,10 @@ pub fn build_router(
             post(handlers::acp::acp_get_session_snapshot_by_conversation),
         )
         .route(
+            "/acp_find_connection_for_conversation",
+            post(handlers::acp::acp_find_connection_for_conversation),
+        )
+        .route(
             "/acp_clear_binary_cache",
             post(handlers::acp::acp_clear_binary_cache),
         )
@@ -734,6 +738,14 @@ pub fn build_router(
         .route(
             "/set_chat_event_filter",
             post(handlers::chat_channel::set_chat_event_filter),
+        )
+        .route(
+            "/get_chat_event_webhooks",
+            post(handlers::chat_channel::get_chat_event_webhooks),
+        )
+        .route(
+            "/set_chat_event_webhooks",
+            post(handlers::chat_channel::set_chat_event_webhooks),
         )
         .route(
             "/get_chat_message_language",

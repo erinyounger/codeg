@@ -8,6 +8,7 @@ import {
 } from "./transport"
 import { getCodegToken, redirectToCodegLogin } from "./transport/web-auth"
 import { getCurrentEffectiveAppLocale } from "./i18n"
+import { TurnBusyError, isTurnInProgressRejection } from "./turn-busy"
 import type { FolderThemeColor } from "./theme-presets"
 import type {
   AgentType,
@@ -20,6 +21,7 @@ import type {
   AgentStats,
   SidebarData,
   ConnectionInfo,
+  ConversationConnectionInfo,
   LiveSessionSnapshot,
   AcpAgentInfo,
   AcpAgentStatus,
@@ -80,6 +82,7 @@ import type {
   ChatChannelInfo,
   ChannelStatusInfo,
   ChatChannelMessageLog,
+  WebhookConfig,
   ModelProviderInfo,
   PluginCheckSummary,
   QuickMessage,
@@ -140,14 +143,21 @@ export async function acpPrompt(
   connectionId: string,
   blocks: PromptInputBlock[],
   folderId: number | null = null,
-  conversationId: number | null = null
+  conversationId: number | null = null,
+  clientMessageId: string | null = null
 ): Promise<void> {
-  return getTransport().call("acp_prompt", {
-    connectionId,
-    blocks,
-    folderId,
-    conversationId,
-  })
+  try {
+    await getTransport().call("acp_prompt", {
+      connectionId,
+      blocks,
+      folderId,
+      conversationId,
+      clientMessageId,
+    })
+  } catch (e) {
+    if (isTurnInProgressRejection(e)) throw new TurnBusyError()
+    throw e
+  }
 }
 
 export async function acpSetMode(
@@ -180,7 +190,15 @@ export interface ForkResult {
 }
 
 export async function acpFork(connectionId: string): Promise<ForkResult> {
-  return getTransport().call("acp_fork", { connectionId })
+  try {
+    return await getTransport().call("acp_fork", { connectionId })
+  } catch (e) {
+    // A fork is serialized with prompts on the backend: it returns
+    // TurnInProgress while a turn is in flight. Surface it as TurnBusyError so
+    // callers can treat it as transient (re-queue) rather than a fork failure.
+    if (isTurnInProgressRejection(e)) throw new TurnBusyError()
+    throw e
+  }
 }
 
 export async function acpRespondPermission(
@@ -220,6 +238,18 @@ export async function acpGetSessionSnapshotByConversation(
 ): Promise<LiveSessionSnapshot | null> {
   return getTransport().call("acp_get_session_snapshot_by_conversation", {
     conversationId,
+  })
+}
+
+export async function acpFindConnectionForConversation(
+  conversationId: number,
+  sessionId: string | undefined,
+  agentType: AgentType
+): Promise<ConversationConnectionInfo | null> {
+  return getTransport().call("acp_find_connection_for_conversation", {
+    conversationId,
+    sessionId,
+    agentType,
   })
 }
 
@@ -2421,6 +2451,16 @@ export async function setChatEventFilter(
   filter: string[] | null
 ): Promise<void> {
   return getTransport().call("set_chat_event_filter", { filter })
+}
+
+export async function getChatEventWebhooks(): Promise<WebhookConfig[]> {
+  return getTransport().call("get_chat_event_webhooks")
+}
+
+export async function setChatEventWebhooks(
+  webhooks: WebhookConfig[]
+): Promise<void> {
+  return getTransport().call("set_chat_event_webhooks", { webhooks })
 }
 
 export async function getChatMessageLanguage(): Promise<string> {
