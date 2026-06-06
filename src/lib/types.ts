@@ -271,6 +271,37 @@ export type ConversationChange =
 
 export const CONVERSATION_CHANGED_EVENT = "conversation://changed"
 
+/** Payload for the global `tabs://changed` side-channel that keeps every
+ *  client's open-tab set in sync across desktop + browsers. Mirrors the Rust
+ *  `TabsChanged` struct. The full conversation-bound tab set is sent as a
+ *  snapshot (idempotent apply); `is_active` marks the focused tab, which is
+ *  mirrored across clients. `origin` is echoed so the originator ignores its
+ *  own broadcast; the sentinel `"server"` marks cascade changes every client
+ *  applies. */
+export interface TabsChanged {
+  version: number
+  origin: string
+  tabs: OpenedTab[]
+}
+
+export const TABS_CHANGED_EVENT = "tabs://changed"
+
+/** Response of `list_opened_tabs`: the persisted set + current workspace tab
+ *  version (clients seed their compare-and-set / echo logic from it). */
+export interface OpenedTabsSnapshot {
+  items: OpenedTab[]
+  version: number
+}
+
+/** Response of the `save_opened_tabs` compare-and-set. When `accepted` is false
+ *  the save was stale (another client won) and `tabs` is the current truth to
+ *  reconcile against. */
+export interface SaveTabsOutcome {
+  accepted: boolean
+  version: number
+  tabs: OpenedTab[]
+}
+
 export interface ImportResult {
   imported: number
   skipped: number
@@ -280,6 +311,14 @@ export interface DbConversationDetail {
   summary: DbConversationSummary
   turns: MessageTurn[]
   session_stats?: SessionStats | null
+  /**
+   * Id of the persisted user turn the backend identified as the in-flight prompt
+   * (present only while a turn is running on this conversation's connection). The
+   * timeline uses it to locate — and, while the live reply is in hand, hide — the
+   * partial assistant turn some agents (OpenCode, Gemini) persist after the prompt
+   * mid-stream, which would otherwise double-render against the live reply.
+   */
+  in_flight_user_turn_id?: string | null
 }
 
 export type ConversationStatus =
