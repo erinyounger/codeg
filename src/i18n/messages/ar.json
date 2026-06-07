@@ -136,6 +136,9 @@
     "restartTimeout": "لم يعد الخادم في الوقت المناسب. تحقق من سجلات الحاوية أو الخدمة.",
     "restartingIn": "إعادة التشغيل خلال {seconds} ثانية...",
     "waitingForServer": "في انتظار عودة الخادم...",
+    "restartToUpdate": "أعد التشغيل للتحديث",
+    "updateReadyHint": "تم تنزيل التحديث — أعد التشغيل لتطبيقه.",
+    "restarting": "جارٍ إعادة التشغيل...",
     "dockerUpgradeHint": "يؤدي هذا إلى ترقية الحاوية قيد التشغيل الآن. وتُفقد عند إعادة إنشاء الحاوية — وللاحتفاظ بها، اسحب أو ابنِ صورة بالإصدار الجديد ثم أعد إنشاء الحاوية.",
     "upgradeRolledBack": "فشلت الترقية؛ عاد الخادم إلى الإصدار السابق.",
     "serverUnreachable": "تعذّر الوصول إلى الخادم لبدء الترقية. تأكد من أنه قيد التشغيل وحاول مرة أخرى.",
@@ -1061,7 +1064,6 @@
     },
     "auxPanel": {
       "tabs": {
-        "diff": "الفرق",
         "files": "الملفات",
         "changes": "التغييرات",
         "commits": "الالتزامات"
@@ -1105,16 +1107,6 @@
       "closeAll": "إغلاق الكل",
       "hideTerminal": "إخفاء الطرفية ({shortcut})",
       "openFolderFirst": "افتح مجلدا أولا"
-    },
-    "sessionFiles": {
-      "currentResponse": "الاستجابة الحالية",
-      "noDiffDataAvailable": "لا توجد بيانات diff متاحة لـ {filePath}",
-      "loading": "جارٍ التحميل...",
-      "noFileChangesInConversation": "لم يتم العثور على تغييرات ملفات في هذه المحادثة",
-      "openConversationToSeeChanges": "افتح محادثة لرؤية تغييرات الملفات الخاصة بها",
-      "remove": "إزالة",
-      "changeCount": "{count, plural, one {# تغيير} other {# تغييرات}}",
-      "fileCount": "{count, plural, one {# ملف} other {# ملفات}}"
     },
     "folderNameDropdown": {
       "fallbackFolderName": "مجلد",
@@ -1164,7 +1156,9 @@
         "upstreamSet": "تم تعيين فرع upstream",
         "upstreamSetAndPushed": "تم تعيين فرع upstream ودفع {count, plural, one {# التزام} other {# التزامات}}",
         "noCommitsToPush": "لا توجد التزامات للدفع",
-        "pushedCommits": "تم دفع {count, plural, one {# التزام} other {# التزامات}}"
+        "pushedCommits": "تم دفع {count, plural, one {# التزام} other {# التزامات}}",
+        "switchedToFolder": "تم التبديل إلى {name}",
+        "switchFailed": "فشل تبديل الفرع"
       },
       "tasks": {
         "newBranch": "إنشاء الفرع {name}",
@@ -1739,6 +1733,8 @@
         "quickMessagesEmpty": "لا توجد رسائل سريعة بعد",
         "quickMessagesLoading": "جارٍ التحميل...",
         "quickMessageUntitled": "بدون عنوان",
+        "liveFeedback": "ملاحظات مباشرة",
+        "liveFeedbackDisabledHint": "متاح أثناء عمل الوكيل",
         "dropFilesToAttach": "أسقط الملفات لإرفاقها",
         "loadingSettings": "جارٍ تحميل الإعدادات...",
         "loadingMode": "جارٍ تحميل الوضع...",
@@ -2075,6 +2071,15 @@
           "errorSuffix": "{count, plural, zero {صفر فشل} one {فشل واحد} two {فشلان} few {# فشلوا} many {# فشلاً} other {# فشل}}",
           "joiner": " · "
         }
+      },
+      "messageNav": {
+        "title": "تنقل الرسائل",
+        "expand": "توسيع تنقل الرسائل",
+        "collapse": "طي تنقل الرسائل",
+        "jumpToMessage": "الانتقال إلى: {label}",
+        "fileCount": "{count, plural, one {# ملف} other {# ملفات}}",
+        "remove": "إزالة",
+        "noDiffDataAvailable": "لا توجد بيانات diff متاحة لـ {filePath}"
       }
     },
     "diffPreview": {
@@ -2193,6 +2198,7 @@
     }
   },
   "WebServiceSettings": {
+    "addressSwitchHint": "التبديل يغيّر فقط العنوان المعروض والمفتوح هنا؛ تستمع الخدمة على جميع الواجهات وتبقى قابلة للوصول من كل عنوان.",
     "sectionTitle": "خدمة الويب",
     "sectionDescription": "تفعيل للوصول إلى Codeg عن بُعد عبر المتصفح",
     "port": "المنفذ",
@@ -2211,6 +2217,9 @@
     "hide": "إخفاء",
     "show": "إظهار",
     "copy": "نسخ",
+    "qrcode": "رمز QR",
+    "qrcodeTitle": "امسح للفتح",
+    "qrcodeHint": "امسح بهاتفك لفتح Codeg في المتصفح",
     "addressLabel": "عنوان الوصول",
     "tokenLabel": "رمز الوصول",
     "tokenHint": "أدخل هذا الرمز عند الوصول إلى عميل الويب لأول مرة",
@@ -2497,6 +2506,19 @@
     }
   },
   "Pet": {
+    "badge": {
+      "running": "{count} قيد التشغيل",
+      "waiting": "{count} في انتظار الموافقة",
+      "error": "{count} بها خطأ"
+    },
+    "panel": {
+      "title": "الجلسات النشطة",
+      "empty": "لا توجد جلسات نشطة",
+      "emptyHint": "تظهر هنا الوكلاء قيد التشغيل وتلك التي تحتاج إليك.",
+      "statusRunning": "قيد التشغيل",
+      "statusWaiting": "في الانتظار",
+      "statusError": "خطأ"
+    },
     "menu": {
       "scale": "الحجم",
       "openManager": "إدارة الحيوانات الأليفة",
@@ -2734,5 +2756,33 @@
     "sessionExpiredTitle": "انتهت الجلسة",
     "sessionExpiredDescription": "لم تعد جلستك صالحة. يُرجى تسجيل الدخول مرة أخرى للمتابعة.",
     "goToLogin": "الانتقال إلى تسجيل الدخول"
+  },
+  "SessionFeedbackSettings": {
+    "title": "ملاحظات مباشرة",
+    "description": "أرسل ملاحظات وتصحيحات إلى الوكيل أثناء عمله. عند التفعيل، يحصل الوكيل على أداة للتحقق من ملاحظاتك المباشرة، وتعرض المحادثات حقل إدخال للملاحظات. نصيحة: عادةً ما يتحقق الوكيل من الملاحظات فقط عند ذكرها في رسالتك — مثلاً أضف \"تحقق من ملاحظاتي المباشرة بانتظام أثناء العمل\" إلى رسالتك.",
+    "enable": "تفعيل الملاحظات المباشرة",
+    "enableHint": "يضيف أداة للتحقق من الملاحظات إلى الوكلاء الذين يبدؤون بعد التفعيل. معطّل افتراضيًا.",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…",
+    "saved": "تم حفظ إعدادات الملاحظات",
+    "saveFailed": "تعذّر حفظ إعدادات الملاحظات",
+    "loadFailed": "فشل التحميل: {detail}"
+  },
+  "LiveFeedback": {
+    "placeholder": "أرسل ملاحظة إلى {agent} أثناء عمله…",
+    "agentFallback": "الوكيل",
+    "ariaLabel": "ملاحظة مباشرة",
+    "dialogTitle": "ملاحظات مباشرة",
+    "dialogDescription": "أرسل ملاحظة إلى الوكيل أثناء عمله. سيقرأها في فحصه التالي دون مقاطعة الخطوة الحالية.",
+    "send": "إرسال",
+    "cancel": "إلغاء",
+    "pending": "في الانتظار",
+    "delivered": "تم الاستلام",
+    "turnEndedUnread": "أنهى الوكيل الجولة قبل قراءة ملاحظاتك.",
+    "sendAsMessage": "إرسال كرسالة",
+    "dismiss": "تجاهل",
+    "turnEndedResent": "انتهت الجولة — تم الإرسال كرسالة جديدة بدلاً من ذلك.",
+    "turnEnded": "انتهت الجولة بالفعل.",
+    "submitFailed": "تعذّر إرسال ملاحظتك"
   }
 }

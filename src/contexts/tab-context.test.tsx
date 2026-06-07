@@ -79,6 +79,7 @@ const defaultFoldersMock: FolderDetail[] = [
     last_opened_at: "2026-05-24T00:00:00Z",
     sort_order: 0,
     color: "blue",
+    parent_id: null,
   },
   {
     id: 2,
@@ -89,6 +90,7 @@ const defaultFoldersMock: FolderDetail[] = [
     last_opened_at: "2026-05-24T00:00:00Z",
     sort_order: 1,
     color: "green",
+    parent_id: null,
   },
 ]
 
@@ -361,6 +363,27 @@ describe("TabProvider tab state transitions", () => {
       expect(disconnectMock).toHaveBeenCalledWith(replacementTabId)
       expect(screen.getByTestId("active-folder")).toHaveTextContent("2")
     })
+  })
+
+  it("applies the supplied folderDefaultAgent for a folder not in the open list", () => {
+    // Regression: navigating a branch switch to a just-reopened (closed) folder
+    // passes that folder's saved default agent explicitly, because `foldersRef`
+    // only catches up on the next render. Folder 999 is absent from the
+    // provider's folders, so without the override the draft would fall back to
+    // sortedTypes[0] ("codex"); the override must win.
+    renderTabs()
+    expect(latestContext).not.toBeNull()
+
+    act(() => {
+      latestContext?.openNewConversationTab(999, "/closed-wt", {
+        folderDefaultAgent: "claude_code",
+      })
+    })
+
+    const activeId = latestContext?.activeTabId
+    const draft = latestContext?.tabs.find((tab) => tab.id === activeId)
+    expect(draft?.folderId).toBe(999)
+    expect(draft?.agentType).toBe("claude_code")
   })
 
   it("activates an opened tab when another tab update is already queued", () => {

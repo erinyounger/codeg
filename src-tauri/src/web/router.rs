@@ -65,6 +65,18 @@ pub fn build_router(
             post(handlers::delegation::set_delegation_settings),
         )
         .route(
+            "/get_feedback_settings",
+            post(handlers::feedback::get_feedback_settings),
+        )
+        .route(
+            "/set_feedback_settings",
+            post(handlers::feedback::set_feedback_settings),
+        )
+        .route(
+            "/submit_session_feedback",
+            post(handlers::feedback::submit_session_feedback),
+        )
+        .route(
             "/get_folder_conversation",
             post(handlers::conversations::get_folder_conversation),
         )
@@ -121,6 +133,14 @@ pub fn build_router(
         )
         .route("/get_folder", post(handlers::folders::get_folder))
         .route("/open_folder", post(handlers::folders::open_folder))
+        .route(
+            "/open_worktree_folder",
+            post(handlers::folders::open_worktree_folder),
+        )
+        .route(
+            "/resolve_worktree_folder",
+            post(handlers::folders::resolve_worktree_folder),
+        )
         .route(
             "/open_folder_in_workspace",
             post(handlers::folders::open_folder_in_workspace),
@@ -697,6 +717,10 @@ pub fn build_router(
             post(handlers::web_server::app_update_status),
         )
         .route(
+            "/app_update_state",
+            post(handlers::app_update::app_update_state),
+        )
+        .route(
             "/perform_app_update",
             post(handlers::app_update::perform_app_update),
         )
@@ -870,6 +894,10 @@ pub fn build_router(
         .route(
             "/pet_get_current_state",
             post(handlers::pet::pet_get_current_state),
+        )
+        .route(
+            "/pet_list_active_sessions",
+            post(handlers::pet::pet_list_active_sessions),
         )
         // ─── Terminal ───
         .route("/terminal_spawn", post(handlers::terminal::terminal_spawn))

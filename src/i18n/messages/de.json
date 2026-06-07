@@ -136,6 +136,9 @@
     "restartTimeout": "Der Server ist nicht rechtzeitig zurückgekehrt. Prüfe die Container- oder Dienstprotokolle.",
     "restartingIn": "Neustart in {seconds} s...",
     "waitingForServer": "Warten, bis der Server zurückkehrt...",
+    "restartToUpdate": "Zum Aktualisieren neu starten",
+    "updateReadyHint": "Update heruntergeladen – zum Anwenden neu starten.",
+    "restarting": "Neustart...",
     "dockerUpgradeHint": "Dies aktualisiert jetzt den laufenden Container. Beim Neuerstellen des Containers geht es verloren – zum Beibehalten ein Image mit der neuen Version ziehen oder bauen und den Container neu erstellen.",
     "upgradeRolledBack": "Upgrade fehlgeschlagen; der Server wurde auf die vorherige Version zurückgesetzt.",
     "serverUnreachable": "Der Server konnte für das Upgrade nicht erreicht werden. Prüfe, ob er läuft, und versuche es erneut.",
@@ -1061,7 +1064,6 @@
     },
     "auxPanel": {
       "tabs": {
-        "diff": "Unterschiede",
         "files": "Dateien",
         "changes": "Änderungen",
         "commits": "Einträge"
@@ -1105,16 +1107,6 @@
       "closeAll": "Alle schließen",
       "hideTerminal": "Terminal ausblenden ({shortcut})",
       "openFolderFirst": "Öffnen Sie zuerst einen Ordner"
-    },
-    "sessionFiles": {
-      "currentResponse": "Aktuelle Antwort",
-      "noDiffDataAvailable": "Keine Diff-Daten verfügbar für {filePath}",
-      "loading": "Wird geladen...",
-      "noFileChangesInConversation": "Keine Dateiänderungen in dieser Konversation gefunden",
-      "openConversationToSeeChanges": "Öffne eine Konversation, um Dateiänderungen zu sehen",
-      "remove": "Entfernen",
-      "changeCount": "{count, plural, one {# Änderung} other {# Änderungen}}",
-      "fileCount": "{count, plural, one {# Datei} other {# Dateien}}"
     },
     "folderNameDropdown": {
       "fallbackFolderName": "Ordner",
@@ -1164,7 +1156,9 @@
         "upstreamSet": "Upstream-Branch wurde gesetzt",
         "upstreamSetAndPushed": "Upstream-Branch gesetzt und {count, plural, one {# Commit} other {# Commits}} gepusht",
         "noCommitsToPush": "Keine Commits zum Pushen",
-        "pushedCommits": "{count, plural, one {# Commit gepusht} other {# Commits gepusht}}"
+        "pushedCommits": "{count, plural, one {# Commit gepusht} other {# Commits gepusht}}",
+        "switchedToFolder": "Zu {name} gewechselt",
+        "switchFailed": "Branch konnte nicht gewechselt werden"
       },
       "tasks": {
         "newBranch": "Branch {name} erstellen",
@@ -1739,6 +1733,8 @@
         "quickMessagesEmpty": "Noch keine Schnellnachrichten",
         "quickMessagesLoading": "Wird geladen...",
         "quickMessageUntitled": "Ohne Titel",
+        "liveFeedback": "Live-Feedback",
+        "liveFeedbackDisabledHint": "Verfügbar, während der Agent arbeitet",
         "dropFilesToAttach": "Dateien zum Anhängen ablegen",
         "loadingSettings": "Einstellungen werden geladen...",
         "loadingMode": "Modus wird geladen...",
@@ -2075,6 +2071,15 @@
           "errorSuffix": "{count, plural, one {# fehlgeschlagen} other {# fehlgeschlagen}}",
           "joiner": " · "
         }
+      },
+      "messageNav": {
+        "title": "Nachrichtennavigation",
+        "expand": "Nachrichtennavigation einblenden",
+        "collapse": "Nachrichtennavigation ausblenden",
+        "jumpToMessage": "Springen zu: {label}",
+        "fileCount": "{count, plural, one {# Datei} other {# Dateien}}",
+        "remove": "Entfernen",
+        "noDiffDataAvailable": "Keine Diff-Daten verfügbar für {filePath}"
       }
     },
     "diffPreview": {
@@ -2193,6 +2198,7 @@
     }
   },
   "WebServiceSettings": {
+    "addressSwitchHint": "Das Umschalten ändert nur die hier angezeigte und geöffnete Adresse – der Dienst lauscht auf allen Schnittstellen und bleibt unter jeder Adresse erreichbar.",
     "sectionTitle": "Webdienst",
     "sectionDescription": "Aktivieren Sie den Fernzugriff auf Codeg über den Browser",
     "port": "Port",
@@ -2211,6 +2217,9 @@
     "hide": "Ausblenden",
     "show": "Einblenden",
     "copy": "Kopieren",
+    "qrcode": "QR-Code",
+    "qrcodeTitle": "Zum Öffnen scannen",
+    "qrcodeHint": "Scanne mit deinem Handy, um Codeg im Browser zu öffnen",
     "addressLabel": "Zugriffsadresse",
     "tokenLabel": "Zugriffstoken",
     "tokenHint": "Geben Sie dieses Token beim ersten Zugriff auf den Web-Client ein",
@@ -2497,6 +2506,19 @@
     }
   },
   "Pet": {
+    "badge": {
+      "running": "{count} laufend",
+      "waiting": "{count} warten auf Freigabe",
+      "error": "{count} fehlgeschlagen"
+    },
+    "panel": {
+      "title": "Aktive Sitzungen",
+      "empty": "Keine aktiven Sitzungen",
+      "emptyHint": "Laufende Agenten und solche, die dich brauchen, erscheinen hier.",
+      "statusRunning": "Läuft",
+      "statusWaiting": "Wartet",
+      "statusError": "Fehler"
+    },
     "menu": {
       "scale": "Skalierung",
       "openManager": "Pets verwalten",
@@ -2734,5 +2756,33 @@
     "sessionExpiredTitle": "Sitzung abgelaufen",
     "sessionExpiredDescription": "Deine Sitzung ist nicht mehr gültig. Bitte melde dich erneut an, um fortzufahren.",
     "goToLogin": "Zur Anmeldung"
+  },
+  "SessionFeedbackSettings": {
+    "title": "Live-Feedback",
+    "description": "Sende dem Agenten Hinweise und Korrekturen, während er arbeitet. Wenn aktiviert, erhält der Agent ein Werkzeug zum Abrufen von Live-Feedback und Unterhaltungen zeigen eine Notizeingabe. Tipp: Der Agent prüft Feedback normalerweise nur, wenn du es in deiner Nachricht erwähnst — füge z. B. «prüfe regelmäßig mein Live-Feedback während der Arbeit» hinzu.",
+    "enable": "Live-Feedback aktivieren",
+    "enableHint": "Fügt Agenten, die nach dem Aktivieren gestartet werden, ein Werkzeug zum Abrufen von Feedback hinzu. Standardmäßig aus.",
+    "save": "Speichern",
+    "saving": "Wird gespeichert…",
+    "saved": "Feedback-Einstellungen gespeichert",
+    "saveFailed": "Feedback-Einstellungen konnten nicht gespeichert werden",
+    "loadFailed": "Laden fehlgeschlagen: {detail}"
+  },
+  "LiveFeedback": {
+    "placeholder": "Sende {agent} eine Notiz, während er arbeitet…",
+    "agentFallback": "der Agent",
+    "ariaLabel": "Live-Feedback-Notiz",
+    "dialogTitle": "Live-Feedback",
+    "dialogDescription": "Sende dem Agenten eine Notiz, während er arbeitet. Er liest sie bei der nächsten Prüfung – ohne den aktuellen Schritt zu unterbrechen.",
+    "send": "Senden",
+    "cancel": "Abbrechen",
+    "pending": "wartet",
+    "delivered": "erhalten",
+    "turnEndedUnread": "Der Agent hat die Runde beendet, bevor er dein Feedback gelesen hat.",
+    "sendAsMessage": "Als Nachricht senden",
+    "dismiss": "Verwerfen",
+    "turnEndedResent": "Die Runde endete – stattdessen als neue Nachricht gesendet.",
+    "turnEnded": "Die Runde ist bereits beendet.",
+    "submitFailed": "Deine Notiz konnte nicht gesendet werden"
   }
 }

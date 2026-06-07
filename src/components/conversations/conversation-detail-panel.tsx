@@ -33,6 +33,10 @@ import { useConnectionLifecycle } from "@/hooks/use-connection-lifecycle"
 import { useMessageQueue, type QueuedMessage } from "@/hooks/use-message-queue"
 import { MessageListView } from "@/components/message/message-list-view"
 import { ConversationShell } from "@/components/chat/conversation-shell"
+import { FeedbackNotesDisplay } from "@/components/chat/feedback-notes-display"
+import { FeedbackDialog } from "@/components/chat/feedback-dialog"
+import { useFeedbackEnabled } from "@/hooks/use-feedback-enabled"
+import { useSessionFeedback } from "@/hooks/use-session-feedback"
 import { AgentSelector } from "@/components/chat/agent-selector"
 import { ChatInput } from "@/components/chat/chat-input"
 import { WelcomeHero, WelcomeTip } from "@/components/chat/welcome-hero"
@@ -1075,6 +1079,30 @@ const ConversationTabView = memo(function ConversationTabView({
     />
   )
 
+  // Live-feedback bar gating + the "agent never read your note" resend fallback.
+  // Enqueue rather than `handleSend`: this fallback fires on a turn-end race
+  // where the backend already reports no active turn but the frontend may still
+  // read `connStatus === "prompting"`, and `handleSend` no-ops unless
+  // "connected" — which would silently drop the note. The message queue holds it
+  // (visible above the composer) and auto-flushes when the turn completes, so
+  // the user's note is never lost.
+  const feedbackEnabled = useFeedbackEnabled()
+  const resendFeedbackAsPrompt = useCallback(
+    (text: string) => {
+      mqEnqueue(
+        { blocks: [{ type: "text", text }], displayText: text },
+        selectedModeId
+      )
+    },
+    [mqEnqueue, selectedModeId]
+  )
+  const feedback = useSessionFeedback({
+    connectionId: conn.connectionId,
+    connStatus,
+    enabled: feedbackEnabled,
+    onResendAsPrompt: resendFeedbackAsPrompt,
+  })
+
   return (
     <ConversationShell
       status={connStatus}
@@ -1103,6 +1131,13 @@ const ConversationTabView = memo(function ConversationTabView({
       attachmentTabId={tabId}
       draftStorageKey={draftStorageKey}
       hideInput={isWelcomeMode || Boolean(acpLoadError)}
+      feedbackList={
+        feedback.showList ? (
+          <FeedbackNotesDisplay notes={feedback.notes} />
+        ) : null
+      }
+      onAddFeedback={feedback.featureEnabled ? feedback.openDialog : undefined}
+      feedbackAddDisabled={!feedback.canSubmit}
       isActive={isActive}
       queue={msgQueue}
       onEnqueue={mqEnqueue}
@@ -1179,6 +1214,10 @@ const ConversationTabView = memo(function ConversationTabView({
               attachmentTabId={tabId}
               draftStorageKey={draftStorageKey}
               isActive={isActive}
+              onAddFeedback={
+                feedback.featureEnabled ? feedback.openDialog : undefined
+              }
+              feedbackAddDisabled={!feedback.canSubmit}
             />
           </div>
           <div className="flex-1" />
@@ -1223,6 +1262,16 @@ const ConversationTabView = memo(function ConversationTabView({
       ) : (
         messageListNode
       )}
+      <FeedbackDialog
+        open={feedback.dialogOpen}
+        onOpenChange={(open) => {
+          if (open) feedback.openDialog()
+          else feedback.closeDialog()
+        }}
+        onSubmit={feedback.submit}
+        submitting={feedback.submitting}
+        agentName={AGENT_LABELS[selectedAgent]}
+      />
     </ConversationShell>
   )
 })

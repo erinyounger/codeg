@@ -48,7 +48,7 @@ interface SidebarConversationCardProps {
   onRename: (id: number, newTitle: string) => Promise<void>
   onDelete: (id: number, agentType: string, folderId: number) => Promise<void>
   onStatusChange: (id: number, status: ConversationStatus) => Promise<void>
-  onNewConversation?: () => void
+  onNewConversation?: (folderId: number) => void
 }
 
 export const SidebarConversationCard = memo(function SidebarConversationCard({
@@ -229,7 +229,9 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
         <ContextMenuContent>
           {onNewConversation && (
             <>
-              <ContextMenuItem onSelect={onNewConversation}>
+              <ContextMenuItem
+                onSelect={() => onNewConversation(conversation.folder_id)}
+              >
                 <Plus className="h-4 w-4" />
                 {t("newConversation")}
               </ContextMenuItem>

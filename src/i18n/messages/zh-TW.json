@@ -136,6 +136,9 @@
     "restartTimeout": "服務未能即時恢復，請檢查容器或服務記錄。",
     "restartingIn": "將在 {seconds} 秒後重新啟動...",
     "waitingForServer": "正在等待服務恢復...",
+    "restartToUpdate": "重新啟動以更新",
+    "updateReadyHint": "新版本已下載，重新啟動以完成更新。",
+    "restarting": "正在重新啟動…",
     "dockerUpgradeHint": "現在升級的是正在執行的容器。容器一旦被重新建立即遺失——如需保留，請拉取或建置新版本映像後重新建立容器。",
     "upgradeRolledBack": "升級失敗，伺服器已自動回復到上一版本。",
     "serverUnreachable": "無法連線到伺服器以開始升級。請確認伺服器正在執行後重試。",
@@ -1061,7 +1064,6 @@
     },
     "auxPanel": {
       "tabs": {
-        "diff": "差異",
         "files": "檔案",
         "changes": "變更",
         "commits": "提交"
@@ -1105,16 +1107,6 @@
       "closeAll": "關閉所有",
       "hideTerminal": "隱藏終端（{shortcut}）",
       "openFolderFirst": "請先開啟一個資料夾"
-    },
-    "sessionFiles": {
-      "currentResponse": "目前回應",
-      "noDiffDataAvailable": "找不到 {filePath} 的差異資料",
-      "loading": "載入中...",
-      "noFileChangesInConversation": "此會話未發現檔案變更",
-      "openConversationToSeeChanges": "打開會話以查看檔案變更",
-      "remove": "移除",
-      "changeCount": "{count} 處變更",
-      "fileCount": "{count} 個檔案"
     },
     "folderNameDropdown": {
       "fallbackFolderName": "資料夾",
@@ -1164,7 +1156,9 @@
         "upstreamSet": "已設定遠端追蹤分支",
         "upstreamSetAndPushed": "已設定遠端追蹤分支並推送 {count} 個提交",
         "noCommitsToPush": "沒有可推送的提交",
-        "pushedCommits": "已推送 {count} 個提交"
+        "pushedCommits": "已推送 {count} 個提交",
+        "switchedToFolder": "已切換到 {name}",
+        "switchFailed": "切換分支失敗"
       },
       "tasks": {
         "newBranch": "新增分支 {name}",
@@ -1739,6 +1733,8 @@
         "quickMessagesEmpty": "尚無快捷訊息",
         "quickMessagesLoading": "載入中...",
         "quickMessageUntitled": "未命名",
+        "liveFeedback": "即時回饋",
+        "liveFeedbackDisabledHint": "智能體工作時可傳送",
         "dropFilesToAttach": "拖曳檔案到此處附加",
         "loadingSettings": "正在載入設定...",
         "loadingMode": "正在載入模式...",
@@ -2075,6 +2071,15 @@
           "errorSuffix": "{count} 個失敗",
           "joiner": " · "
         }
+      },
+      "messageNav": {
+        "title": "訊息導覽",
+        "expand": "展開訊息導覽",
+        "collapse": "收合訊息導覽",
+        "jumpToMessage": "跳至：{label}",
+        "fileCount": "{count} 個檔案",
+        "remove": "移除",
+        "noDiffDataAvailable": "找不到 {filePath} 的差異資料"
       }
     },
     "diffPreview": {
@@ -2193,6 +2198,7 @@
     }
   },
   "WebServiceSettings": {
+    "addressSwitchHint": "切換只會改變這裡顯示與開啟的位址；服務會監聽所有網路介面，每個位址都可存取。",
     "sectionTitle": "Web 服務",
     "sectionDescription": "啟用後可透過瀏覽器遠端存取 Codeg",
     "port": "連接埠",
@@ -2211,6 +2217,9 @@
     "hide": "隱藏",
     "show": "顯示",
     "copy": "複製",
+    "qrcode": "QR 碼",
+    "qrcodeTitle": "掃碼開啟",
+    "qrcodeHint": "用手機掃描，在瀏覽器中開啟 Codeg",
     "addressLabel": "存取位址",
     "tokenLabel": "存取 Token",
     "tokenHint": "Web 用戶端首次存取時需輸入此 Token",
@@ -2497,6 +2506,19 @@
     }
   },
   "Pet": {
+    "badge": {
+      "running": "{count} 個執行中",
+      "waiting": "{count} 個待核准",
+      "error": "{count} 個發生錯誤"
+    },
+    "panel": {
+      "title": "活動工作階段",
+      "empty": "沒有活動工作階段",
+      "emptyHint": "正在執行或需要你處理的工作階段會顯示在這裡。",
+      "statusRunning": "執行中",
+      "statusWaiting": "等待中",
+      "statusError": "發生錯誤"
+    },
     "menu": {
       "scale": "縮放",
       "openManager": "管理寵物",
@@ -2734,5 +2756,33 @@
     "sessionExpiredTitle": "工作階段已過期",
     "sessionExpiredDescription": "登入狀態已失效，請重新登入以繼續。",
     "goToLogin": "前往登入"
+  },
+  "SessionFeedbackSettings": {
+    "title": "即時回饋",
+    "description": "在智能體工作過程中向它傳送提醒和修正。啟用後，智能體會取得一個查看即時回饋的工具，對話中也會出現留言入口。提示：智能體通常只在你的提示詞中提及時才會主動查看回饋——例如在訊息中加上「工作過程中定期查看我的即時回饋」，智能體才會主動讀取。",
+    "enable": "啟用即時回饋",
+    "enableHint": "為啟用之後啟動的智能體注入查看回饋工具。預設關閉。",
+    "save": "儲存",
+    "saving": "儲存中…",
+    "saved": "回饋設定已儲存",
+    "saveFailed": "儲存回饋設定失敗",
+    "loadFailed": "載入失敗：{detail}"
+  },
+  "LiveFeedback": {
+    "placeholder": "在 {agent} 工作時給它留言…",
+    "agentFallback": "智能體",
+    "ariaLabel": "即時回饋留言",
+    "dialogTitle": "即時回饋",
+    "dialogDescription": "在智能體工作時給它留言。它會在下次檢查時讀取，不會打斷當前步驟。",
+    "send": "送出",
+    "cancel": "取消",
+    "pending": "等待中",
+    "delivered": "已收到",
+    "turnEndedUnread": "智能體在讀取你的回饋前已結束本輪。",
+    "sendAsMessage": "作為新訊息送出",
+    "dismiss": "忽略",
+    "turnEndedResent": "本輪已結束——已改為作為新訊息送出。",
+    "turnEnded": "本輪已結束。",
+    "submitFailed": "留言送出失敗"
   }
 }

@@ -136,6 +136,9 @@
     "restartTimeout": "El servidor no volvió a tiempo. Revisa los registros del contenedor o del servicio.",
     "restartingIn": "Reiniciando en {seconds} s...",
     "waitingForServer": "Esperando a que el servidor vuelva...",
+    "restartToUpdate": "Reiniciar para actualizar",
+    "updateReadyHint": "Actualización descargada: reinicia para aplicarla.",
+    "restarting": "Reiniciando...",
     "dockerUpgradeHint": "Esto actualiza el contenedor en ejecución ahora. Se pierde si se recrea el contenedor: para conservarlo, descarga o crea una imagen con la nueva versión y recrea el contenedor.",
     "upgradeRolledBack": "La actualización falló; el servidor volvió a la versión anterior.",
     "serverUnreachable": "No se pudo conectar con el servidor para iniciar la actualización. Comprueba que esté en ejecución e inténtalo de nuevo.",
@@ -1061,7 +1064,6 @@
     },
     "auxPanel": {
       "tabs": {
-        "diff": "Diferencias",
         "files": "Archivos",
         "changes": "Cambios",
         "commits": "Confirmaciones"
@@ -1105,16 +1107,6 @@
       "closeAll": "Cerrar todo",
       "hideTerminal": "Ocultar terminal ({shortcut})",
       "openFolderFirst": "Abre primero una carpeta"
-    },
-    "sessionFiles": {
-      "currentResponse": "Respuesta actual",
-      "noDiffDataAvailable": "No hay datos de diff disponibles para {filePath}",
-      "loading": "Cargando...",
-      "noFileChangesInConversation": "No se encontraron cambios de archivos en esta conversación",
-      "openConversationToSeeChanges": "Abre una conversación para ver sus cambios de archivos",
-      "remove": "Quitar",
-      "changeCount": "{count, plural, one {# cambio} other {# cambios}}",
-      "fileCount": "{count, plural, one {# archivo} other {# archivos}}"
     },
     "folderNameDropdown": {
       "fallbackFolderName": "Carpeta",
@@ -1164,7 +1156,9 @@
         "upstreamSet": "La rama upstream se ha configurado",
         "upstreamSetAndPushed": "Rama upstream configurada y se enviaron {count, plural, one {# commit} other {# commits}}",
         "noCommitsToPush": "No hay commits para enviar",
-        "pushedCommits": "Se enviaron {count, plural, one {# commit} other {# commits}}"
+        "pushedCommits": "Se enviaron {count, plural, one {# commit} other {# commits}}",
+        "switchedToFolder": "Cambiado a {name}",
+        "switchFailed": "No se pudo cambiar de rama"
       },
       "tasks": {
         "newBranch": "Crear rama {name}",
@@ -1739,6 +1733,8 @@
         "quickMessagesEmpty": "Aún no hay mensajes rápidos",
         "quickMessagesLoading": "Cargando...",
         "quickMessageUntitled": "Sin título",
+        "liveFeedback": "Comentarios en vivo",
+        "liveFeedbackDisabledHint": "Disponible mientras el agente trabaja",
         "dropFilesToAttach": "Suelta archivos para adjuntar",
         "loadingSettings": "Cargando ajustes...",
         "loadingMode": "Cargando modo...",
@@ -2075,6 +2071,15 @@
           "errorSuffix": "{count, plural, one {# falló} other {# fallaron}}",
           "joiner": " · "
         }
+      },
+      "messageNav": {
+        "title": "Navegación de mensajes",
+        "expand": "Expandir navegación de mensajes",
+        "collapse": "Contraer navegación de mensajes",
+        "jumpToMessage": "Ir a: {label}",
+        "fileCount": "{count, plural, one {# archivo} other {# archivos}}",
+        "remove": "Quitar",
+        "noDiffDataAvailable": "No hay datos de diff disponibles para {filePath}"
       }
     },
     "diffPreview": {
@@ -2193,6 +2198,7 @@
     }
   },
   "WebServiceSettings": {
+    "addressSwitchHint": "Cambiar solo modifica la dirección que se muestra y se abre aquí; el servicio escucha en todas las interfaces y sigue accesible en cada dirección.",
     "sectionTitle": "Servicio Web",
     "sectionDescription": "Habilitar para acceder a Codeg de forma remota a través del navegador",
     "port": "Puerto",
@@ -2211,6 +2217,9 @@
     "hide": "Ocultar",
     "show": "Mostrar",
     "copy": "Copiar",
+    "qrcode": "Código QR",
+    "qrcodeTitle": "Escanear para abrir",
+    "qrcodeHint": "Escanea con tu teléfono para abrir Codeg en el navegador",
     "addressLabel": "Dirección de acceso",
     "tokenLabel": "Token de acceso",
     "tokenHint": "Ingrese este token al acceder al cliente Web por primera vez",
@@ -2497,6 +2506,19 @@
     }
   },
   "Pet": {
+    "badge": {
+      "running": "{count} en ejecución",
+      "waiting": "{count} esperando aprobación",
+      "error": "{count} con error"
+    },
+    "panel": {
+      "title": "Sesiones activas",
+      "empty": "No hay sesiones activas",
+      "emptyHint": "Aquí aparecen los agentes en ejecución y los que te necesitan.",
+      "statusRunning": "En ejecución",
+      "statusWaiting": "En espera",
+      "statusError": "Error"
+    },
     "menu": {
       "scale": "Escala",
       "openManager": "Gestionar mascotas",
@@ -2734,5 +2756,33 @@
     "sessionExpiredTitle": "Sesión caducada",
     "sessionExpiredDescription": "Tu sesión ya no es válida. Inicia sesión de nuevo para continuar.",
     "goToLogin": "Ir al inicio de sesión"
+  },
+  "SessionFeedbackSettings": {
+    "title": "Comentarios en vivo",
+    "description": "Envía notas y correcciones a un agente mientras trabaja. Cuando está activado, el agente obtiene una herramienta para consultar comentarios en vivo y las conversaciones muestran una entrada de notas. Consejo: el agente normalmente solo consulta los comentarios cuando lo mencionas en tu mensaje — por ejemplo, añade \"revisa mis comentarios en vivo periódicamente mientras trabajas\".",
+    "enable": "Activar comentarios en vivo",
+    "enableHint": "Inyecta una herramienta para consultar comentarios en los agentes iniciados después de activarlo. Desactivado por defecto.",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Ajustes de comentarios guardados",
+    "saveFailed": "No se pudieron guardar los ajustes de comentarios",
+    "loadFailed": "Error al cargar: {detail}"
+  },
+  "LiveFeedback": {
+    "placeholder": "Envía una nota a {agent} mientras trabaja…",
+    "agentFallback": "el agente",
+    "ariaLabel": "Nota de comentarios en vivo",
+    "dialogTitle": "Comentarios en vivo",
+    "dialogDescription": "Envía una nota al agente mientras trabaja. La leerá en su próxima comprobación, sin interrumpir el paso actual.",
+    "send": "Enviar",
+    "cancel": "Cancelar",
+    "pending": "esperando",
+    "delivered": "recibida",
+    "turnEndedUnread": "El agente terminó antes de leer tus comentarios.",
+    "sendAsMessage": "Enviar como mensaje",
+    "dismiss": "Descartar",
+    "turnEndedResent": "El turno terminó: se envió como un mensaje nuevo.",
+    "turnEnded": "El turno ya terminó.",
+    "submitFailed": "No se pudo enviar tu nota"
   }
 }

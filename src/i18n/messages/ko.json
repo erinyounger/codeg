@@ -136,6 +136,9 @@
     "restartTimeout": "서버가 제때 복구되지 않았습니다. 컨테이너 또는 서비스 로그를 확인하세요.",
     "restartingIn": "{seconds}초 후에 다시 시작합니다...",
     "waitingForServer": "서버가 복구되기를 기다리는 중...",
+    "restartToUpdate": "다시 시작하여 업데이트",
+    "updateReadyHint": "업데이트를 다운로드했습니다. 다시 시작하여 적용하세요.",
+    "restarting": "다시 시작하는 중…",
     "dockerUpgradeHint": "지금 실행 중인 컨테이너를 업그레이드합니다. 컨테이너를 다시 만들면 사라집니다. 유지하려면 새 버전 이미지를 가져오거나 빌드한 뒤 컨테이너를 다시 만드세요.",
     "upgradeRolledBack": "업그레이드에 실패하여 서버가 이전 버전으로 롤백되었습니다.",
     "serverUnreachable": "업그레이드를 시작하기 위해 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인한 후 다시 시도하세요.",
@@ -1061,7 +1064,6 @@
     },
     "auxPanel": {
       "tabs": {
-        "diff": "차이",
         "files": "파일",
         "changes": "변경사항",
         "commits": "커밋"
@@ -1105,16 +1107,6 @@
       "closeAll": "모두 닫기",
       "hideTerminal": "터미널 숨기기 ({shortcut})",
       "openFolderFirst": "먼저 폴더를 여세요"
-    },
-    "sessionFiles": {
-      "currentResponse": "현재 응답",
-      "noDiffDataAvailable": "{filePath}에 대한 diff 데이터가 없습니다",
-      "loading": "로딩 중...",
-      "noFileChangesInConversation": "이 대화에서 파일 변경을 찾을 수 없습니다",
-      "openConversationToSeeChanges": "대화를 열어 파일 변경을 확인하세요",
-      "remove": "제거",
-      "changeCount": "{count, plural, one {#개 변경} other {#개 변경}}",
-      "fileCount": "{count, plural, one {#개 파일} other {#개 파일}}"
     },
     "folderNameDropdown": {
       "fallbackFolderName": "폴더",
@@ -1164,7 +1156,9 @@
         "upstreamSet": "업스트림 브랜치가 설정되었습니다",
         "upstreamSetAndPushed": "업스트림 브랜치를 설정하고 {count, plural, one {#개 커밋} other {#개 커밋}}을 푸시했습니다",
         "noCommitsToPush": "푸시할 커밋이 없습니다",
-        "pushedCommits": "{count, plural, one {#개 커밋 푸시됨} other {#개 커밋 푸시됨}}"
+        "pushedCommits": "{count, plural, one {#개 커밋 푸시됨} other {#개 커밋 푸시됨}}",
+        "switchedToFolder": "{name}(으)로 전환했습니다",
+        "switchFailed": "브랜치 전환에 실패했습니다"
       },
       "tasks": {
         "newBranch": "브랜치 {name} 생성",
@@ -1739,6 +1733,8 @@
         "quickMessagesEmpty": "빠른 메시지가 없습니다",
         "quickMessagesLoading": "불러오는 중...",
         "quickMessageUntitled": "제목 없음",
+        "liveFeedback": "라이브 피드백",
+        "liveFeedbackDisabledHint": "에이전트가 작업 중일 때 보낼 수 있습니다",
         "dropFilesToAttach": "파일을 놓아 첨부",
         "loadingSettings": "설정 불러오는 중...",
         "loadingMode": "모드 불러오는 중...",
@@ -2075,6 +2071,15 @@
           "errorSuffix": "{count}건 실패",
           "joiner": " · "
         }
+      },
+      "messageNav": {
+        "title": "메시지 탐색",
+        "expand": "메시지 탐색 펼치기",
+        "collapse": "메시지 탐색 접기",
+        "jumpToMessage": "이동: {label}",
+        "fileCount": "{count, plural, one {#개 파일} other {#개 파일}}",
+        "remove": "제거",
+        "noDiffDataAvailable": "{filePath}에 대한 diff 데이터가 없습니다"
       }
     },
     "diffPreview": {
@@ -2193,6 +2198,7 @@
     }
   },
   "WebServiceSettings": {
+    "addressSwitchHint": "전환해도 여기에 표시되고 열리는 주소만 바뀝니다. 서비스는 모든 인터페이스에서 수신하며 어떤 주소로도 접속할 수 있습니다.",
     "sectionTitle": "웹 서비스",
     "sectionDescription": "활성화하면 브라우저를 통해 Codeg에 원격으로 접속할 수 있습니다",
     "port": "포트",
@@ -2211,6 +2217,9 @@
     "hide": "숨기기",
     "show": "표시",
     "copy": "복사",
+    "qrcode": "QR 코드",
+    "qrcodeTitle": "스캔하여 열기",
+    "qrcodeHint": "휴대폰으로 스캔하여 브라우저에서 Codeg를 엽니다",
     "addressLabel": "접속 주소",
     "tokenLabel": "접속 토큰",
     "tokenHint": "웹 클라이언트 첫 접속 시 이 토큰을 입력하세요",
@@ -2497,6 +2506,19 @@
     }
   },
   "Pet": {
+    "badge": {
+      "running": "실행 중 {count}개",
+      "waiting": "승인 대기 {count}개",
+      "error": "오류 {count}개"
+    },
+    "panel": {
+      "title": "활성 세션",
+      "empty": "활성 세션 없음",
+      "emptyHint": "실행 중이거나 사용자의 조치가 필요한 세션이 여기에 표시됩니다.",
+      "statusRunning": "실행 중",
+      "statusWaiting": "대기 중",
+      "statusError": "오류"
+    },
     "menu": {
       "scale": "크기",
       "openManager": "펫 관리",
@@ -2734,5 +2756,33 @@
     "sessionExpiredTitle": "세션이 만료되었습니다",
     "sessionExpiredDescription": "세션이 더 이상 유효하지 않습니다. 계속하려면 다시 로그인하세요.",
     "goToLogin": "로그인으로 이동"
+  },
+  "SessionFeedbackSettings": {
+    "title": "라이브 피드백",
+    "description": "작업 중인 에이전트에게 메모와 수정 사항을 보낼 수 있습니다. 활성화하면 에이전트가 라이브 피드백을 확인하는 도구를 갖게 되고, 대화에 메모 입력이 표시됩니다. 팁: 에이전트는 보통 프롬프트에서 언급할 때만 피드백을 확인합니다. 예를 들어 메시지에 \"작업 중 정기적으로 라이브 피드백을 확인해\"를 추가하세요.",
+    "enable": "라이브 피드백 활성화",
+    "enableHint": "활성화 후 시작된 에이전트에 피드백 확인 도구를 주입합니다. 기본값은 꺼짐입니다.",
+    "save": "저장",
+    "saving": "저장 중…",
+    "saved": "피드백 설정을 저장했습니다",
+    "saveFailed": "피드백 설정 저장에 실패했습니다",
+    "loadFailed": "불러오기 실패: {detail}"
+  },
+  "LiveFeedback": {
+    "placeholder": "{agent}이(가) 작업하는 동안 메모 보내기…",
+    "agentFallback": "에이전트",
+    "ariaLabel": "라이브 피드백 메모",
+    "dialogTitle": "라이브 피드백",
+    "dialogDescription": "에이전트가 작업하는 동안 메모를 보냅니다. 현재 단계를 중단하지 않고 다음 확인 시 읽습니다.",
+    "send": "보내기",
+    "cancel": "취소",
+    "pending": "대기 중",
+    "delivered": "수신됨",
+    "turnEndedUnread": "에이전트가 피드백을 읽기 전에 턴을 마쳤습니다.",
+    "sendAsMessage": "새 메시지로 보내기",
+    "dismiss": "닫기",
+    "turnEndedResent": "턴이 종료되어 새 메시지로 보냈습니다.",
+    "turnEnded": "턴이 이미 종료되었습니다.",
+    "submitFailed": "메모를 보내지 못했습니다"
   }
 }

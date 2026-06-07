@@ -136,6 +136,9 @@
     "restartTimeout": "服务未能按时恢复，请检查容器或服务日志。",
     "restartingIn": "将在 {seconds} 秒后重启...",
     "waitingForServer": "正在等待服务恢复...",
+    "restartToUpdate": "重启以更新",
+    "updateReadyHint": "新版本已下载，重启以完成更新。",
+    "restarting": "正在重启…",
     "dockerUpgradeHint": "现在升级的是正在运行的容器。容器一旦被重建即丢失——如需保留，请拉取或构建新版本镜像后重建容器。",
     "upgradeRolledBack": "升级失败，服务器已自动回滚到上一版本。",
     "serverUnreachable": "无法连接到服务器以开始升级。请确认服务器正在运行后重试。",
@@ -1061,7 +1064,6 @@
     },
     "auxPanel": {
       "tabs": {
-        "diff": "差异",
         "files": "文件",
         "changes": "变更",
         "commits": "提交"
@@ -1105,16 +1107,6 @@
       "closeAll": "关闭所有",
       "hideTerminal": "隐藏终端（{shortcut}）",
       "openFolderFirst": "请先打开一个文件夹"
-    },
-    "sessionFiles": {
-      "currentResponse": "当前响应",
-      "noDiffDataAvailable": "未找到 {filePath} 的差异数据",
-      "loading": "加载中...",
-      "noFileChangesInConversation": "该会话未发现文件变更",
-      "openConversationToSeeChanges": "打开会话以查看文件变更",
-      "remove": "移除",
-      "changeCount": "{count} 处变更",
-      "fileCount": "{count} 个文件"
     },
     "folderNameDropdown": {
       "fallbackFolderName": "文件夹",
@@ -1164,7 +1156,9 @@
         "upstreamSet": "已设置远程跟踪分支",
         "upstreamSetAndPushed": "已设置远程跟踪分支并推送 {count} 个提交",
         "noCommitsToPush": "没有可推送的提交",
-        "pushedCommits": "已推送 {count} 个提交"
+        "pushedCommits": "已推送 {count} 个提交",
+        "switchedToFolder": "已切换到 {name}",
+        "switchFailed": "切换分支失败"
       },
       "tasks": {
         "newBranch": "新建分支 {name}",
@@ -1741,6 +1735,8 @@
         "quickMessagesEmpty": "暂无快捷消息",
         "quickMessagesLoading": "加载中...",
         "quickMessageUntitled": "未命名",
+        "liveFeedback": "实时反馈",
+        "liveFeedbackDisabledHint": "智能体工作时可发送",
         "dropFilesToAttach": "拖拽文件到此处附加",
         "loadingSettings": "正在加载设置...",
         "loadingMode": "正在加载模式...",
@@ -2075,6 +2071,15 @@
           "errorSuffix": "{count} 个失败",
           "joiner": " · "
         }
+      },
+      "messageNav": {
+        "title": "消息导航",
+        "expand": "展开消息导航",
+        "collapse": "收起消息导航",
+        "jumpToMessage": "跳转到：{label}",
+        "fileCount": "{count} 个文件",
+        "remove": "移除",
+        "noDiffDataAvailable": "未找到 {filePath} 的差异数据"
       }
     },
     "diffPreview": {
@@ -2193,6 +2198,7 @@
     }
   },
   "WebServiceSettings": {
+    "addressSwitchHint": "切换只改变这里显示和打开的地址；服务监听所有网卡，每个地址都可访问。",
     "sectionTitle": "Web 服务",
     "sectionDescription": "启用后可通过浏览器远程访问 Codeg",
     "port": "端口",
@@ -2211,6 +2217,9 @@
     "hide": "隐藏",
     "show": "显示",
     "copy": "复制",
+    "qrcode": "二维码",
+    "qrcodeTitle": "扫码打开",
+    "qrcodeHint": "用手机扫描，在浏览器中打开 Codeg",
     "addressLabel": "访问地址",
     "tokenLabel": "访问 Token",
     "tokenHint": "Web 客户端首次访问时需输入此 Token",
@@ -2509,6 +2518,19 @@
     }
   },
   "Pet": {
+    "badge": {
+      "running": "{count} 个运行中",
+      "waiting": "{count} 个待批准",
+      "error": "{count} 个出错"
+    },
+    "panel": {
+      "title": "活动会话",
+      "empty": "没有活动会话",
+      "emptyHint": "正在运行或需要你处理的会话会显示在这里。",
+      "statusRunning": "运行中",
+      "statusWaiting": "等待中",
+      "statusError": "出错"
+    },
     "menu": {
       "scale": "缩放",
       "openManager": "管理宠物",
@@ -2734,5 +2756,33 @@
     "sessionExpiredTitle": "会话已过期",
     "sessionExpiredDescription": "登录状态已失效，请重新登录以继续。",
     "goToLogin": "前往登录"
+  },
+  "SessionFeedbackSettings": {
+    "title": "实时反馈",
+    "description": "在智能体工作过程中向它发送提醒和纠正。开启后，智能体会获得一个查看实时反馈的工具，会话中也会出现留言入口。提示：智能体通常只在你的提示词中提及时才会主动查看反馈——例如在消息中加上「工作过程中定期查看我的实时反馈」，智能体才会主动读取。",
+    "enable": "启用实时反馈",
+    "enableHint": "为开启之后启动的智能体注入查看反馈工具。默认关闭。",
+    "save": "保存",
+    "saving": "保存中…",
+    "saved": "反馈设置已保存",
+    "saveFailed": "保存反馈设置失败",
+    "loadFailed": "加载失败：{detail}"
+  },
+  "LiveFeedback": {
+    "placeholder": "在 {agent} 工作时给它留言…",
+    "agentFallback": "智能体",
+    "ariaLabel": "实时反馈留言",
+    "dialogTitle": "实时反馈",
+    "dialogDescription": "在智能体工作时给它留言。它会在下次检查时读取，不会打断当前步骤。",
+    "send": "发送",
+    "cancel": "取消",
+    "pending": "等待中",
+    "delivered": "已收到",
+    "turnEndedUnread": "智能体在读取你的反馈前已结束本轮。",
+    "sendAsMessage": "作为新消息发送",
+    "dismiss": "忽略",
+    "turnEndedResent": "本轮已结束——已改为作为新消息发送。",
+    "turnEnded": "本轮已结束。",
+    "submitFailed": "留言发送失败"
   }
 }

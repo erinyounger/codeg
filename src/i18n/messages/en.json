@@ -136,6 +136,9 @@
     "restartTimeout": "The server didn't come back in time. Check the container or service logs.",
     "restartingIn": "Restarting in {seconds}s...",
     "waitingForServer": "Waiting for the server to come back...",
+    "restartToUpdate": "Restart to update",
+    "updateReadyHint": "Update downloaded — restart to apply.",
+    "restarting": "Restarting...",
     "dockerUpgradeHint": "This upgrades the running container now. It's lost if the container is recreated — to keep it, pull or build an image at the new version and recreate.",
     "upgradeRolledBack": "Upgrade failed; the server rolled back to the previous version.",
     "serverUnreachable": "Couldn't reach the server to start the upgrade. Check that it's running and try again.",
@@ -1061,7 +1064,6 @@
     },
     "auxPanel": {
       "tabs": {
-        "diff": "Diff",
         "files": "Files",
         "changes": "Changes",
         "commits": "Commits"
@@ -1105,16 +1107,6 @@
       "closeAll": "Close All",
       "hideTerminal": "Hide Terminal ({shortcut})",
       "openFolderFirst": "Open a folder first"
-    },
-    "sessionFiles": {
-      "currentResponse": "Current response",
-      "noDiffDataAvailable": "No diff data available for {filePath}",
-      "loading": "Loading...",
-      "noFileChangesInConversation": "No file changes found in this conversation",
-      "openConversationToSeeChanges": "Open a conversation to see its file changes",
-      "remove": "Remove",
-      "changeCount": "{count, plural, one {# change} other {# changes}}",
-      "fileCount": "{count, plural, one {# file} other {# files}}"
     },
     "folderNameDropdown": {
       "fallbackFolderName": "Folder",
@@ -1164,7 +1156,9 @@
         "upstreamSet": "Upstream branch has been set",
         "upstreamSetAndPushed": "Upstream branch set and pushed {count, plural, one {# commit} other {# commits}}",
         "noCommitsToPush": "No commits to push",
-        "pushedCommits": "Pushed {count, plural, one {# commit} other {# commits}}"
+        "pushedCommits": "Pushed {count, plural, one {# commit} other {# commits}}",
+        "switchedToFolder": "Switched to {name}",
+        "switchFailed": "Failed to switch branch"
       },
       "tasks": {
         "newBranch": "Create branch {name}",
@@ -1741,6 +1735,8 @@
         "quickMessagesEmpty": "No quick messages yet",
         "quickMessagesLoading": "Loading...",
         "quickMessageUntitled": "Untitled",
+        "liveFeedback": "Live feedback",
+        "liveFeedbackDisabledHint": "Available while the agent is working",
         "dropFilesToAttach": "Drop files to attach",
         "loadingSettings": "Loading settings...",
         "loadingMode": "Loading mode...",
@@ -2075,6 +2071,15 @@
           "errorSuffix": "{count, plural, one {# failed} other {# failed}}",
           "joiner": " · "
         }
+      },
+      "messageNav": {
+        "title": "Message navigation",
+        "expand": "Expand message navigation",
+        "collapse": "Collapse message navigation",
+        "jumpToMessage": "Jump to: {label}",
+        "fileCount": "{count, plural, one {# file} other {# files}}",
+        "remove": "Remove",
+        "noDiffDataAvailable": "No diff data available for {filePath}"
       }
     },
     "diffPreview": {
@@ -2193,6 +2198,7 @@
     }
   },
   "WebServiceSettings": {
+    "addressSwitchHint": "Switching only changes the address shown and opened here — the service listens on all interfaces and stays reachable at every address.",
     "sectionTitle": "Web Service",
     "sectionDescription": "Enable to access Codeg remotely via browser",
     "port": "Port",
@@ -2211,6 +2217,9 @@
     "hide": "Hide",
     "show": "Show",
     "copy": "Copy",
+    "qrcode": "QR Code",
+    "qrcodeTitle": "Scan to Open",
+    "qrcodeHint": "Scan with your phone to open Codeg in a browser",
     "addressLabel": "Access Address",
     "tokenLabel": "Access Token",
     "tokenHint": "Enter this token when accessing the Web client for the first time",
@@ -2509,6 +2518,19 @@
     }
   },
   "Pet": {
+    "badge": {
+      "running": "{count} running",
+      "waiting": "{count} awaiting approval",
+      "error": "{count} errored"
+    },
+    "panel": {
+      "title": "Active sessions",
+      "empty": "No active sessions",
+      "emptyHint": "Running agents and ones that need you appear here.",
+      "statusRunning": "Running",
+      "statusWaiting": "Waiting",
+      "statusError": "Error"
+    },
     "menu": {
       "scale": "Scale",
       "openManager": "Manage pets",
@@ -2734,5 +2756,33 @@
     "sessionExpiredTitle": "Session expired",
     "sessionExpiredDescription": "Your session is no longer valid. Please sign in again to continue.",
     "goToLogin": "Go to login"
+  },
+  "SessionFeedbackSettings": {
+    "title": "Live Feedback",
+    "description": "Send notes and corrections to an agent while it's working. When enabled, the agent gets a tool to check for your mid-task feedback, and conversations show a note input. Tip: agents typically only check for feedback when you mention it in your prompt — for example, add \"check my live feedback regularly\" to your message so the agent knows to look.",
+    "enable": "Enable live feedback",
+    "enableHint": "Adds a check-for-feedback tool to agents started after this is turned on. Off by default.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Feedback settings saved",
+    "saveFailed": "Failed to save feedback settings",
+    "loadFailed": "Failed to load: {detail}"
+  },
+  "LiveFeedback": {
+    "placeholder": "Send a note to {agent} while it works…",
+    "agentFallback": "the agent",
+    "ariaLabel": "Live feedback note",
+    "dialogTitle": "Live feedback",
+    "dialogDescription": "Send a note to the agent while it works. It reads your note the next time it checks — without interrupting the current step.",
+    "send": "Send",
+    "cancel": "Cancel",
+    "pending": "waiting",
+    "delivered": "received",
+    "turnEndedUnread": "The agent finished before reading your feedback.",
+    "sendAsMessage": "Send as message",
+    "dismiss": "Dismiss",
+    "turnEndedResent": "The turn ended — sent as a new message instead.",
+    "turnEnded": "The turn already ended.",
+    "submitFailed": "Couldn't send your note"
   }
 }
