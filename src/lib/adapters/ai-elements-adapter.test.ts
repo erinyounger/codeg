@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   adaptMessageTurn,
   createMessageTurnAdapter,
+  dropHiddenFeedbackChecks,
   groupConsecutiveDelegationStatus,
   groupGoalRuns,
   groupConsecutiveToolCalls,
@@ -128,6 +129,86 @@ describe("groupConsecutiveToolCalls", () => {
       "tool-call",
       "tool-group",
       "tool-call",
+    ])
+  })
+})
+
+describe("dropHiddenFeedbackChecks", () => {
+  const FEEDBACK_OUT =
+    'Wall time: 0.003 seconds\nOutput:\n{"count":1,"feedback":[{"created_at":"2026-06-09T07:47:12Z","text":"还有package"}]}'
+  const NO_FEEDBACK_OUT =
+    'Wall time: 0.002 seconds\nOutput:\n{"count":0,"feedback":[]}'
+
+  function feedbackCheck(
+    output: string | null,
+    extra: Partial<AdaptedToolCallPart> = {}
+  ): AdaptedToolCallPart {
+    return {
+      type: "tool-call",
+      toolCallId: `cuf:${output ?? "pending"}`,
+      toolName: "check_user_feedback",
+      input: "{}",
+      state: output ? "output-available" : "input-available",
+      output,
+      ...extra,
+    }
+  }
+
+  it("drops no-feedback, in-flight, and unparseable checks", () => {
+    const out = dropHiddenFeedbackChecks([
+      feedbackCheck(NO_FEEDBACK_OUT),
+      feedbackCheck(null),
+      feedbackCheck("some unrelated output"),
+    ])
+    expect(out).toHaveLength(0)
+  })
+
+  it("keeps checks that received feedback", () => {
+    const part = feedbackCheck(FEEDBACK_OUT)
+    expect(dropHiddenFeedbackChecks([part])).toEqual([part])
+  })
+
+  it("keeps errored checks so failures aren't swallowed", () => {
+    const errored = feedbackCheck(null, {
+      state: "output-error",
+      errorText: "boom",
+    })
+    expect(dropHiddenFeedbackChecks([errored])).toEqual([errored])
+  })
+
+  it("never touches non-feedback parts", () => {
+    const parts: AdaptedContentPart[] = [
+      poll("exec_command"),
+      text,
+      poll("read"),
+    ]
+    expect(dropHiddenFeedbackChecks(parts)).toEqual(parts)
+  })
+
+  it("collapses neighbours into one group once a no-op check is dropped", () => {
+    const grouped = groupConsecutiveToolCalls(
+      dropHiddenFeedbackChecks([
+        poll("exec_command"),
+        feedbackCheck(NO_FEEDBACK_OUT),
+        poll("read"),
+      ])
+    )
+    // Without the drop, the standalone check would split this into two groups.
+    expect(grouped.map((p) => p.type)).toEqual(["tool-group"])
+  })
+
+  it("breaks the run when a check carries feedback", () => {
+    const grouped = groupConsecutiveToolCalls(
+      dropHiddenFeedbackChecks([
+        poll("exec_command"),
+        feedbackCheck(FEEDBACK_OUT),
+        poll("read"),
+      ])
+    )
+    expect(grouped.map((p) => p.type)).toEqual([
+      "tool-group",
+      "tool-call",
+      "tool-group",
     ])
   })
 })
@@ -515,5 +596,129 @@ describe("mergeAdjacentDelegationStatusGroups", () => {
       "text",
       "delegation-status-group",
     ])
+  })
+})
+
+describe("adaptMessageTurn plan handling", () => {
+  const msgText = {
+    attachedResources: "Attached resources",
+    toolCallFailed: "Tool failed",
+  }
+
+  it("renders a live synthetic plan block as a plan part (not reasoning) and marks the last block streaming", () => {
+    const adapted = adaptMessageTurn(
+      {
+        id: "live-plan",
+        role: "assistant",
+        timestamp: "2026-06-02T00:00:00.000Z",
+        blocks: [
+          {
+            type: "plan",
+            entries: [
+              { content: "Step A", status: "in_progress", priority: "high" },
+              { content: "Step B", status: "completed", priority: "low" },
+            ],
+          },
+        ],
+      },
+      msgText,
+      true
+    )
+
+    expect(adapted.content.map((p) => p.type)).toEqual(["plan"])
+    const plan = adapted.content[0]
+    if (plan.type !== "plan") throw new Error("expected a plan part")
+    expect(plan.isStreaming).toBe(true)
+    expect(plan.entries).toEqual([
+      { content: "Step A", status: "in_progress", priority: "high" },
+      { content: "Step B", status: "completed", priority: "low" },
+    ])
+  })
+
+  it("converts a persisted TodoWrite tool_use (+ its result) into a single plan part with no orphan tool-result", () => {
+    const adapted = adaptMessageTurn(
+      {
+        id: "hist-plan",
+        role: "assistant",
+        timestamp: "2026-06-02T00:00:00.000Z",
+        blocks: [
+          {
+            type: "tool_use",
+            tool_use_id: "todo-1",
+            tool_name: "TodoWrite",
+            input_preview: JSON.stringify({
+              todos: [
+                { content: "X", status: "pending", priority: "medium" },
+                { content: "Y", status: "completed", priority: "high" },
+              ],
+            }),
+          },
+          {
+            type: "tool_result",
+            tool_use_id: "todo-1",
+            output_preview: "Todos have been modified successfully",
+            is_error: false,
+          },
+        ],
+      },
+      msgText,
+      false
+    )
+
+    expect(adapted.content.map((p) => p.type)).toEqual(["plan"])
+    expect(adapted.content.some((p) => p.type === "tool-result")).toBe(false)
+    const plan = adapted.content[0]
+    if (plan.type !== "plan") throw new Error("expected a plan part")
+    expect(plan.isStreaming).toBe(false)
+    expect(plan.entries).toEqual([
+      { content: "X", status: "pending", priority: "medium" },
+      { content: "Y", status: "completed", priority: "high" },
+    ])
+  })
+
+  it("does NOT convert a TodoWrite tool_use while streaming (live plan source is the synthetic block)", () => {
+    const adapted = adaptMessageTurn(
+      {
+        id: "live-todo",
+        role: "assistant",
+        timestamp: "2026-06-02T00:00:00.000Z",
+        blocks: [
+          {
+            type: "tool_use",
+            tool_use_id: "todo-1",
+            tool_name: "TodoWrite",
+            input_preview: JSON.stringify({
+              todos: [{ content: "X", status: "pending", priority: "medium" }],
+            }),
+          },
+        ],
+      },
+      msgText,
+      true
+    )
+
+    expect(adapted.content.every((p) => p.type !== "plan")).toBe(true)
+  })
+
+  it("falls back to a normal tool card when a plan-like tool has unparsable input", () => {
+    const adapted = adaptMessageTurn(
+      {
+        id: "hist-bad",
+        role: "assistant",
+        timestamp: "2026-06-02T00:00:00.000Z",
+        blocks: [
+          {
+            type: "tool_use",
+            tool_use_id: "todo-1",
+            tool_name: "TodoWrite",
+            input_preview: "not json",
+          },
+        ],
+      },
+      msgText,
+      false
+    )
+
+    expect(adapted.content.every((p) => p.type !== "plan")).toBe(true)
   })
 })
