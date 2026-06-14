@@ -48,25 +48,10 @@ interface VirtualizedMessageThreadProps<T> {
   /**
    * Publishes the virtualizer scroll handle to an ancestor so siblings that
    * live outside the `MessageScrollProvider` subtree (e.g. the conversation
-   * message navigator rail) can drive `scrollToIndex`.
+   * message navigator) can drive `scrollToIndex`.
    */
   scrollApiRef?: RefObject<MessageScrollContextValue | null>
-  /**
-   * Fires with the index of the item nearest the top of the viewport whenever
-   * the thread scrolls. Used to highlight the active entry in the navigator.
-   */
-  onVisibleStartIndexChange?: (index: number) => void
 }
-
-/**
- * Small top tolerance (px) when mapping scroll offset → "active" item index.
- * A click runs `scrollToIndex(N, {align: "start"})`, pinning message N to the
- * top, but the browser floors `scrollTop` a sub-pixel below `offsetOf(N)`, so
- * `findItemIndex` (largest i with `offsetOf(i) <= offset`) returns N-1. Because
- * user-message nav ticks are sparse, N-1 lands on the *previous* tick. Nudging
- * the query past that boundary maps the pinned message back to itself.
- */
-const ACTIVE_TOP_EPSILON_PX = 2
 
 function VirtualizedMessageThreadImpl<T>({
   items,
@@ -81,7 +66,6 @@ function VirtualizedMessageThreadImpl<T>({
   contentClassName,
   contentProps,
   scrollApiRef,
-  onVisibleStartIndexChange,
 }: VirtualizedMessageThreadProps<T>) {
   const { scrollRef } = useStickToBottomContext()
   const virtualizerHandleRef = useRef<VirtualizerHandle>(null)
@@ -108,16 +92,36 @@ function VirtualizedMessageThreadImpl<T>({
     }
   }, [scrollApiRef, scrollContextValue])
 
-  const handleScroll = useCallback(
-    (offset: number) => {
-      if (!onVisibleStartIndexChange) return
-      const index = virtualizerHandleRef.current?.findItemIndex(
-        offset + ACTIVE_TOP_EPSILON_PX
+  // Make the scroll viewport focusable so the browser's native keyboard
+  // scrolling (Arrow keys, PageUp/PageDown, Home/End, Space) works — matching
+  // the sidebar conversation list, whose card <button>s are focusable and let
+  // the browser scroll their scrollable ancestor. A left-click on
+  // non-interactive transcript content focuses the viewport so the keys engage,
+  // without stealing focus from interactive controls (links, buttons, inputs)
+  // or breaking text selection (focus() doesn't clear a selection).
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.tabIndex = 0
+    const onPointerDown = (e: PointerEvent) => {
+      // Ignore right-click and macOS ctrl-click (both open the context menu).
+      if (e.button !== 0 || e.ctrlKey) return
+      const target = e.target as HTMLElement | null
+      // Don't steal focus from interactive/editable elements — they manage
+      // their own focus (some do it in pointerdown). We deliberately do NOT
+      // match a bare `[tabindex]` here: the viewport itself has tabIndex=0, so
+      // an ancestor match would suppress focusing on every transcript click.
+      if (
+        target?.closest(
+          'a[href],button,input,textarea,select,summary,[contenteditable]:not([contenteditable="false"]),[role="button"],[role="link"],[role="checkbox"],[role="switch"],[role="radio"],[role="tab"],[role="textbox"],[role="menuitem"],[role="option"],[role="combobox"],[role="slider"]'
+        )
       )
-      if (typeof index === "number") onVisibleStartIndexChange(index)
-    },
-    [onVisibleStartIndexChange]
-  )
+        return
+      el.focus({ preventScroll: true })
+    }
+    el.addEventListener("pointerdown", onPointerDown)
+    return () => el.removeEventListener("pointerdown", onPointerDown)
+  }, [scrollRef])
 
   // Pre-compute the three possible padding styles so every render reuses
   // the same object references (avoids allocating per-item on each frame).
@@ -142,7 +146,7 @@ function VirtualizedMessageThreadImpl<T>({
     <MessageScrollProvider value={scrollContextValue}>
       <MessageThreadContent
         className={cn("mx-0 max-w-none p-0", contentClassName)}
-        scrollClassName="scrollbar-thin overscroll-contain [overflow-anchor:none]"
+        scrollClassName="scrollbar-thin overscroll-contain [overflow-anchor:none] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         {...contentProps}
       >
         {items.length === 0 ? (
@@ -153,7 +157,6 @@ function VirtualizedMessageThreadImpl<T>({
             scrollRef={scrollRef as unknown as RefObject<HTMLElement | null>}
             itemSize={itemSize}
             bufferSize={bufferSize}
-            onScroll={onVisibleStartIndexChange ? handleScroll : undefined}
           >
             {items.map((item, index) => (
               <div

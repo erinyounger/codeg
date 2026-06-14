@@ -250,6 +250,34 @@ export interface FolderDetail {
    * original root. Drives the sidebar merge and worktree-branch detection.
    */
   parent_id: number | null
+  /**
+   * True for the dedicated hidden folder backing a single chat-mode (folderless)
+   * conversation. Kept in `allFolders` so cwd / active-folder resolve, but hidden
+   * from user-facing folder lists; its conversation routes to the sidebar "Chat"
+   * group and folder-bound chrome is hidden while it is active.
+   */
+  is_chat: boolean
+}
+
+/**
+ * Result of `createChatConversation`: the new conversation id plus the hidden
+ * chat folder backing it, so the caller can drop the folder straight into
+ * `allFolders` (resolving cwd / active-folder) without a refetch.
+ */
+export interface CreateChatConversationResult {
+  conversationId: number
+  folderId: number
+  folder: FolderDetail
+}
+
+/**
+ * Result of `createChatDir`: a freshly created chat-mode scratch directory
+ * (filesystem only — no DB rows). Used to connect ACP at a real cwd the instant
+ * "no-folder mode" is selected; the conversation is still created lazily on the
+ * first send, reusing this path.
+ */
+export interface CreateChatDirResult {
+  path: string
 }
 
 export interface OpenedTab {
@@ -277,6 +305,10 @@ export interface DbConversationSummary {
   message_count: number
   created_at: string
   updated_at: string
+  /** When the user pinned this conversation (ISO string), or null if not pinned.
+   *  Drives the sidebar's "Pinned" section (sorted by this descending); a pinned
+   *  conversation is shown there instead of in its folder group. */
+  pinned_at: string | null
   parent_id?: number | null
   parent_tool_use_id?: string | null
   delegation_call_id?: string | null
@@ -1819,6 +1851,7 @@ export type FixActionKind =
   | "retry_connection"
   | "open_agents_settings"
   | "install_opencode_plugins"
+  | "install_uv"
 
 export interface FixAction {
   label: string

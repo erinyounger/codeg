@@ -7,7 +7,6 @@ import {
   PanelLeft,
   PanelRight,
   PawPrint,
-  Search,
   Settings,
   SquareTerminal,
 } from "lucide-react"
@@ -16,6 +15,7 @@ import { openSettingsWindow } from "@/lib/api"
 import { getPetSettings, openPetWindow } from "@/lib/pet/api"
 import { useAppWorkspace } from "@/contexts/app-workspace-context"
 import { useActiveFolder } from "@/contexts/active-folder-context"
+import { useIsActiveChatMode } from "@/hooks/use-is-active-chat-mode"
 import { isDesktop, openFileDialog } from "@/lib/platform"
 import { getActiveRemoteConnectionId } from "@/lib/transport"
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,7 @@ import { useSidebarContext } from "@/contexts/sidebar-context"
 import { useAuxPanelContext } from "@/contexts/aux-panel-context"
 import { useTerminalContext } from "@/contexts/terminal-context"
 import { useTabContext } from "@/contexts/tab-context"
+import { useSearchDialog } from "@/contexts/search-dialog-context"
 import { useIsMac } from "@/hooks/use-is-mac"
 import { useShortcutSettings } from "@/hooks/use-shortcut-settings"
 import {
@@ -49,13 +50,17 @@ export function FolderTitleBar() {
   const tPet = useTranslations("Pet")
   const { openFolder } = useAppWorkspace()
   const { activeFolder } = useActiveFolder()
+  const isChatMode = useIsActiveChatMode()
   const { isOpen, toggle } = useSidebarContext()
   const { isOpen: auxPanelOpen, toggle: toggleAuxPanel } = useAuxPanelContext()
   const { isOpen: terminalOpen, toggle: toggleTerminal } = useTerminalContext()
   const { openNewConversationTab } = useTabContext()
   const isMac = useIsMac()
   const { shortcuts } = useShortcutSettings()
-  const [searchOpen, setSearchOpen] = useState(false)
+  // Search open-state is shared (see search-dialog-context): the trigger now
+  // lives in the sidebar, but this always-mounted bar keeps owning the dialog
+  // and the ⌘K shortcut so search works even when the sidebar is collapsed.
+  const { open: searchOpen, setOpen: setSearchOpen } = useSearchDialog()
   const [browserOpen, setBrowserOpen] = useState(false)
 
   const handleOpenPet = useCallback(async () => {
@@ -124,6 +129,9 @@ export function FolderTitleBar() {
         return
       }
       if (matchShortcutEvent(e, shortcuts.toggle_aux_panel)) {
+        // Chat mode hides the aux panel + its toggle; the shortcut must not
+        // re-open it either.
+        if (isChatMode) return
         e.preventDefault()
         toggleAuxPanel()
         return
@@ -151,10 +159,12 @@ export function FolderTitleBar() {
     handleOpenFolder,
     handleOpenSettings,
     openNewConversationTab,
+    setSearchOpen,
     shortcuts,
     toggle,
     toggleAuxPanel,
     toggleTerminal,
+    isChatMode,
   ])
 
   const isMobile = useIsMobile()
@@ -215,15 +225,9 @@ export function FolderTitleBar() {
           isMobile ? (
             <div className="flex items-center gap-1">
               <CommandDropdown />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setSearchOpen(true)}
-                title={tTitleBar("search")}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
+              {/* Search lives only in the left sidebar's fixed actions region
+                  now (desktop + mobile sheet); no title-bar search entry on any
+                  width. The ⌘K shortcut + SearchCommandDialog stay wired here. */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -231,13 +235,16 @@ export function FolderTitleBar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={toggleAuxPanel}
-                    disabled={!activeFolder}
-                  >
-                    <PanelRight className="h-3.5 w-3.5" />
-                    {tTitleBar("toggleAuxPanel")}
-                  </DropdownMenuItem>
+                  {/* Folderless chat conversations hide the aux panel entirely. */}
+                  {!isChatMode && (
+                    <DropdownMenuItem
+                      onClick={toggleAuxPanel}
+                      disabled={!activeFolder}
+                    >
+                      <PanelRight className="h-3.5 w-3.5" />
+                      {tTitleBar("toggleAuxPanel")}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={() => toggleTerminal()}
                     disabled={!activeFolder}
@@ -274,37 +281,27 @@ export function FolderTitleBar() {
                 >
                   <SquareTerminal className="h-3.5 w-3.5" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`h-6 w-6 hover:text-foreground/80 ${auxPanelOpen ? "bg-accent" : ""}`}
-                  onClick={toggleAuxPanel}
-                  disabled={!activeFolder}
-                  title={tTitleBar("withShortcut", {
-                    label: tTitleBar("toggleAuxPanel"),
-                    shortcut: formatShortcutLabel(
-                      shortcuts.toggle_aux_panel,
-                      isMac
-                    ),
-                  })}
-                >
-                  <PanelRight className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 hover:text-foreground/80"
-                  onClick={() => setSearchOpen(true)}
-                  title={tTitleBar("withShortcut", {
-                    label: tTitleBar("search"),
-                    shortcut: formatShortcutLabel(
-                      shortcuts.toggle_search,
-                      isMac
-                    ),
-                  })}
-                >
-                  <Search className="h-3.5 w-3.5" />
-                </Button>
+                {/* Folderless chat conversations hide the aux panel entirely. */}
+                {!isChatMode && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-6 w-6 hover:text-foreground/80 ${auxPanelOpen ? "bg-accent" : ""}`}
+                    onClick={toggleAuxPanel}
+                    disabled={!activeFolder}
+                    title={tTitleBar("withShortcut", {
+                      label: tTitleBar("toggleAuxPanel"),
+                      shortcut: formatShortcutLabel(
+                        shortcuts.toggle_aux_panel,
+                        isMac
+                      ),
+                    })}
+                  >
+                    <PanelRight className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                {/* Desktop search moved into the sidebar's fixed top region;
+                    the dialog + ⌘K shortcut still live here. */}
                 <Button
                   variant="ghost"
                   size="icon"

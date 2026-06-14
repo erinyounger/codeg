@@ -785,6 +785,7 @@
       "notInstalled": "Nicht installiert",
       "remoteLocal": "Remote: {remoteVersion} · Lokal: {localVersion}",
       "platformUnsupported": "{versionText}. Aktuelle Plattform unterstützt diesen Agenten nicht.",
+      "uvxNotReady": "{versionText}. Die uv-Laufzeit ist nicht installiert – installieren Sie sie über die uv-Prüfung unten, um diesen Agenten zu verwenden.",
       "clickInstall": "{versionText}. Rechts auf Installieren klicken.",
       "localUnrecognized": "{versionText}. Lokale Version ist nicht vergleichbar; zum Überschreiben bitte Upgrade versuchen.",
       "upgradeAvailable": "{versionText}. Upgrade verfügbar.",
@@ -925,6 +926,8 @@
       "collapseAllGroups": "Alle Gruppen einklappen",
       "newConversation": "Neue Konversation",
       "newConversationShort": "Neu",
+      "newChat": "Neue Konversation",
+      "search": "Suchen",
       "noConversationsFound": "Keine Konversationen gefunden.",
       "importLocalSessions": "Lokale Sitzungen importieren",
       "importing": "Importiere...",
@@ -996,7 +999,12 @@
         "toastDeleted": "{count} Konversation(en) gelöscht",
         "toastStatusUpdated": "Status von {count} Konversation(en) aktualisiert",
         "toastOpFailed": "Aktion fehlgeschlagen: {message}"
-      }
+      },
+      "sectionPinned": "Angeheftet",
+      "sectionFolders": "Ordner",
+      "sectionChats": "Chat",
+      "noChats": "Keine Chats",
+      "newChatAction": "Neuer Chat"
     },
     "conversation": {
       "reloadFailed": "Konversation konnte nicht neu geladen werden: {message}",
@@ -1050,7 +1058,11 @@
       "deleteConversationTitle": "Konversation löschen?",
       "deleteConversationDescription": "\"{title}\" wird gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
       "cancel": "Abbrechen",
-      "save": "Speichern"
+      "save": "Speichern",
+      "pin": "Anheften",
+      "unpin": "Loslösen",
+      "markCompleted": "Als abgeschlossen markieren",
+      "reopen": "Erneut öffnen"
     },
     "search": {
       "dialogTitle": "Suchen",
@@ -1813,6 +1825,8 @@
         "autoConnectFallback": "Klicken Sie, um {path} zu öffnen und die Installation zu verwalten.",
         "autoConnectAppend": "{message}. Klicken Sie, um {path} zu öffnen und die Installation zu verwalten.",
         "enableAgentFirstPlaceholder": "Aktivieren Sie mindestens einen Agenten, bevor Sie eine Sitzung starten...",
+        "prepareSessionFailed": "Die Chat-Sitzung konnte nicht vorbereitet werden. Bitte versuche es erneut.",
+        "createConversationFailed": "Die Konversation konnte nicht erstellt werden. Bitte versuche es erneut.",
         "askAnythingPlaceholder": "Fragen Sie alles..."
       },
       "welcomePanel": {
@@ -2119,9 +2133,8 @@
       },
       "messageNav": {
         "title": "Nachrichtennavigation",
-        "expand": "Nachrichtennavigation einblenden",
         "collapse": "Nachrichtennavigation ausblenden",
-        "jumpToMessage": "Springen zu: {label}",
+        "collapsedSummary": "Nachrichten {count}",
         "fileCount": "{count, plural, one {# Datei} other {# Dateien}}",
         "remove": "Entfernen",
         "noDiffDataAvailable": "Keine Diff-Daten verfügbar für {filePath}"
@@ -2183,12 +2196,14 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
+      "chatModeLabel": "Ohne-Ordner-Modus",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",
       "toasts": {
         "folderChanged": "Switched to {name}",
         "openFolderFailed": "Failed to open folder",
+        "switchedToChatMode": "In den Chat-Modus gewechselt",
         "openStashFailed": "Failed to open stash window",
         "openMergeFailed": "Failed to open merge window"
       }
@@ -2415,6 +2430,8 @@
       "errorDesc": "Wenn ein Agent einen Fehler feststellt",
       "permissionRequest": "Berechtigungsanfrage",
       "permissionRequestDesc": "Wenn ein Agent eine Berechtigung anfordert",
+      "questionRequest": "Frage des Agenten",
+      "questionRequestDesc": "Wenn ein Agent dir eine Frage stellt",
       "userPromptSent": "Benutzernachricht",
       "userPromptSentDesc": "Wenn du eine Nachricht sendest – der Nachrichtentext ist in der Benachrichtigung enthalten",
       "saved": "Ereignisfilter aktualisiert.",

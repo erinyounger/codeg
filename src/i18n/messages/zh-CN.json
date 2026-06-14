@@ -785,6 +785,7 @@
       "notInstalled": "未安装",
       "remoteLocal": "远程：{remoteVersion} · 本地：{localVersion}",
       "platformUnsupported": "{versionText}。当前平台不支持该 Agent。",
+      "uvxNotReady": "{versionText}。uv 运行时未安装——请在下方 uv 预检项中安装后再使用该 Agent。",
       "clickInstall": "{versionText}。请点击右侧安装。",
       "localUnrecognized": "{versionText}。本地版本无法识别，可尝试升级覆盖安装。",
       "upgradeAvailable": "{versionText}。发现可升级版本。",
@@ -925,6 +926,8 @@
       "collapseAllGroups": "折叠全部分组",
       "newConversation": "新建会话",
       "newConversationShort": "新建",
+      "newChat": "新建会话",
+      "search": "搜索",
       "noConversationsFound": "未找到会话。",
       "importLocalSessions": "导入本地会话",
       "importing": "导入中...",
@@ -996,7 +999,12 @@
         "toastDeleted": "已删除 {count} 个会话",
         "toastStatusUpdated": "已更新 {count} 个会话的状态",
         "toastOpFailed": "操作失败：{message}"
-      }
+      },
+      "sectionPinned": "已置顶",
+      "sectionFolders": "文件夹",
+      "sectionChats": "聊天",
+      "noChats": "没有聊天",
+      "newChatAction": "新建聊天"
     },
     "conversation": {
       "reloadFailed": "会话重新加载失败：{message}",
@@ -1050,7 +1058,11 @@
       "deleteConversationTitle": "删除会话？",
       "deleteConversationDescription": "会删除“{title}”，此操作不可撤销。",
       "cancel": "取消",
-      "save": "保存"
+      "save": "保存",
+      "pin": "置顶",
+      "unpin": "取消置顶",
+      "markCompleted": "标记为已完成",
+      "reopen": "重新打开"
     },
     "search": {
       "dialogTitle": "搜索",
@@ -1813,6 +1825,8 @@
         "autoConnectFallback": "点击前往 {path} 管理安装。",
         "autoConnectAppend": "{message}，点击前往 {path} 管理安装。",
         "enableAgentFirstPlaceholder": "请先启用至少一个 Agent 后开始会话...",
+        "prepareSessionFailed": "无法准备聊天会话，请重试。",
+        "createConversationFailed": "无法创建会话，请重试。",
         "askAnythingPlaceholder": "请开始输入..."
       },
       "welcomePanel": {
@@ -2119,9 +2133,8 @@
       },
       "messageNav": {
         "title": "消息导航",
-        "expand": "展开消息导航",
         "collapse": "收起消息导航",
-        "jumpToMessage": "跳转到：{label}",
+        "collapsedSummary": "消息 {count}",
         "fileCount": "{count} 个文件",
         "remove": "移除",
         "noDiffDataAvailable": "未找到 {filePath} 的差异数据"
@@ -2183,12 +2196,14 @@
       "noFolders": "暂无文件夹",
       "noBranches": "暂无分支",
       "noBranch": "（无分支）",
+      "chatModeLabel": "无文件夹模式",
       "commit": "提交",
       "push": "推送",
       "merge": "合并",
       "toasts": {
         "folderChanged": "已切换到 {name}",
         "openFolderFailed": "打开文件夹失败",
+        "switchedToChatMode": "已切换到聊天模式",
         "openStashFailed": "打开贮藏窗口失败",
         "openMergeFailed": "打开合并窗口失败"
       }
@@ -2427,6 +2442,8 @@
       "errorDesc": "代理遇到错误时",
       "permissionRequest": "权限请求",
       "permissionRequestDesc": "智能体请求操作权限时",
+      "questionRequest": "智能体提问",
+      "questionRequestDesc": "当智能体向你提问时",
       "userPromptSent": "用户消息",
       "userPromptSentDesc": "当你发送消息时——通知中会包含消息内容",
       "saved": "事件过滤已更新。",

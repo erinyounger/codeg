@@ -785,6 +785,7 @@
       "notInstalled": "Não instalado",
       "remoteLocal": "Remoto: {remoteVersion} · Local: {localVersion}",
       "platformUnsupported": "{versionText}. A plataforma atual não suporta este agente.",
+      "uvxNotReady": "{versionText}. O runtime do uv não está instalado — instale-o na verificação do uv abaixo para usar este agente.",
       "clickInstall": "{versionText}. Clique em Instalar à direita.",
       "localUnrecognized": "{versionText}. A versão local não é comparável; tente atualizar para sobrescrever a instalação.",
       "upgradeAvailable": "{versionText}. Atualização disponível.",
@@ -925,6 +926,8 @@
       "collapseAllGroups": "Recolher todos os grupos",
       "newConversation": "Nova conversa",
       "newConversationShort": "Nova",
+      "newChat": "Nova conversa",
+      "search": "Buscar",
       "noConversationsFound": "Nenhuma conversa encontrada.",
       "importLocalSessions": "Importar sessões locais",
       "importing": "Importando...",
@@ -996,7 +999,12 @@
         "toastDeleted": "{count} conversa(s) excluída(s)",
         "toastStatusUpdated": "Status atualizado para {count} conversa(s)",
         "toastOpFailed": "Falha na operação: {message}"
-      }
+      },
+      "sectionPinned": "Fixadas",
+      "sectionFolders": "Pastas",
+      "sectionChats": "Chat",
+      "noChats": "Sem chats",
+      "newChatAction": "Novo chat"
     },
     "conversation": {
       "reloadFailed": "Falha ao recarregar conversa: {message}",
@@ -1050,7 +1058,11 @@
       "deleteConversationTitle": "Excluir conversa?",
       "deleteConversationDescription": "Isso excluirá \"{title}\". Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "save": "Salvar"
+      "save": "Salvar",
+      "pin": "Fixar",
+      "unpin": "Desafixar",
+      "markCompleted": "Marcar como concluída",
+      "reopen": "Reabrir"
     },
     "search": {
       "dialogTitle": "Buscar",
@@ -1813,6 +1825,8 @@
         "autoConnectFallback": "Clique para abrir {path} e gerenciar a instalação.",
         "autoConnectAppend": "{message}. Clique para abrir {path} e gerenciar a instalação.",
         "enableAgentFirstPlaceholder": "Ative pelo menos um agente antes de iniciar uma sessão...",
+        "prepareSessionFailed": "Não foi possível preparar a sessão de chat. Tente novamente.",
+        "createConversationFailed": "Não foi possível criar a conversa. Tente novamente.",
         "askAnythingPlaceholder": "Pergunte qualquer coisa..."
       },
       "welcomePanel": {
@@ -2119,9 +2133,8 @@
       },
       "messageNav": {
         "title": "Navegação de mensagens",
-        "expand": "Expandir navegação de mensagens",
         "collapse": "Recolher navegação de mensagens",
-        "jumpToMessage": "Ir para: {label}",
+        "collapsedSummary": "Mensagens {count}",
         "fileCount": "{count, plural, one {# arquivo} other {# arquivos}}",
         "remove": "Remover",
         "noDiffDataAvailable": "Nenhum dado de diff disponível para {filePath}"
@@ -2183,12 +2196,14 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
+      "chatModeLabel": "Modo sem pasta",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",
       "toasts": {
         "folderChanged": "Switched to {name}",
         "openFolderFailed": "Failed to open folder",
+        "switchedToChatMode": "Alternado para o modo de chat",
         "openStashFailed": "Failed to open stash window",
         "openMergeFailed": "Failed to open merge window"
       }
@@ -2415,6 +2430,8 @@
       "errorDesc": "Quando um agente encontra um erro",
       "permissionRequest": "Solicitação de permissão",
       "permissionRequestDesc": "Quando um agente solicita permissão para agir",
+      "questionRequest": "Pergunta do agente",
+      "questionRequestDesc": "Quando um agente faz uma pergunta",
       "userPromptSent": "Mensagem do usuário",
       "userPromptSentDesc": "Quando você envia uma mensagem (o texto da mensagem é incluído na notificação)",
       "saved": "Filtro de eventos atualizado.",

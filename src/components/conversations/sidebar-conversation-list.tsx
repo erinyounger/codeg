@@ -16,18 +16,20 @@ import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { Virtualizer, type VirtualizerHandle } from "virtua"
 import {
-  Folder,
+  FolderClosed,
   Bot,
   Check,
+  ChevronRight,
   Download,
   ExternalLink,
   FolderOpen,
   GitBranch,
   ListChecks,
   Loader2,
+  MoreHorizontal,
   Palette,
-  Plus,
   Rocket,
+  SquarePen,
   XCircle,
 } from "lucide-react"
 import { useActiveFolder } from "@/contexts/active-folder-context"
@@ -42,6 +44,7 @@ import {
   openProjectBootWindow,
   updateConversationTitle,
   updateConversationStatus,
+  updateConversationPinned,
   updateFolderColor,
   updateFolderDefaultAgent,
   deleteConversation,
@@ -57,6 +60,9 @@ import { AGENT_LABELS } from "@/lib/types"
 import {
   loadFolderExpanded,
   saveFolderExpanded,
+  loadSectionCollapsed,
+  saveSectionCollapsed,
+  type SidebarSectionCollapsed,
   type SidebarSortMode,
 } from "@/lib/sidebar-view-mode-storage"
 import {
@@ -81,8 +87,11 @@ import {
   pointerYToTargetIndex,
   reuseSelected,
   reuseSet,
+  selectChatConversationsWithReuse,
+  selectPinnedWithReuse,
   type SidebarRow,
 } from "./sidebar-conversation-grouping"
+import { SidebarSectionHeader } from "./sidebar-section-header"
 import { ConversationManageDialog } from "./conversation-manage-dialog"
 import { CloneDialog } from "@/components/layout/clone-dialog"
 import { DirectoryBrowserDialog } from "@/components/shared/directory-browser-dialog"
@@ -285,7 +294,7 @@ const FolderHeader = memo(function FolderHeader({
                 {expanded ? (
                   <FolderOpen className="h-[0.875rem] w-[0.875rem]" />
                 ) : (
-                  <Folder className="h-[0.875rem] w-[0.875rem]" />
+                  <FolderClosed className="h-[0.875rem] w-[0.875rem]" />
                 )}
               </span>
               <div className="flex min-w-0 flex-1 items-center gap-[0.5rem]">
@@ -306,7 +315,65 @@ const FolderHeader = memo(function FolderHeader({
                 >
                   {count}
                 </span>
+                {/* Disclosure chevron mirrors the section headers: hover-revealed,
+                    rotates on expand. The persistent open/closed state still reads
+                    from the folder icon on the left; this is the matching affordance
+                    that makes folder + section headers feel like one family.
+                    NOTE: `group-focus-within` (not `group-focus-visible` like the
+                    section header) is intentional — here the `group` is the outer
+                    row wrapper and focus lands on a child (the toggle button or the
+                    sibling ⋯ menu button), so the reveal must react to focus
+                    anywhere inside the row. The section header's `group` IS its
+                    button, so it uses `group-focus-visible`. Don't "normalize". */}
+                <ChevronRight
+                  aria-hidden
+                  className={cn(
+                    "h-3 w-3 shrink-0 text-muted-foreground/60",
+                    "transition-[transform,opacity] duration-200 ease-out",
+                    // Collapsed: always visible (mirrors the section headers, so a
+                    // folded folder shows the same reopen affordance). Expanded:
+                    // hover/focus-only.
+                    expanded
+                      ? "rotate-90 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
+                      : "opacity-100"
+                  )}
+                />
               </div>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                // Re-open the SAME context menu as right-click (single source of
+                // truth — the menu has 3 submenus, duplicating it would drift).
+                // Dispatch a synthetic contextmenu event from this button; it
+                // bubbles to the enclosing <ContextMenuTrigger>, which Radix opens
+                // at the given coords — anchored just under the button.
+                const rect = e.currentTarget.getBoundingClientRect()
+                e.currentTarget.dispatchEvent(
+                  new MouseEvent("contextmenu", {
+                    bubbles: true,
+                    cancelable: true,
+                    button: 2,
+                    clientX: rect.left,
+                    clientY: rect.bottom,
+                  })
+                )
+              }}
+              title={t("moreOptions")}
+              aria-label={t("moreOptions")}
+              aria-haspopup="menu"
+              className={cn(
+                "flex h-7 w-7 shrink-0 items-center justify-center",
+                // Shares the card action-icon palette: default /90 is the lightest
+                // muted shade clearing 3:1 non-text contrast (incl. on touch, where
+                // this stays visible); hover deepens to full foreground.
+                "rounded-[0.375rem] cursor-pointer outline-none text-muted-foreground/90",
+                "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100",
+                "transition-[opacity,color] duration-150 hover:text-sidebar-foreground"
+              )}
+            >
+              <MoreHorizontal className="h-[0.875rem] w-[0.875rem]" />
             </button>
             <button
               type="button"
@@ -317,20 +384,23 @@ const FolderHeader = memo(function FolderHeader({
               title={t("newConversation")}
               aria-label={t("newConversation")}
               className={cn(
+                // Mirrors the ⋯ button's action-icon palette and hover-reveal so
+                // the two read as one trailing control cluster. As the rightmost
+                // control it carries the small right-edge margin.
                 "mr-[0.125rem] flex h-7 w-7 shrink-0 items-center justify-center",
-                "rounded-[0.375rem] cursor-pointer outline-none text-muted-foreground/80",
+                "rounded-[0.375rem] cursor-pointer outline-none text-muted-foreground/90",
                 "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100",
-                "transition-[opacity,color,background-color] duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                "transition-[opacity,color] duration-150 hover:text-sidebar-foreground"
               )}
             >
-              <Plus className="h-[0.875rem] w-[0.875rem]" />
+              <SquarePen className="h-[0.875rem] w-[0.875rem]" />
             </button>
           </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onSelect={() => onNewConversation(folderId)}>
-          <Plus className="h-4 w-4" />
+          <SquarePen className="h-4 w-4" />
           {t("newConversation")}
         </ContextMenuItem>
         <ContextMenuItem
@@ -529,6 +599,7 @@ export function SidebarConversationList({
     closeConversationTab,
     closeTabsByFolder,
     openNewConversationTab,
+    openChatModeTab,
     activeTabId,
     tabs,
   } = useTabContext()
@@ -590,6 +661,13 @@ export function SidebarConversationList({
   const [folderExpanded, setFolderExpanded] = useState<Record<number, boolean>>(
     {}
   )
+  // Collapsed state of the two top-level sections ("Pinned", "Folders"). Absent
+  // key = expanded (default). Hydrated from localStorage after mount.
+  const [sectionCollapsed, setSectionCollapsed] =
+    useState<SidebarSectionCollapsed>({})
+  const pinnedExpanded = !sectionCollapsed.pinned
+  const foldersExpanded = !sectionCollapsed.folders
+  const chatsExpanded = !sectionCollapsed.chats
   const [removeConfirm, setRemoveConfirm] = useState<{
     folderId: number
     folderName: string
@@ -640,7 +718,19 @@ export function SidebarConversationList({
     // Hydrate from localStorage after mount to keep SSR/CSR markup consistent.
 
     setFolderExpanded(loadFolderExpanded())
+    setSectionCollapsed(loadSectionCollapsed())
   }, [])
+
+  const toggleSection = useCallback(
+    (section: "pinned" | "folders" | "chats") => {
+      setSectionCollapsed((prev) => {
+        const next = { ...prev, [section]: !prev[section] }
+        saveSectionCollapsed(next)
+        return next
+      })
+    },
+    []
+  )
 
   const handleChangeFolderColor = useCallback(
     async (folderId: number, color: FolderThemeColor) => {
@@ -718,10 +808,50 @@ export function SidebarConversationList({
     return () => clearInterval(interval)
   }, [])
 
-  const filteredConversations = useMemo(() => {
-    if (showCompleted) return conversations
-    return conversations.filter((c) => c.status !== "completed")
-  }, [conversations, showCompleted])
+  // Hidden chat-mode folders (one per folderless conversation). Their
+  // conversations are routed to the flat "Chat" section and excluded from the
+  // folders grouping; the folders themselves are excluded from the folder list
+  // (orderedFolderIds) below.
+  const chatFolderIds = useMemo(
+    () => new Set(allFolders.filter((f) => f.is_chat).map((f) => f.id)),
+    [allFolders]
+  )
+
+  // Folder grouping source: pinned conversations are surfaced in the dedicated
+  // Pinned section, and folderless chat conversations in the dedicated Chat
+  // section, so exclude both here; then apply the completed filter as before.
+  const folderConversations = useMemo(() => {
+    const base = conversations.filter(
+      (c) => c.pinned_at == null && !chatFolderIds.has(c.folder_id)
+    )
+    if (showCompleted) return base
+    return base.filter((c) => c.status !== "completed")
+  }, [conversations, showCompleted, chatFolderIds])
+
+  // Flat "Chat" bucket: folderless chat-mode conversations, most-recently-updated
+  // first, with reference reuse (so an unrelated status event doesn't rebuild it
+  // and defeat the section's memo). Pinned chats live in the Pinned section.
+  const chatConvsRef = useRef<DbConversationSummary[]>([])
+  const chatConversations = useMemo(() => {
+    const next = selectChatConversationsWithReuse(
+      conversations,
+      chatFolderIds,
+      showCompleted,
+      chatConvsRef.current
+    )
+    chatConvsRef.current = next
+    return next
+  }, [conversations, chatFolderIds, showCompleted])
+
+  // Pinned bucket: the FULL conversation list (ignores "Show completed" — a
+  // pinned conversation stays visible regardless), sorted most-recently-pinned
+  // first, with reference reuse so an unrelated status event doesn't rebuild it.
+  const pinnedRef = useRef<DbConversationSummary[]>([])
+  const pinned = useMemo(() => {
+    const next = selectPinnedWithReuse(conversations, pinnedRef.current)
+    pinnedRef.current = next
+    return next
+  }, [conversations])
 
   // Maps each open worktree child folder → its (open) root folder. A child is
   // only redirected when its parent is also open, so a worktree whose root was
@@ -745,18 +875,23 @@ export function SidebarConversationList({
   const byFolderRef = useRef<Map<number, DbConversationSummary[]>>(new Map())
   const byFolder = useMemo(() => {
     const grouped = groupByFolderWithReuse(
-      filteredConversations,
+      folderConversations,
       sortMode,
       byFolderRef.current,
       childToParent
     )
     byFolderRef.current = grouped
     return grouped
-  }, [filteredConversations, sortMode, childToParent])
+  }, [folderConversations, sortMode, childToParent])
 
+  // Counts the unfiltered-but-non-pinned conversations per display group, so the
+  // empty-hint renderer distinguishes a truly empty folder from one whose rows
+  // are merely hidden by the completed filter. Pinned conversations are excluded
+  // (they're not in this folder's bucket), matching `byFolder`.
   const folderTotalCounts = useMemo(() => {
     const map = new Map<number, number>()
     for (const conv of conversations) {
+      if (conv.pinned_at != null) continue
       const groupId = childToParent.get(conv.folder_id) ?? conv.folder_id
       map.set(groupId, (map.get(groupId) ?? 0) + 1)
     }
@@ -765,9 +900,11 @@ export function SidebarConversationList({
 
   const orderedFolderIds = useMemo(() => {
     const folderIdSet = new Set(folders.map((f) => f.id))
-    // Worktree child folders are merged into their parent group, so they never
-    // get their own header row.
-    const isMergedChild = (id: number) => childToParent.has(id)
+    // Worktree child folders are merged into their parent group, and hidden
+    // chat folders belong to the flat "Chat" section — neither gets its own
+    // header row in the folders list.
+    const isHidden = (id: number) =>
+      childToParent.has(id) || chatFolderIds.has(id)
     // During drag we honour the optimistic order so sibling folders shift live
     // as the user hovers over slots. We still filter/append against the source
     // of truth so newly-added or -removed folders don't disappear mid-drag.
@@ -775,13 +912,13 @@ export function SidebarConversationList({
       const seen = new Set<number>()
       const ids: number[] = []
       for (const id of dragOrder) {
-        if (folderIdSet.has(id) && !seen.has(id) && !isMergedChild(id)) {
+        if (folderIdSet.has(id) && !seen.has(id) && !isHidden(id)) {
           seen.add(id)
           ids.push(id)
         }
       }
       for (const f of folders) {
-        if (!seen.has(f.id) && !isMergedChild(f.id)) {
+        if (!seen.has(f.id) && !isHidden(f.id)) {
           seen.add(f.id)
           ids.push(f.id)
         }
@@ -792,22 +929,45 @@ export function SidebarConversationList({
     const seen = new Set<number>()
     const ids: number[] = []
     for (const f of folders) {
-      if (!seen.has(f.id) && !isMergedChild(f.id)) {
+      if (!seen.has(f.id) && !isHidden(f.id)) {
         seen.add(f.id)
         ids.push(f.id)
       }
     }
     return ids
-  }, [folders, dragOrder, childToParent])
+  }, [folders, dragOrder, childToParent, chatFolderIds])
 
   const darkMode = resolvedTheme === "dark"
 
-  // Flat row model for windowing. Deliberately excludes `now` (see buildRows):
-  // the per-minute label tick must not rebuild rows and break the card memo.
+  // Flat row model for windowing — the pinned section, the folders section, and
+  // every conversation live in this ONE array fed to the single Virtualizer (no
+  // separate, un-virtualized pinned list). Deliberately excludes `now` (see
+  // buildRows): the per-minute label tick must not rebuild rows and break the
+  // card memo.
   const rows = useMemo(
     () =>
-      buildRows(orderedFolderIds, byFolder, folderExpanded, folderTotalCounts),
-    [orderedFolderIds, byFolder, folderExpanded, folderTotalCounts]
+      buildRows({
+        pinned,
+        pinnedExpanded,
+        orderedFolderIds,
+        byFolder,
+        folderExpanded,
+        folderTotalCounts,
+        foldersExpanded,
+        chatConversations,
+        chatsExpanded,
+      }),
+    [
+      pinned,
+      pinnedExpanded,
+      orderedFolderIds,
+      byFolder,
+      folderExpanded,
+      folderTotalCounts,
+      foldersExpanded,
+      chatConversations,
+      chatsExpanded,
+    ]
   )
 
   // Latest snapshots for the imperative scroll/drag code paths, refreshed every
@@ -860,22 +1020,60 @@ export function SidebarConversationList({
         (c) => c.id === targetId && c.agent_type === targetAgent
       )
       if (!conv) return
-      // A worktree conversation is rendered under its parent group, so the row's
-      // visibility is gated by the parent's expansion — expand the display group,
-      // not the (never-rendered) child folder id.
-      const displayFolderId =
-        childToParent.get(conv.folder_id) ?? conv.folder_id
-      if (!(folderExpanded[displayFolderId] ?? true)) {
-        // Expand first; the row only exists in the flat model once expanded, so
-        // defer the actual scroll to the next render (this effect re-runs on the
-        // folderExpanded change with the rebuilt rows available via rowsRef).
-        setFolderExpanded((prev) => {
-          const next = { ...prev, [displayFolderId]: true }
-          saveFolderExpanded(next)
-          return next
-        })
-        pendingScrollRef.current = true
-        return
+      // Each expansion step below defers the actual scroll to the next render
+      // (the row only exists in the flat model once visible); this effect re-runs
+      // on the expansion-state change with the rebuilt rows available via
+      // rowsRef, and chains through multiple steps via pendingScrollRef.
+      if (conv.pinned_at != null) {
+        // Pinned conversations live in the Pinned section — gated only by that
+        // section's collapse, never by any folder.
+        if (!pinnedExpanded) {
+          setSectionCollapsed((prev) => {
+            const next = { ...prev, pinned: false }
+            saveSectionCollapsed(next)
+            return next
+          })
+          pendingScrollRef.current = true
+          return
+        }
+      } else if (chatFolderIds.has(conv.folder_id)) {
+        // Chat conversations live in the flat Chat section — gated only by that
+        // section's collapse, never by any folder.
+        if (!chatsExpanded) {
+          setSectionCollapsed((prev) => {
+            const next = { ...prev, chats: false }
+            saveSectionCollapsed(next)
+            return next
+          })
+          pendingScrollRef.current = true
+          return
+        }
+      } else {
+        // A folder conversation appears only when the Folders section AND its
+        // (display) folder are expanded.
+        if (!foldersExpanded) {
+          setSectionCollapsed((prev) => {
+            const next = { ...prev, folders: false }
+            saveSectionCollapsed(next)
+            return next
+          })
+          pendingScrollRef.current = true
+          return
+        }
+        // A worktree conversation is rendered under its parent group, so the
+        // row's visibility is gated by the parent's expansion — expand the
+        // display group, not the (never-rendered) child folder id.
+        const displayFolderId =
+          childToParent.get(conv.folder_id) ?? conv.folder_id
+        if (!(folderExpanded[displayFolderId] ?? true)) {
+          setFolderExpanded((prev) => {
+            const next = { ...prev, [displayFolderId]: true }
+            saveFolderExpanded(next)
+            return next
+          })
+          pendingScrollRef.current = true
+          return
+        }
       }
       // Off-screen virtualized rows are not in the DOM, so resolve the flat row
       // index and let virtua scroll to it.
@@ -895,7 +1093,16 @@ export function SidebarConversationList({
       pendingScrollRef.current = false
       scrollToActiveRef.current()
     }
-  }, [selectedConversation, conversations, folderExpanded, childToParent])
+  }, [
+    selectedConversation,
+    conversations,
+    folderExpanded,
+    childToParent,
+    pinnedExpanded,
+    foldersExpanded,
+    chatFolderIds,
+    chatsExpanded,
+  ])
 
   const toggleFolder = useCallback((folderId: number) => {
     setFolderExpanded((prev) => {
@@ -1080,6 +1287,21 @@ export function SidebarConversationList({
     async (id: number, status: ConversationStatus) => {
       updateConversationLocal(id, { status })
       await updateConversationStatus(id, status)
+    },
+    [updateConversationLocal]
+  )
+
+  const handleTogglePin = useCallback(
+    async (id: number, nextPinned: boolean) => {
+      // Optimistic: instantly move the row into / out of the Pinned section. The
+      // upsert echo (emit_conversation_upsert) reconciles the exact server
+      // `pinned_at`; on failure the next refresh / WS reconnect corrects it
+      // (mirrors handleStatusChange's lenient pattern). Stable callback — only
+      // `updateConversationLocal` as a dep — so the card memo keeps bailing out.
+      updateConversationLocal(id, {
+        pinned_at: nextPinned ? new Date().toISOString() : null,
+      })
+      await updateConversationPinned(id, nextPinned)
     },
     [updateConversationLocal]
   )
@@ -1489,6 +1711,26 @@ export function SidebarConversationList({
   }
 
   const renderRow = (row: SidebarRow) => {
+    if (row.kind === "section") {
+      // Section headers are not folder-scoped, so they skip themeWrap.
+      return (
+        <SidebarSectionHeader
+          section={row.section}
+          expanded={row.expanded}
+          onToggle={toggleSection}
+          // The chats section gets an always-visible New-chat button (its primary
+          // entry point, reachable even when empty). `openChatModeTab` is a stable
+          // context callback, so the memo holds.
+          onNewChat={row.section === "chats" ? openChatModeTab : undefined}
+          // Every section header carries a top gap: it separates "Folders" from
+          // the "Pinned" section above it, and — now that a fixed New chat /
+          // Search region sits above the scrolled list — gives the first section
+          // (Pinned, or Folders when nothing is pinned) the same breathing room
+          // below that region instead of butting right up against it.
+          topGap
+        />
+      )
+    }
     if (row.kind === "folder") {
       return themeWrap(
         row.folderId,
@@ -1515,6 +1757,15 @@ export function SidebarConversationList({
         </div>
       )
     }
+    if (row.kind === "chats-empty") {
+      // Folderless flat hint — no themeWrap, no conversation rail; align with the
+      // section header's text inset (px-[0.5rem]) rather than the folder rail.
+      return (
+        <div className="px-[0.5rem] py-[0.375rem] text-[0.75rem] text-muted-foreground/70">
+          {t("noChats")}
+        </div>
+      )
+    }
     const conv = row.conversation
     // Worktree child folders render under their parent group, so theme the row
     // by the display group (parent) for a unified look.
@@ -1538,13 +1789,16 @@ export function SidebarConversationList({
         onDelete={handleDelete}
         onStatusChange={handleStatusChange}
         onNewConversation={handleNewConversationForFolder}
+        onTogglePin={handleTogglePin}
       />
     )
   }
 
   const rowKey = (row: SidebarRow): string => {
+    if (row.kind === "section") return `section-${row.section}`
     if (row.kind === "folder") return `folder-${row.folderId}`
     if (row.kind === "empty") return `empty-${row.folderId}`
+    if (row.kind === "chats-empty") return "chats-empty"
     return `conv-${row.conversation.agent_type}-${row.conversation.id}`
   }
 
@@ -1694,7 +1948,7 @@ export function SidebarConversationList({
               onSelect={handleNewConversation}
               disabled={!activeFolder}
             >
-              <Plus className="h-4 w-4" />
+              <SquarePen className="h-4 w-4" />
               {t("newConversation")}
             </ContextMenuItem>
             <ContextMenuSeparator />

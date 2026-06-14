@@ -785,6 +785,7 @@
       "notInstalled": "未安裝",
       "remoteLocal": "遠端：{remoteVersion} · 本地：{localVersion}",
       "platformUnsupported": "{versionText}。目前平台不支援該 Agent。",
+      "uvxNotReady": "{versionText}。uv 執行階段未安裝——請在下方 uv 預檢項中安裝後再使用該 Agent。",
       "clickInstall": "{versionText}。請點擊右側安裝。",
       "localUnrecognized": "{versionText}。本地版本無法識別，可嘗試升級覆蓋安裝。",
       "upgradeAvailable": "{versionText}。發現可升級版本。",
@@ -925,6 +926,8 @@
       "collapseAllGroups": "折疊全部分組",
       "newConversation": "新增會話",
       "newConversationShort": "新增",
+      "newChat": "新增會話",
+      "search": "搜尋",
       "noConversationsFound": "找不到會話。",
       "importLocalSessions": "匯入本地會話",
       "importing": "匯入中...",
@@ -996,7 +999,12 @@
         "toastDeleted": "已刪除 {count} 個會話",
         "toastStatusUpdated": "已更新 {count} 個會話的狀態",
         "toastOpFailed": "操作失敗：{message}"
-      }
+      },
+      "sectionPinned": "已置頂",
+      "sectionFolders": "資料夾",
+      "sectionChats": "聊天",
+      "noChats": "沒有聊天",
+      "newChatAction": "新增聊天"
     },
     "conversation": {
       "reloadFailed": "會話重新載入失敗：{message}",
@@ -1050,7 +1058,11 @@
       "deleteConversationTitle": "刪除會話？",
       "deleteConversationDescription": "會刪除「{title}」，此操作無法復原。",
       "cancel": "取消",
-      "save": "儲存"
+      "save": "儲存",
+      "pin": "置頂",
+      "unpin": "取消置頂",
+      "markCompleted": "標記為已完成",
+      "reopen": "重新開啟"
     },
     "search": {
       "dialogTitle": "搜尋",
@@ -1813,6 +1825,8 @@
         "autoConnectFallback": "點擊前往 {path} 管理安裝。",
         "autoConnectAppend": "{message}，點擊前往 {path} 管理安裝。",
         "enableAgentFirstPlaceholder": "請先啟用至少一個 Agent 後開始會話...",
+        "prepareSessionFailed": "無法準備聊天工作階段，請重試。",
+        "createConversationFailed": "無法建立會話，請重試。",
         "askAnythingPlaceholder": "請開始輸入..."
       },
       "welcomePanel": {
@@ -2119,9 +2133,8 @@
       },
       "messageNav": {
         "title": "訊息導覽",
-        "expand": "展開訊息導覽",
         "collapse": "收合訊息導覽",
-        "jumpToMessage": "跳至：{label}",
+        "collapsedSummary": "訊息 {count}",
         "fileCount": "{count} 個檔案",
         "remove": "移除",
         "noDiffDataAvailable": "找不到 {filePath} 的差異資料"
@@ -2183,12 +2196,14 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
+      "chatModeLabel": "無資料夾模式",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",
       "toasts": {
         "folderChanged": "Switched to {name}",
         "openFolderFailed": "Failed to open folder",
+        "switchedToChatMode": "已切換到聊天模式",
         "openStashFailed": "Failed to open stash window",
         "openMergeFailed": "Failed to open merge window"
       }
@@ -2415,6 +2430,8 @@
       "errorDesc": "代理遇到錯誤時",
       "permissionRequest": "權限請求",
       "permissionRequestDesc": "智慧代理請求操作權限時",
+      "questionRequest": "智慧代理提問",
+      "questionRequestDesc": "當智慧代理向你提問時",
       "userPromptSent": "使用者訊息",
       "userPromptSentDesc": "當你傳送訊息時——通知中會包含訊息內容",
       "saved": "事件篩選已更新。",

@@ -785,6 +785,7 @@
       "notInstalled": "설치되지 않음",
       "remoteLocal": "원격: {remoteVersion} · 로컬: {localVersion}",
       "platformUnsupported": "{versionText}. 현재 플랫폼에서는 이 에이전트를 지원하지 않습니다.",
+      "uvxNotReady": "{versionText}. uv 런타임이 설치되지 않았습니다. 아래 uv 검사에서 설치하면 이 에이전트를 사용할 수 있습니다.",
       "clickInstall": "{versionText}. 오른쪽의 설치를 클릭하세요.",
       "localUnrecognized": "{versionText}. 로컬 버전을 비교할 수 없습니다. 덮어쓰기 설치를 위해 업그레이드를 시도하세요.",
       "upgradeAvailable": "{versionText}. 업그레이드가 가능합니다.",
@@ -925,6 +926,8 @@
       "collapseAllGroups": "모든 그룹 접기",
       "newConversation": "새 대화",
       "newConversationShort": "새로 만들기",
+      "newChat": "새 대화",
+      "search": "검색",
       "noConversationsFound": "대화를 찾을 수 없습니다.",
       "importLocalSessions": "로컬 세션 가져오기",
       "importing": "가져오는 중...",
@@ -996,7 +999,12 @@
         "toastDeleted": "{count}개 대화를 삭제했습니다",
         "toastStatusUpdated": "{count}개 대화의 상태를 업데이트했습니다",
         "toastOpFailed": "작업 실패: {message}"
-      }
+      },
+      "sectionPinned": "고정됨",
+      "sectionFolders": "폴더",
+      "sectionChats": "채팅",
+      "noChats": "채팅 없음",
+      "newChatAction": "새 채팅"
     },
     "conversation": {
       "reloadFailed": "대화 다시 불러오기 실패: {message}",
@@ -1050,7 +1058,11 @@
       "deleteConversationTitle": "대화를 삭제할까요?",
       "deleteConversationDescription": "\"{title}\"을(를) 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
       "cancel": "취소",
-      "save": "저장"
+      "save": "저장",
+      "pin": "고정",
+      "unpin": "고정 해제",
+      "markCompleted": "완료로 표시",
+      "reopen": "다시 열기"
     },
     "search": {
       "dialogTitle": "검색",
@@ -1813,6 +1825,8 @@
         "autoConnectFallback": "{path}을(를) 열어 설치를 관리하세요.",
         "autoConnectAppend": "{message}. {path}을(를) 열어 설치를 관리하세요.",
         "enableAgentFirstPlaceholder": "세션을 시작하기 전에 최소 한 개의 에이전트를 활성화하세요...",
+        "prepareSessionFailed": "채팅 세션을 준비하지 못했습니다. 다시 시도해 주세요.",
+        "createConversationFailed": "대화를 만들지 못했습니다. 다시 시도해 주세요.",
         "askAnythingPlaceholder": "무엇이든 물어보세요..."
       },
       "welcomePanel": {
@@ -2119,9 +2133,8 @@
       },
       "messageNav": {
         "title": "메시지 탐색",
-        "expand": "메시지 탐색 펼치기",
         "collapse": "메시지 탐색 접기",
-        "jumpToMessage": "이동: {label}",
+        "collapsedSummary": "메시지 {count}",
         "fileCount": "{count, plural, one {#개 파일} other {#개 파일}}",
         "remove": "제거",
         "noDiffDataAvailable": "{filePath}에 대한 diff 데이터가 없습니다"
@@ -2183,12 +2196,14 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
+      "chatModeLabel": "폴더 없음 모드",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",
       "toasts": {
         "folderChanged": "Switched to {name}",
         "openFolderFailed": "Failed to open folder",
+        "switchedToChatMode": "채팅 모드로 전환했습니다",
         "openStashFailed": "Failed to open stash window",
         "openMergeFailed": "Failed to open merge window"
       }
@@ -2415,6 +2430,8 @@
       "errorDesc": "에이전트에 오류가 발생했을 때",
       "permissionRequest": "권한 요청",
       "permissionRequestDesc": "에이전트가 작업 권한을 요청할 때",
+      "questionRequest": "에이전트 질문",
+      "questionRequestDesc": "에이전트가 질문할 때",
       "userPromptSent": "사용자 메시지",
       "userPromptSentDesc": "메시지를 보낼 때 — 알림에 메시지 내용이 포함됩니다",
       "saved": "이벤트 필터가 업데이트되었습니다.",

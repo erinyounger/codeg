@@ -10,6 +10,7 @@ import {
 } from "react"
 import type { ImperativePanelGroupHandle } from "react-resizable-panels"
 import { FolderTitleBar } from "@/components/layout/folder-title-bar"
+import { useIsActiveChatMode } from "@/hooks/use-is-active-chat-mode"
 import { Sidebar } from "@/components/layout/sidebar"
 import { StatusBar } from "@/components/layout/status-bar"
 import {
@@ -31,6 +32,7 @@ import { ConversationRuntimeProvider } from "@/contexts/conversation-runtime-con
 import { TabProvider, useTabContext } from "@/contexts/tab-context"
 import { SessionStatsProvider } from "@/contexts/session-stats-context"
 import { SidebarProvider, useSidebarContext } from "@/contexts/sidebar-context"
+import { SearchDialogProvider } from "@/contexts/search-dialog-context"
 import {
   AuxPanelProvider,
   useAuxPanelContext,
@@ -99,6 +101,23 @@ function TabKeysSync() {
   useEffect(() => {
     registerOpenTabKeys(keys)
   }, [keys, registerOpenTabKeys])
+  return null
+}
+
+/**
+ * Auto-hides the right (aux) panel whenever a folderless chat conversation
+ * becomes active. Effect fires only on the `isChatMode` rising edge (it does NOT
+ * depend on `isOpen`), so it won't fight a user who reopens the panel — though in
+ * practice the toggle button and shortcut are also hidden in chat mode, making
+ * the hide effectively sticky for the chat session. Leaving chat mode does not
+ * auto-restore (kept simple); the user reopens it on a normal folder.
+ */
+function ChatModeAuxAutoHide() {
+  const isChatMode = useIsActiveChatMode()
+  const { setOpen } = useAuxPanelContext()
+  useEffect(() => {
+    if (isChatMode) setOpen(false)
+  }, [isChatMode, setOpen])
   return null
 }
 
@@ -776,6 +795,7 @@ function FolderLayoutShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-background text-foreground pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
+      <ChatModeAuxAutoHide />
       <FolderTitleBar />
       {isMobile ? (
         <MobileFolderWorkspaceShell>{children}</MobileFolderWorkspaceShell>
@@ -814,9 +834,11 @@ function WorkspaceLayoutInner({ children }: { children: React.ReactNode }) {
                           <SidebarProvider>
                             <AuxPanelProvider>
                               <TerminalProvider>
-                                <FolderLayoutShell>
-                                  {children}
-                                </FolderLayoutShell>
+                                <SearchDialogProvider>
+                                  <FolderLayoutShell>
+                                    {children}
+                                  </FolderLayoutShell>
+                                </SearchDialogProvider>
                               </TerminalProvider>
                             </AuxPanelProvider>
                           </SidebarProvider>

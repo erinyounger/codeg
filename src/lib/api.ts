@@ -37,6 +37,8 @@ import type {
   ExpertInstallStatus,
   FolderHistoryEntry,
   FolderDetail,
+  CreateChatConversationResult,
+  CreateChatDirResult,
   WorktreeResolution,
   DbConversationSummary,
   ImportResult,
@@ -302,6 +304,17 @@ export async function acpDownloadAgentBinary(
     version: version ?? null,
     taskId,
   })
+}
+
+export async function acpInstallUvTool(taskId: string): Promise<void> {
+  // uv install downloads + extracts the toolchain from GitHub; allow well
+  // beyond the default 60s web-call timeout so slow networks don't surface a
+  // spurious timeout while the backend is still streaming progress.
+  return getTransport().call(
+    "acp_install_uv_tool",
+    { taskId },
+    { timeoutMs: 600_000 }
+  )
 }
 
 export async function acpDetectAgentLocalVersion(
@@ -1500,6 +1513,35 @@ export async function createConversation(
   })
 }
 
+/**
+ * Create a folderless "chat mode" conversation. The backend lazily creates a
+ * dated per-conversation scratch dir and a dedicated hidden `is_chat` folder
+ * backing it, then the conversation. Returns the new conversation id plus that
+ * folder so the caller can seed `allFolders` (cwd / active-folder) immediately.
+ */
+export async function createChatConversation(
+  agentType: AgentType,
+  title?: string,
+  // Reuse a scratch dir already minted by `createChatDir` (eager connect) so the
+  // ACP cwd never moves across the first send; omit to let the backend mint one.
+  existingDir?: string
+): Promise<CreateChatConversationResult> {
+  return getTransport().call("create_chat_conversation", {
+    agentType,
+    title: title ?? null,
+    existingDir: existingDir ?? null,
+  })
+}
+
+/**
+ * Eagerly create a chat-mode scratch directory (filesystem only — no DB rows)
+ * and return its path, so a chat draft can connect ACP at a real cwd the instant
+ * "no-folder mode" is selected, before any first prompt.
+ */
+export async function createChatDir(): Promise<CreateChatDirResult> {
+  return getTransport().call("create_chat_dir", {})
+}
+
 export async function updateConversationStatus(
   conversationId: number,
   status: string
@@ -1517,6 +1559,16 @@ export async function updateConversationTitle(
   return getTransport().call("update_conversation_title", {
     conversationId,
     title,
+  })
+}
+
+export async function updateConversationPinned(
+  conversationId: number,
+  pinned: boolean
+): Promise<void> {
+  return getTransport().call("update_conversation_pinned", {
+    conversationId,
+    pinned,
   })
 }
 

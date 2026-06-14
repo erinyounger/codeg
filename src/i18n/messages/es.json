@@ -785,6 +785,7 @@
       "notInstalled": "No instalado",
       "remoteLocal": "Remota: {remoteVersion} · Local: {localVersion}",
       "platformUnsupported": "{versionText}. La plataforma actual no soporta este agente.",
+      "uvxNotReady": "{versionText}. El runtime de uv no está instalado: instálalo desde la comprobación de uv de abajo para usar este agente.",
       "clickInstall": "{versionText}. Haz clic en Instalar a la derecha.",
       "localUnrecognized": "{versionText}. La versión local no es comparable; intenta actualizar para sobrescribir la instalación.",
       "upgradeAvailable": "{versionText}. Hay actualización disponible.",
@@ -925,6 +926,8 @@
       "collapseAllGroups": "Colapsar todos los grupos",
       "newConversation": "Nueva conversación",
       "newConversationShort": "Nueva",
+      "newChat": "Nueva conversación",
+      "search": "Buscar",
       "noConversationsFound": "No se encontraron conversaciones.",
       "importLocalSessions": "Importar sesiones locales",
       "importing": "Importando...",
@@ -996,7 +999,12 @@
         "toastDeleted": "Se eliminaron {count} conversación(es)",
         "toastStatusUpdated": "Estado actualizado para {count} conversación(es)",
         "toastOpFailed": "Error en la operación: {message}"
-      }
+      },
+      "sectionPinned": "Fijadas",
+      "sectionFolders": "Carpetas",
+      "sectionChats": "Chat",
+      "noChats": "Sin chats",
+      "newChatAction": "Nuevo chat"
     },
     "conversation": {
       "reloadFailed": "No se pudo recargar la conversación: {message}",
@@ -1050,7 +1058,11 @@
       "deleteConversationTitle": "¿Eliminar conversación?",
       "deleteConversationDescription": "Esto eliminará \"{title}\". Esta acción no se puede deshacer.",
       "cancel": "Cancelar",
-      "save": "Guardar"
+      "save": "Guardar",
+      "pin": "Fijar",
+      "unpin": "Dejar de fijar",
+      "markCompleted": "Marcar como completada",
+      "reopen": "Reabrir"
     },
     "search": {
       "dialogTitle": "Buscar",
@@ -1813,6 +1825,8 @@
         "autoConnectFallback": "Haz clic para abrir {path} y gestionar la instalación.",
         "autoConnectAppend": "{message}. Haz clic para abrir {path} y gestionar la instalación.",
         "enableAgentFirstPlaceholder": "Habilita al menos un agente antes de iniciar una sesión...",
+        "prepareSessionFailed": "No se pudo preparar la sesión de chat. Inténtalo de nuevo.",
+        "createConversationFailed": "No se pudo crear la conversación. Inténtalo de nuevo.",
         "askAnythingPlaceholder": "Pregunta lo que sea..."
       },
       "welcomePanel": {
@@ -2119,9 +2133,8 @@
       },
       "messageNav": {
         "title": "Navegación de mensajes",
-        "expand": "Expandir navegación de mensajes",
         "collapse": "Contraer navegación de mensajes",
-        "jumpToMessage": "Ir a: {label}",
+        "collapsedSummary": "Mensajes {count}",
         "fileCount": "{count, plural, one {# archivo} other {# archivos}}",
         "remove": "Quitar",
         "noDiffDataAvailable": "No hay datos de diff disponibles para {filePath}"
@@ -2183,12 +2196,14 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
+      "chatModeLabel": "Modo sin carpeta",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",
       "toasts": {
         "folderChanged": "Switched to {name}",
         "openFolderFailed": "Failed to open folder",
+        "switchedToChatMode": "Cambiado al modo de chat",
         "openStashFailed": "Failed to open stash window",
         "openMergeFailed": "Failed to open merge window"
       }
@@ -2415,6 +2430,8 @@
       "errorDesc": "Cuando un agente encuentra un error",
       "permissionRequest": "Solicitud de permiso",
       "permissionRequestDesc": "Cuando un agente solicita permiso para actuar",
+      "questionRequest": "Pregunta del agente",
+      "questionRequestDesc": "Cuando un agente te hace una pregunta",
       "userPromptSent": "Mensaje del usuario",
       "userPromptSentDesc": "Cuando envías un mensaje (el texto del mensaje se incluye en la notificación)",
       "saved": "Filtro de eventos actualizado.",

@@ -785,6 +785,7 @@
       "notInstalled": "Not installed",
       "remoteLocal": "Remote: {remoteVersion} · Local: {localVersion}",
       "platformUnsupported": "{versionText}. Current platform does not support this agent.",
+      "uvxNotReady": "{versionText}. The uv runtime isn't installed — install it from the uv check below to use this agent.",
       "clickInstall": "{versionText}. Click Install on the right.",
       "localUnrecognized": "{versionText}. Local version is not comparable; try upgrade to overwrite install.",
       "upgradeAvailable": "{versionText}. Upgrade available.",
@@ -925,6 +926,8 @@
       "collapseAllGroups": "Collapse All Groups",
       "newConversation": "New Conversation",
       "newConversationShort": "New",
+      "newChat": "New chat",
+      "search": "Search",
       "noConversationsFound": "No conversations found.",
       "importLocalSessions": "Import local sessions",
       "importing": "Importing...",
@@ -996,7 +999,12 @@
         "toastDeleted": "Deleted {count} conversation(s)",
         "toastStatusUpdated": "Updated status for {count} conversation(s)",
         "toastOpFailed": "Operation failed: {message}"
-      }
+      },
+      "sectionPinned": "Pinned",
+      "sectionFolders": "Folders",
+      "sectionChats": "Chat",
+      "noChats": "No chats",
+      "newChatAction": "New chat"
     },
     "conversation": {
       "reloadFailed": "Failed to reload conversation: {message}",
@@ -1050,7 +1058,11 @@
       "deleteConversationTitle": "Delete conversation?",
       "deleteConversationDescription": "This will delete \"{title}\". This action cannot be undone.",
       "cancel": "Cancel",
-      "save": "Save"
+      "save": "Save",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "markCompleted": "Mark as completed",
+      "reopen": "Reopen"
     },
     "search": {
       "dialogTitle": "Search",
@@ -1813,6 +1825,8 @@
         "autoConnectFallback": "Click to open {path} and manage installation.",
         "autoConnectAppend": "{message}. Click to open {path} and manage installation.",
         "enableAgentFirstPlaceholder": "Enable at least one agent before starting a session...",
+        "prepareSessionFailed": "Couldn't prepare the chat session. Please try again.",
+        "createConversationFailed": "Couldn't create the conversation. Please try again.",
         "askAnythingPlaceholder": "Ask anything..."
       },
       "welcomePanel": {
@@ -2119,9 +2133,8 @@
       },
       "messageNav": {
         "title": "Message navigation",
-        "expand": "Expand message navigation",
         "collapse": "Collapse message navigation",
-        "jumpToMessage": "Jump to: {label}",
+        "collapsedSummary": "Messages {count}",
         "fileCount": "{count, plural, one {# file} other {# files}}",
         "remove": "Remove",
         "noDiffDataAvailable": "No diff data available for {filePath}"
@@ -2183,12 +2196,14 @@
       "noFolders": "No folders",
       "noBranches": "No branches",
       "noBranch": "(no branch)",
+      "chatModeLabel": "No-folder mode",
       "commit": "Commit",
       "push": "Push",
       "merge": "Merge",
       "toasts": {
         "folderChanged": "Switched to {name}",
         "openFolderFailed": "Failed to open folder",
+        "switchedToChatMode": "Switched to chat mode",
         "openStashFailed": "Failed to open stash window",
         "openMergeFailed": "Failed to open merge window"
       }
@@ -2427,6 +2442,8 @@
       "errorDesc": "When an agent encounters an error",
       "permissionRequest": "Permission Request",
       "permissionRequestDesc": "When an agent requests permission to act",
+      "questionRequest": "Agent Question",
+      "questionRequestDesc": "When an agent asks you a question",
       "userPromptSent": "User Message",
       "userPromptSentDesc": "When you send a message — the message text is included in the notification",
       "saved": "Event filter updated.",
