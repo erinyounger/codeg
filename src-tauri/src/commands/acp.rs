@@ -2128,16 +2128,38 @@ fn merge_hermes_model_config(
 
 /// Quote a single argv token for the current platform's shell, only when it
 /// contains characters that would otherwise be reparsed (so simple tokens stay
-/// readable). POSIX uses single quotes; Windows `cmd` uses double quotes.
+/// readable). POSIX uses single quotes; Windows wraps in double quotes.
 fn shell_quote_arg(arg: &str) -> String {
-    let needs_quoting = arg.is_empty()
-        || arg
-            .chars()
-            .any(|c| c.is_whitespace() || "[](){}'\"$&;|<>*?`\\!#~".contains(c));
+    shell_quote_arg_for(arg, cfg!(windows))
+}
+
+/// Platform-parameterized core of [`shell_quote_arg`], so both the POSIX and
+/// Windows quoting rules are unit-testable on any host.
+///
+/// The backslash forces quoting on POSIX (it is the shell escape char) but NOT
+/// on Windows, where it is just the path separator. Force-quoting a plain
+/// Windows path like `C:\…\uvx.exe` makes the rendered command *begin* with a
+/// double-quoted string: `cmd.exe` runs that fine, but PowerShell parses a
+/// leading quoted string as a string *expression* (invoking it would need the
+/// `&` call operator) and dies with "Unexpected token" on the next argument —
+/// uvx never runs. Leaving a space-free path unquoted keeps it a bare command
+/// token that runs in both `cmd` and PowerShell. (A path that contains spaces
+/// still must be quoted; such a copied command stays PowerShell-incompatible and
+/// needs a leading `&` when pasted there.)
+fn shell_quote_arg_for(arg: &str, windows: bool) -> String {
+    // Metacharacters that force quoting. Backslash is POSIX-only: on Windows it
+    // is the path separator and quoting on its account is what breaks PowerShell.
+    let special: &str = if windows {
+        "[](){}'\"$&;|<>*?`!#~"
+    } else {
+        "[](){}'\"$&;|<>*?`\\!#~"
+    };
+    let needs_quoting =
+        arg.is_empty() || arg.chars().any(|c| c.is_whitespace() || special.contains(c));
     if !needs_quoting {
         return arg.to_string();
     }
-    if cfg!(windows) {
+    if windows {
         format!("\"{}\"", arg.replace('"', "\\\""))
     } else {
         format!("'{}'", arg.replace('\'', "'\\''"))
@@ -2739,7 +2761,7 @@ fn hermes_home_for_launch(runtime_env: &BTreeMap<String, String>) -> PathBuf {
 
 pub(crate) fn reconcile_hermes_runtime_env(runtime_env: &BTreeMap<String, String>) {
     if let Err(err) = reconcile_hermes_runtime_env_in(&hermes_home_for_launch(runtime_env)) {
-        eprintln!("[ACP][Hermes] base_url reconcile skipped: {err}");
+        tracing::warn!("[ACP][Hermes] base_url reconcile skipped: {err}");
     }
 }
 
@@ -2974,6 +2996,13 @@ pub(crate) fn skill_storage_spec(agent_type: AgentType) -> Option<SkillStorageSp
             kind: SkillStorageKind::SkillDirectoryOnly,
             global_dirs: vec![hermes_home_dir().join("skills")],
             project_rel_dirs: vec![],
+        }),
+        // CodeBuddy is a Claude Code derivative: same `skills` directory
+        // layout, under `~/.codebuddy` instead of `~/.claude`.
+        AgentType::CodeBuddy => Some(SkillStorageSpec {
+            kind: SkillStorageKind::SkillDirectoryOnly,
+            global_dirs: vec![home_dir_or_default().join(".codebuddy").join("skills")],
+            project_rel_dirs: vec![".codebuddy/skills"],
         }),
     }
 }
@@ -3450,6 +3479,15 @@ const CLAUDE_MODEL_KEY_MAP: &[(&str, &str)] = &[
     ("haiku", "ANTHROPIC_DEFAULT_HAIKU_MODEL"),
     ("sonnet", "ANTHROPIC_DEFAULT_SONNET_MODEL"),
     ("opus", "ANTHROPIC_DEFAULT_OPUS_MODEL"),
+    // The custom model option trio appends one entry to the in-session /model
+    // picker (a model the provider's gateway serves). Carried by the provider's
+    // model JSON like the five model fields, so binding/cascade pushes it too.
+    ("customOption", "ANTHROPIC_CUSTOM_MODEL_OPTION"),
+    ("customOptionName", "ANTHROPIC_CUSTOM_MODEL_OPTION_NAME"),
+    (
+        "customOptionDescription",
+        "ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION",
+    ),
 ];
 
 /// Parse the model field stored on a model_provider into the env-var actions to
@@ -3460,8 +3498,10 @@ const CLAUDE_MODEL_KEY_MAP: &[(&str, &str)] = &[
 /// "clear". This lets the caller overwrite even when the provider's value is
 /// empty.
 ///
-/// - Claude: returns 5 entries (one per ANTHROPIC_*_MODEL). Each entry is `None`
-///   when the provider's JSON omits that key or has an empty value.
+/// - Claude: returns one entry per `CLAUDE_MODEL_KEY_MAP` row — the five
+///   ANTHROPIC_*_MODEL fields plus the ANTHROPIC_CUSTOM_MODEL_OPTION trio. Each
+///   entry is `None` when the provider's JSON omits that key or has an empty
+///   value.
 /// - Gemini: returns `GEMINI_MODEL`.
 /// - Codex: returns `OPENAI_MODEL` so the provider can override env_json (the
 ///   root `model` in `config.toml` is handled separately by
@@ -3688,6 +3728,12 @@ fn cascade_update_agent_config(
             persist_agent_local_config_json(agent_type, Some(&patch_str))?;
         }
         AgentType::Cline => {}
+        AgentType::CodeBuddy => {
+            // CodeBuddy authenticates via env vars (CODEBUDDY_API_KEY /
+            // CODEBUDDY_INTERNET_ENVIRONMENT) managed by its dedicated settings
+            // panel through `acpUpdateAgentEnv`; it does not participate in the
+            // model-provider credential cascade.
+        }
     }
     Ok(())
 }
@@ -3757,7 +3803,7 @@ pub(crate) async fn cascade_update_model_provider(
             &model_env,
             &codex_action,
         ) {
-            eprintln!(
+            tracing::warn!(
                 "[ModelProvider] cascade_update_agent_config({agent_type}) failed: {e}, skipping config update"
             );
         }
@@ -4702,6 +4748,14 @@ pub(crate) async fn acp_update_agent_env_core(
     // same way.
     let mut merged_env = env;
     let mut codex_action = CodexModelAction::NoOp;
+    // When a Claude provider is bound, capture the inputs to also rewrite the
+    // on-disk config.env below. Claude's model fields live in config.env, which
+    // the runtime overlays OVER db env_json (see `build_runtime_env_from_setting`),
+    // so clearing a key from db env alone is not enough — a stale value left in
+    // `~/.claude/settings.json` (e.g. ANTHROPIC_CUSTOM_MODEL_OPTION) would win at
+    // launch. Binding must therefore be authoritative on disk too, matching the
+    // provider-edit cascade.
+    let mut claude_local_cascade: Option<(String, String, BTreeMap<String, Option<String>>)> = None;
     if let Some(pid) = model_provider_id {
         let provider = crate::db::service::model_provider_service::get_by_id(&db.conn, pid)
             .await
@@ -4727,17 +4781,23 @@ pub(crate) async fn acp_update_agent_env_core(
         }
 
         let model_env = parse_provider_model(agent_type, provider.model.as_deref());
-        for (k, v) in model_env {
+        for (k, v) in &model_env {
             match v {
                 Some(value) => {
-                    merged_env.insert(k, value);
+                    merged_env.insert(k.clone(), value.clone());
                 }
                 None => {
-                    merged_env.remove(&k);
+                    merged_env.remove(k);
                 }
             }
         }
         codex_action = provider_codex_model_action(agent_type, provider.model.as_deref());
+        // Codex's on-disk config is handled by `apply_codex_root_model_action`
+        // below; Gemini's analogous config.env gap is pre-existing and out of
+        // scope here. Only Claude needs the local-config cascade on bind.
+        if agent_type == AgentType::ClaudeCode {
+            claude_local_cascade = Some((provider.api_url.clone(), provider.api_key.clone(), model_env));
+        }
     }
 
     let patch = agent_setting_service::AgentSettingsUpdate {
@@ -4749,8 +4809,23 @@ pub(crate) async fn acp_update_agent_env_core(
         .await
         .map_err(|e| AcpError::protocol(e.to_string()))?;
 
+    // Authoritatively rewrite the local config.env so a stale model key (e.g. the
+    // custom model option) cannot survive a bind/rebind via any save path. `None`
+    // entries become JSON-null and are removed by `merge_json_values`.
+    if let Some((api_url, api_key, model_env)) = claude_local_cascade {
+        if let Err(e) = cascade_update_agent_config(
+            agent_type,
+            &api_url,
+            &api_key,
+            &model_env,
+            &CodexModelAction::NoOp,
+        ) {
+            eprintln!("[acp_update_agent_env] cascade_update_agent_config({agent_type}) failed: {e}");
+        }
+    }
+
     if let Err(e) = apply_codex_root_model_action(&codex_action) {
-        eprintln!("[acp_update_agent_env] apply_codex_root_model_action failed: {e}");
+        tracing::error!("[acp_update_agent_env] apply_codex_root_model_action failed: {e}");
     }
 
     emit_acp_agents_updated(emitter, "env_updated", Some(agent_type));
@@ -5476,7 +5551,7 @@ pub(crate) async fn acp_prepare_npx_agent_core(
                     agent_setting_service::set_installed_version(&db.conn, agent_type, detected)
                         .await
                 {
-                    eprintln!(
+                    tracing::error!(
                         "[acp] failed to resync installed_version after clean upgrade failure: {sync_err}"
                     );
                 }
@@ -6080,6 +6155,77 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("codeg-acp-{name}-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).expect("create test directory");
         dir
+    }
+
+    #[test]
+    fn parse_provider_model_emits_claude_custom_model_option_trio() {
+        // A Claude provider that defines the custom model option must surface all
+        // three ANTHROPIC_CUSTOM_MODEL_OPTION* env vars (Some => set) alongside
+        // the standard model fields.
+        let raw = r#"{
+            "main": "gw/opus",
+            "customOption": "gw/opus-preview",
+            "customOptionName": "Gateway Opus",
+            "customOptionDescription": "via gateway"
+        }"#;
+        let out = parse_provider_model(AgentType::ClaudeCode, Some(raw));
+        assert_eq!(
+            out.get("ANTHROPIC_CUSTOM_MODEL_OPTION"),
+            Some(&Some("gw/opus-preview".to_string()))
+        );
+        assert_eq!(
+            out.get("ANTHROPIC_CUSTOM_MODEL_OPTION_NAME"),
+            Some(&Some("Gateway Opus".to_string()))
+        );
+        assert_eq!(
+            out.get("ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION"),
+            Some(&Some("via gateway".to_string()))
+        );
+        assert_eq!(out.get("ANTHROPIC_MODEL"), Some(&Some("gw/opus".to_string())));
+
+        // Omitted custom keys are authoritative clears (None => remove from env),
+        // matching the five model fields' overwrite semantics.
+        let bare = parse_provider_model(AgentType::ClaudeCode, Some(r#"{"main":"x"}"#));
+        assert_eq!(bare.get("ANTHROPIC_CUSTOM_MODEL_OPTION"), Some(&None));
+        assert_eq!(bare.get("ANTHROPIC_CUSTOM_MODEL_OPTION_NAME"), Some(&None));
+        assert_eq!(
+            bare.get("ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION"),
+            Some(&None)
+        );
+    }
+
+    #[test]
+    fn merge_json_values_clears_stale_custom_model_option_via_null() {
+        // The local-config cascade (cascade_update_agent_config) encodes a
+        // cleared model key as JSON-null. merge_json_values must DELETE that key
+        // from the on-disk config (nested under `env`) while preserving sibling
+        // keys — this is what stops a stale ANTHROPIC_CUSTOM_MODEL_OPTION* in
+        // ~/.claude/settings.json from winning after binding to a provider that
+        // omits the trio (parse_provider_model yields `None` => null here).
+        let mut base = serde_json::json!({
+            "env": {
+                "ANTHROPIC_CUSTOM_MODEL_OPTION": "gw/opus-stale",
+                "ANTHROPIC_CUSTOM_MODEL_OPTION_NAME": "Stale",
+                "ANTHROPIC_MODEL": "keep-me"
+            }
+        });
+        let patch = serde_json::json!({
+            "env": {
+                "ANTHROPIC_CUSTOM_MODEL_OPTION": null,
+                "ANTHROPIC_CUSTOM_MODEL_OPTION_NAME": null
+            }
+        });
+        merge_json_values(&mut base, &patch);
+        let env = base
+            .get("env")
+            .and_then(|v| v.as_object())
+            .expect("env object survives the merge");
+        assert!(!env.contains_key("ANTHROPIC_CUSTOM_MODEL_OPTION"));
+        assert!(!env.contains_key("ANTHROPIC_CUSTOM_MODEL_OPTION_NAME"));
+        assert_eq!(
+            env.get("ANTHROPIC_MODEL").and_then(|v| v.as_str()),
+            Some("keep-me")
+        );
     }
 
     #[test]
@@ -7703,6 +7849,39 @@ mod tests {
             vec!["--python".to_string(), "3.13".to_string()]
         );
         assert!(uvx_python_args(None).is_empty());
+    }
+
+    #[test]
+    fn shell_quote_arg_leaves_spacefree_windows_paths_unquoted() {
+        // A backslash path with no spaces must NOT be quoted on Windows. A
+        // leading double-quoted string makes PowerShell parse the line as a
+        // string expression and fail with "Unexpected token" instead of running
+        // uvx; an unquoted bare path runs in both cmd and PowerShell.
+        let path = r"C:\Users\Administrator\AppData\Local\app.codeg\acp-binaries\uv-tool\windows-x86_64\uvx.exe";
+        assert_eq!(shell_quote_arg_for(path, true), path);
+        // On POSIX the backslash is the escape char, so it still forces quoting.
+        assert_eq!(shell_quote_arg_for(path, false), format!("'{path}'"));
+    }
+
+    #[test]
+    fn shell_quote_arg_still_quotes_when_required() {
+        // Spaces force quoting on both platforms (this case is the known
+        // PowerShell-incompatible residual: a quoted leading path needs `&`).
+        assert_eq!(
+            shell_quote_arg_for(r"C:\Program Files\uv-tool\uvx.exe", true),
+            "\"C:\\Program Files\\uv-tool\\uvx.exe\""
+        );
+        // The pinned package's brackets and comma must stay quoted so PowerShell
+        // does not split `[acp,mcp]` into an array argument.
+        let pkg = "hermes-agent[acp,mcp]==0.16.0";
+        assert_eq!(shell_quote_arg_for(pkg, true), format!("\"{pkg}\""));
+        assert_eq!(shell_quote_arg_for(pkg, false), format!("'{pkg}'"));
+        // Plain flag/value tokens are never quoted on either platform.
+        for windows in [true, false] {
+            assert_eq!(shell_quote_arg_for("--python", windows), "--python");
+            assert_eq!(shell_quote_arg_for("3.13", windows), "3.13");
+            assert_eq!(shell_quote_arg_for("hermes-acp", windows), "hermes-acp");
+        }
     }
 
     #[test]

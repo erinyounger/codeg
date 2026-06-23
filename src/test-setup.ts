@@ -11,6 +11,21 @@ if (typeof Element !== "undefined") {
   // jsdom doesn't implement scrollIntoView; the composer's suggestion popup
   // calls it to keep the active row visible.
   Element.prototype.scrollIntoView ??= () => {}
+  // jsdom doesn't implement Pointer Capture; Radix menus/popovers touch these
+  // during the pointer interactions @testing-library/user-event drives.
+  Element.prototype.hasPointerCapture ??= () => false
+  Element.prototype.setPointerCapture ??= () => {}
+  Element.prototype.releasePointerCapture ??= () => {}
+}
+if (typeof globalThis !== "undefined" && !("ResizeObserver" in globalThis)) {
+  // jsdom doesn't implement ResizeObserver; cmdk (the command palette used by
+  // the branch/folder pickers) constructs one on mount. A no-op stub is enough
+  // for headless rendering — layout callbacks never need to fire.
+  ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
 }
 if (typeof Range !== "undefined") {
   Range.prototype.getClientRects ??= () =>

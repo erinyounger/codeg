@@ -207,7 +207,7 @@ fn bundled_metadata() -> &'static [ExpertMetadata] {
     METADATA.get_or_init(|| match load_bundled_metadata_inner() {
         Ok(list) => list,
         Err(err) => {
-            eprintln!("[Experts] failed to load bundled metadata: {err}");
+            tracing::error!("[Experts] failed to load bundled metadata: {err}");
             Vec::new()
         }
     })
@@ -665,6 +665,20 @@ fn extract_bundle_dir(
                     fs::create_dir_all(parent)?;
                 }
                 fs::write(&out_path, f.contents())?;
+                // `include_dir!` does not carry Unix permission bits, so bundled
+                // scripts (e.g. subagent-driven-development/scripts/* and the
+                // brainstorming companion's *.sh) would extract as non-executable
+                // and fail when a skill invokes them by path. Restore the execute
+                // bit for any file that declares a shebang.
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if f.contents().starts_with(b"#!") {
+                        let mut perms = fs::metadata(&out_path)?.permissions();
+                        perms.set_mode(perms.mode() | 0o111);
+                        fs::set_permissions(&out_path, perms)?;
+                    }
+                }
             }
             DirEntry::Dir(d) => {
                 extract_bundle_dir(d, bundle_prefix, target)?;
@@ -779,6 +793,7 @@ fn supported_agents() -> Vec<AgentType> {
         AgentType::OpenClaw,
         AgentType::Cline,
         AgentType::Hermes,
+        AgentType::CodeBuddy,
     ];
     ALL.iter()
         .filter(|a| skill_storage_spec(**a).is_some())
