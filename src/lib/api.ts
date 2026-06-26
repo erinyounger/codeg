@@ -104,6 +104,7 @@ import type {
   ModelProviderInfo,
   UpdateModelProviderResult,
   PluginCheckSummary,
+  OpenCodeCatalogProvider,
   QuickMessage,
   OfficecliInfo,
   OfficecliSkill,
@@ -551,6 +552,14 @@ export async function opencodeListPlugins(): Promise<PluginCheckSummary> {
   return getTransport().call("opencode_list_plugins", {})
 }
 
+export async function opencodeProviderCatalog(
+  forceRefresh?: boolean
+): Promise<OpenCodeCatalogProvider[]> {
+  return getTransport().call("opencode_provider_catalog", {
+    forceRefresh: forceRefresh ?? null,
+  })
+}
+
 export async function opencodeInstallPlugins(
   taskId: string,
   names?: string[] | null
@@ -629,12 +638,6 @@ export async function expertsList(): Promise<ExpertListItem[]> {
   return getTransport().call("experts_list")
 }
 
-export async function expertsListForAgent(
-  agentType: AgentType
-): Promise<ExpertListItem[]> {
-  return getTransport().call("experts_list_for_agent", { agentType })
-}
-
 export async function expertsGetInstallStatus(
   expertId: string
 ): Promise<ExpertInstallStatus[]> {
@@ -689,8 +692,18 @@ export async function officecliDetect(): Promise<OfficecliInfo> {
   return getTransport().call("officecli_detect")
 }
 
-export async function officecliInstall(): Promise<OfficecliInfo> {
-  return getTransport().call("officecli_install")
+export async function officecliInstall(taskId: string): Promise<OfficecliInfo> {
+  // The vendor installer downloads + extracts a multi-MB binary; allow well
+  // beyond the default 60s web-call timeout so slow networks don't surface a
+  // spurious timeout while progress is still streaming. Sits 30s ABOVE the
+  // backend's own 600s deadline so the backend's structured timeout error wins
+  // the race instead of a generic transport abort. `taskId` correlates the
+  // `app://officecli-install` stream the settings page subscribes to.
+  return getTransport().call(
+    "officecli_install",
+    { taskId },
+    { timeoutMs: 630_000 }
+  )
 }
 
 export async function officecliUninstall(): Promise<OfficecliInfo> {
@@ -754,6 +767,32 @@ export async function officecliRenderHtml(
   path: string
 ): Promise<string> {
   return getTransport().call("officecli_render_html", { rootPath, path })
+}
+
+/**
+ * Start (or share, by ref-count) a long-lived `officecli watch` preview server
+ * for an office file and return its loopback `port` plus a per-watch `cap`
+ * capability. `path` is relative to `rootPath`. Live refresh is driven by
+ * officecli's own SSE channel, so the preview no longer re-reads (and locks)
+ * the file the way the one-shot {@link officecliRenderHtml} did.
+ *
+ * `cap` is only used by web/server mode, where the iframe loads the preview
+ * through the `/api/office-watch-proxy/{port}` reverse proxy and authenticates
+ * with `?cap=` (the master token never enters the iframe). Desktop ignores it.
+ */
+export async function startOfficeWatch(
+  rootPath: string,
+  path: string
+): Promise<{ port: number; cap: string }> {
+  return getTransport().call("start_office_watch", { rootPath, path })
+}
+
+/** Release one reference to an office file's watch preview server. */
+export async function stopOfficeWatch(
+  rootPath: string,
+  path: string
+): Promise<void> {
+  return getTransport().call("stop_office_watch", { rootPath, path })
 }
 
 export async function getSystemProxySettings(): Promise<SystemProxySettings> {

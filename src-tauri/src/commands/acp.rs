@@ -573,6 +573,19 @@ async fn detect_local_version(agent_type: AgentType) -> Option<String> {
 /// may not have synced niche packages like `@agentclientprotocol/*`.
 const NPM_OFFICIAL_REGISTRY: &str = "https://registry.npmjs.org";
 
+/// Force npm to install platform-specific `optionalDependencies`. Several agents
+/// ship their native CLI as a per-platform optional package — e.g.
+/// `@agentclientprotocol/claude-agent-acp` pulls in `@anthropic-ai/claude-agent-sdk`,
+/// whose runtime binary lives in optional deps like
+/// `@anthropic-ai/claude-agent-sdk-win32-x64`. npm includes optional deps by
+/// default, but a machine with `omit=optional` in its `.npmrc` (or `npm_config_omit`
+/// in the environment) silently skips them, so the install "succeeds" yet the agent
+/// fails at launch with "native binary not found for <platform>". `--include` wins
+/// over `--omit` regardless of order and a CLI flag outranks any `.npmrc`, so passing
+/// it unconditionally guarantees the native binary lands no matter how npm is
+/// configured. Harmless for agents without optional deps.
+const NPM_INCLUDE_OPTIONAL: &str = "--include=optional";
+
 /// Run an npm command with piped stdout/stderr, streaming each line as a log event.
 /// Returns (success: bool, collected_stderr: String) so callers can inspect errors.
 async fn run_npm_streaming(
@@ -654,11 +667,15 @@ async fn install_npm_global_package_streaming(
         emitter,
         task_id,
         AgentInstallEventKind::Log,
-        format!("$ npm install -g {package}"),
+        format!("$ npm install -g {NPM_INCLUDE_OPTIONAL} {package}"),
     );
 
-    let (success, stderr) =
-        run_npm_streaming(&["install", "-g", &registry_arg, package], task_id, emitter).await?;
+    let (success, stderr) = run_npm_streaming(
+        &["install", "-g", NPM_INCLUDE_OPTIONAL, &registry_arg, package],
+        task_id,
+        emitter,
+    )
+    .await?;
 
     if !success {
         // EACCES: permission denied — retry with a user-local --prefix so
@@ -683,7 +700,14 @@ async fn install_npm_global_package_streaming(
                 "File conflict, retrying with --force...",
             );
             let (retry_success, retry_stderr) = run_npm_streaming(
-                &["install", "-g", "--force", &registry_arg, package],
+                &[
+                    "install",
+                    "-g",
+                    "--force",
+                    NPM_INCLUDE_OPTIONAL,
+                    &registry_arg,
+                    package,
+                ],
                 task_id,
                 emitter,
             )
@@ -756,11 +780,21 @@ async fn install_npm_to_user_prefix_streaming(
         emitter,
         task_id,
         AgentInstallEventKind::Log,
-        format!("$ npm install -g --prefix={} {package}", prefix.display()),
+        format!(
+            "$ npm install -g {NPM_INCLUDE_OPTIONAL} --prefix={} {package}",
+            prefix.display()
+        ),
     );
 
     let (success, stderr) = run_npm_streaming(
-        &["install", "-g", &prefix_arg, registry_arg, package],
+        &[
+            "install",
+            "-g",
+            NPM_INCLUDE_OPTIONAL,
+            &prefix_arg,
+            registry_arg,
+            package,
+        ],
         task_id,
         emitter,
     )
@@ -781,6 +815,7 @@ async fn install_npm_to_user_prefix_streaming(
                     "install",
                     "-g",
                     "--force",
+                    NPM_INCLUDE_OPTIONAL,
                     &prefix_arg,
                     registry_arg,
                     package,
@@ -978,18 +1013,25 @@ fn codex_auth_json_path() -> PathBuf {
     codex_home_dir().join("auth.json")
 }
 
-fn opencode_primary_config_path() -> PathBuf {
-    home_dir_or_default()
-        .join(".config")
+/// OpenCode reads config from `$XDG_CONFIG_HOME/opencode` (falling back to
+/// `~/.config/opencode`) and credentials from `$XDG_DATA_HOME/opencode`
+/// (falling back to `~/.local/share/opencode`) on every platform. codeg must
+/// write where OpenCode reads, so these reuse the same XDG resolution as
+/// `opencode_plugins` (config) and `parsers::opencode` (data) — otherwise a
+/// user with XDG dirs set would get credentials written where OpenCode never
+/// looks, and codeg's own plugin/connect paths would diverge.
+fn opencode_config_dir() -> PathBuf {
+    crate::acp::opencode_plugins::xdg_config_home()
+        .unwrap_or_else(|| home_dir_or_default().join(".config"))
         .join("opencode")
-        .join("opencode.json")
+}
+
+fn opencode_primary_config_path() -> PathBuf {
+    opencode_config_dir().join("opencode.json")
 }
 
 fn opencode_legacy_config_path() -> PathBuf {
-    home_dir_or_default()
-        .join(".config")
-        .join("opencode")
-        .join("config.json")
+    opencode_config_dir().join("config.json")
 }
 
 fn resolve_opencode_config_path() -> PathBuf {
@@ -1007,11 +1049,7 @@ fn resolve_opencode_config_path() -> PathBuf {
 }
 
 fn opencode_auth_json_path() -> PathBuf {
-    home_dir_or_default()
-        .join(".local")
-        .join("share")
-        .join("opencode")
-        .join("auth.json")
+    crate::parsers::opencode::resolve_opencode_base_dir().join("auth.json")
 }
 
 fn load_opencode_auth_json_raw() -> Option<String> {
@@ -1407,6 +1445,29 @@ fn load_codex_local_config_json() -> Option<String> {
         return None;
     }
     serde_json::to_string_pretty(&serde_json::Value::Object(merged)).ok()
+}
+
+/// Extract the `model_provider` name from codex `config.toml` text.
+///
+/// Returns the trimmed provider name, or `None` when the key is absent, empty,
+/// or the TOML is malformed. Pure (no I/O) so it is unit-testable without env
+/// vars or the filesystem; [`codex_model_provider`] is the on-disk wrapper.
+fn parse_codex_model_provider(raw_toml: &str) -> Option<String> {
+    raw_toml
+        .parse::<toml::Value>()
+        .ok()?
+        .get("model_provider")
+        .and_then(|item| item.as_str())
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(str::to_string)
+}
+
+/// Read codex's configured `model_provider` from `~/.codex/config.toml` (honors
+/// `CODEX_HOME` via [`codex_config_toml_path`]). `None` when the file is
+/// missing/unreadable or declares no provider.
+fn codex_model_provider() -> Option<String> {
+    parse_codex_model_provider(&fs::read_to_string(codex_config_toml_path()).ok()?)
 }
 
 fn persist_codex_local_config(config_patch_json: Option<&str>) -> Result<(), AcpError> {
@@ -4658,6 +4719,21 @@ pub(crate) async fn build_session_runtime_env(
         build_runtime_env_from_setting(agent_type, setting.as_ref(), local_config_json.as_deref());
     apply_model_provider_env(agent_type, setting.as_ref(), &mut runtime_env, &db.conn).await;
 
+    // codex-acp 1.0.0 hard-codes `modelProvider: "openai"` when resuming a
+    // session (its `getResumeModelProvider`) unless `MODEL_PROVIDER` is set —
+    // which silently routes resumed conversations to the official OpenAI
+    // endpoint and ignores the custom provider in `~/.codex/config.toml`. New
+    // sessions are spared because they pass `null` (→ codex reads the config's
+    // own `model_provider`). Pin `MODEL_PROVIDER` to that same name so resumed
+    // sessions select the same provider as new ones. Skipped when the config
+    // declares no provider (official OpenAI / ChatGPT users → keep the upstream
+    // "openai" fallback) or the user already set it explicitly via `env_json`.
+    if agent_type == AgentType::Codex && !runtime_env.contains_key("MODEL_PROVIDER") {
+        if let Some(provider) = codex_model_provider() {
+            runtime_env.insert("MODEL_PROVIDER".to_string(), provider);
+        }
+    }
+
     if let Some(cred_env) = crate::commands::terminal::prepare_credential_env(data_dir) {
         for (key, value) in cred_env {
             runtime_env.insert(key, value);
@@ -5401,14 +5477,6 @@ pub(crate) async fn acp_update_agent_preferences_core(
             Some(trimmed.to_string())
         }
     });
-    let opencode_auth_json = opencode_auth_json.and_then(|raw| {
-        let trimmed = raw.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    });
     if let Some(raw) = config_json.as_deref() {
         let parsed = serde_json::from_str::<serde_json::Value>(raw)
             .map_err(|e| AcpError::protocol(format!("invalid config_json: {e}")))?;
@@ -5440,12 +5508,10 @@ pub(crate) async fn acp_update_agent_preferences_core(
     }
 
     if agent_type == AgentType::OpenCode {
-        if let Some(raw_auth) = opencode_auth_json.as_deref() {
-            persist_opencode_auth_json(raw_auth)?;
-        }
-        if let Some(raw) = config_json.as_deref() {
-            persist_agent_local_config_json(agent_type, Some(raw))?;
-        }
+        persist_opencode_native_config(
+            opencode_auth_json.as_deref(),
+            config_json.as_deref(),
+        )?;
         emit_acp_agents_updated(emitter, "preferences_updated", Some(agent_type));
         return Ok(());
     }
@@ -5686,6 +5752,38 @@ pub async fn acp_update_agent_env(
     .await
 }
 
+/// Decide what to write to OpenCode's `auth.json`. `None` (caller passed no
+/// auth payload) leaves the file untouched. An explicitly empty payload becomes
+/// `{}` so clearing the last credential truncates the file instead of being
+/// skipped — otherwise a stale key would survive on disk and the disconnected
+/// provider would reappear after reload.
+fn opencode_auth_payload_to_write(raw: Option<&str>) -> Option<String> {
+    let trimmed = raw?.trim();
+    Some(if trimmed.is_empty() {
+        "{}".to_string()
+    } else {
+        trimmed.to_string()
+    })
+}
+
+/// Persist OpenCode's native files (`auth.json` + `opencode.json`) for a
+/// config/preferences save. Shared by both the config and preferences commands
+/// so the empty-auth handling can't drift between the two exposed paths. An
+/// explicitly empty auth payload truncates `auth.json` to `{}`; `None` leaves
+/// each file untouched.
+fn persist_opencode_native_config(
+    opencode_auth_json: Option<&str>,
+    config_json: Option<&str>,
+) -> Result<(), AcpError> {
+    if let Some(auth) = opencode_auth_payload_to_write(opencode_auth_json) {
+        persist_opencode_auth_json(&auth)?;
+    }
+    if let Some(raw) = config_json {
+        persist_agent_local_config_json(AgentType::OpenCode, Some(raw))?;
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn acp_update_agent_config_core(
     agent_type: AgentType,
@@ -5696,14 +5794,6 @@ pub(crate) async fn acp_update_agent_config_core(
     emitter: &EventEmitter,
 ) -> Result<(), AcpError> {
     let config_json = config_json.and_then(|raw| {
-        let trimmed = raw.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    });
-    let opencode_auth_json = opencode_auth_json.and_then(|raw| {
         let trimmed = raw.trim();
         if trimmed.is_empty() {
             None
@@ -5733,12 +5823,10 @@ pub(crate) async fn acp_update_agent_config_core(
     }
 
     if agent_type == AgentType::OpenCode {
-        if let Some(raw_auth) = opencode_auth_json.as_deref() {
-            persist_opencode_auth_json(raw_auth)?;
-        }
-        if let Some(raw) = config_json.as_deref() {
-            persist_agent_local_config_json(agent_type, Some(raw))?;
-        }
+        persist_opencode_native_config(
+            opencode_auth_json.as_deref(),
+            config_json.as_deref(),
+        )?;
         emit_acp_agents_updated(emitter, "config_updated", Some(agent_type));
         return Ok(());
     }
@@ -6743,6 +6831,27 @@ pub async fn opencode_list_plugins() -> Result<PluginCheckSummary, AcpError> {
     opencode_list_plugins_core().await
 }
 
+pub(crate) async fn opencode_provider_catalog_core(
+    data_dir: &Path,
+    force_refresh: bool,
+) -> Vec<crate::acp::opencode_catalog::CatalogProvider> {
+    crate::acp::opencode_catalog::provider_catalog(data_dir, force_refresh).await
+}
+
+#[cfg(feature = "tauri-runtime")]
+#[cfg_attr(feature = "tauri-runtime", tauri::command)]
+pub async fn opencode_provider_catalog(
+    force_refresh: Option<bool>,
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<crate::acp::opencode_catalog::CatalogProvider>, AcpError> {
+    let data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map(|p| crate::paths::resolve_effective_data_dir(&p))
+        .unwrap_or_else(|_| PathBuf::from("."));
+    Ok(opencode_provider_catalog_core(&data_dir, force_refresh.unwrap_or(false)).await)
+}
+
 pub(crate) async fn opencode_install_plugins_core(
     names: Option<Vec<String>>,
     task_id: String,
@@ -6997,6 +7106,148 @@ pub(crate) async fn codex_poll_device_code_core(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn opencode_auth_empty_payload_truncates_to_empty_object() {
+        // Clearing the last credential sends "" — it must persist `{}` (clearing
+        // the file), not be skipped (which would strand a stale key on disk).
+        assert_eq!(
+            opencode_auth_payload_to_write(Some("")),
+            Some("{}".to_string())
+        );
+        assert_eq!(
+            opencode_auth_payload_to_write(Some("   \n")),
+            Some("{}".to_string())
+        );
+    }
+
+    #[test]
+    fn opencode_auth_payload_preserves_non_empty_and_skips_none() {
+        let json = r#"{"openai":{"type":"api","key":"k"}}"#;
+        assert_eq!(
+            opencode_auth_payload_to_write(Some(json)),
+            Some(json.to_string())
+        );
+        // No payload supplied → leave auth.json untouched.
+        assert_eq!(opencode_auth_payload_to_write(None), None);
+    }
+
+    // Call-site guard: both acp_update_agent_config_core and
+    // acp_update_agent_preferences_core route OpenCode persistence through
+    // persist_opencode_native_config, so testing it covers both exposed paths.
+    #[test]
+    fn persist_opencode_native_config_empty_auth_clears_file() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        // Pin HOME and clear XDG_DATA_HOME so the auth path resolves under the
+        // temp dir regardless of the developer's environment.
+        temp_env::with_vars(
+            [
+                ("HOME", Some(tmp.path())),
+                ("XDG_DATA_HOME", None::<&std::path::Path>),
+            ],
+            || {
+                let auth_path = opencode_auth_json_path();
+                fs::create_dir_all(auth_path.parent().unwrap()).expect("mkdir");
+                fs::write(&auth_path, r#"{"openai":{"type":"api","key":"k"}}"#).expect("seed");
+
+                // Disconnecting the last provider sends an empty auth payload: it
+                // must truncate auth.json to {}, not strand the stale credential.
+                persist_opencode_native_config(Some(""), None).expect("persist");
+
+                assert_eq!(fs::read_to_string(&auth_path).unwrap().trim(), "{}");
+            },
+        );
+    }
+
+    #[test]
+    fn persist_opencode_native_config_none_auth_leaves_file() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        temp_env::with_vars(
+            [
+                ("HOME", Some(tmp.path())),
+                ("XDG_DATA_HOME", None::<&std::path::Path>),
+            ],
+            || {
+                let auth_path = opencode_auth_json_path();
+                fs::create_dir_all(auth_path.parent().unwrap()).expect("mkdir");
+                let original = "{\"openai\":{\"type\":\"api\",\"key\":\"k\"}}\n";
+                fs::write(&auth_path, original).expect("seed");
+
+                // No auth payload supplied → file untouched.
+                persist_opencode_native_config(None, None).expect("persist");
+
+                assert_eq!(fs::read_to_string(&auth_path).unwrap(), original);
+            },
+        );
+    }
+
+    #[test]
+    fn opencode_config_path_falls_back_when_xdg_config_home_empty() {
+        // An empty XDG_CONFIG_HOME must fall back to <home>/.config, not resolve
+        // to a relative "opencode/opencode.json". `dirs::home_dir()` ignores the
+        // HOME env var on Windows, so derive the expected base from the same
+        // resolution production uses instead of pinning HOME.
+        temp_env::with_var("XDG_CONFIG_HOME", Some(""), || {
+            assert_eq!(
+                opencode_primary_config_path(),
+                home_dir_or_default()
+                    .join(".config")
+                    .join("opencode")
+                    .join("opencode.json")
+            );
+        });
+    }
+
+    #[test]
+    fn opencode_paths_follow_xdg_when_set() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let cfg = tmp.path().join("xdg-config");
+        let data = tmp.path().join("xdg-data");
+        temp_env::with_vars(
+            [
+                ("HOME", Some(tmp.path())),
+                ("XDG_CONFIG_HOME", Some(cfg.as_path())),
+                ("XDG_DATA_HOME", Some(data.as_path())),
+            ],
+            || {
+                assert_eq!(
+                    opencode_primary_config_path(),
+                    cfg.join("opencode").join("opencode.json")
+                );
+                assert_eq!(
+                    opencode_auth_json_path(),
+                    data.join("opencode").join("auth.json")
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn parse_codex_model_provider_extracts_named_custom_provider() {
+        // A codeg-managed config pins a named custom provider. Without this name
+        // pinned into MODEL_PROVIDER, codex-acp resumes against "openai".
+        let toml = r#"
+model = "gpt-5-codex"
+model_provider = "codeg"
+
+[model_providers.codeg]
+name = "codeg"
+base_url = "https://gateway.example/v1"
+wire_api = "responses"
+"#;
+        assert_eq!(parse_codex_model_provider(toml), Some("codeg".to_string()));
+
+        // No model_provider (official OpenAI / ChatGPT users) → None, so
+        // build_session_runtime_env leaves MODEL_PROVIDER unset and codex-acp's
+        // resume fallback to "openai" stays correct.
+        assert_eq!(parse_codex_model_provider("model = \"gpt-5-codex\"\n"), None);
+
+        // Whitespace-only value is treated as absent.
+        assert_eq!(parse_codex_model_provider("model_provider = \"   \"\n"), None);
+
+        // Malformed TOML must not panic — just yields None.
+        assert_eq!(parse_codex_model_provider("model_provider = "), None);
+    }
 
     fn unique_test_dir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("codeg-acp-{name}-{}", uuid::Uuid::new_v4()));
