@@ -2420,6 +2420,22 @@
         "dismiss": "Dismiss",
         "reconnectFailed": "Failed to reconnect session",
         "applied": "New configuration applied"
+      },
+      "collabAgent": {
+        "title": "Sub-agent",
+        "errorTitle": "Sub-agent task failed",
+        "statesLabel": "Sub-agents",
+        "statusRunning": "Running",
+        "statusCompleted": "Completed",
+        "statusFailed": "Failed",
+        "statusPending": "Starting",
+        "statusInterrupted": "Interrupted",
+        "statusClosed": "Closed",
+        "statusNotFound": "Not found",
+        "opSpawn": "Starting sub-agent",
+        "opWait": "Fetching sub-agent result",
+        "opClose": "Closing sub-agent",
+        "opResume": "Resuming sub-agent"
       }
     },
     "diffPreview": {
@@ -2897,6 +2913,7 @@
     "detection": {
       "installed": "Installed",
       "notInstalled": "Not installed",
+      "notRunnable": "Installed but not runnable",
       "installHint": "Install OfficeCLI to enable office document generation skills for your AI agents.",
       "install": "Install",
       "uninstall": "Uninstall",

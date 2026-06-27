@@ -2420,6 +2420,22 @@
         "dismiss": "تجاهل",
         "reconnectFailed": "فشل في إعادة الاتصال بالجلسة",
         "applied": "تم تطبيق الإعدادات الجديدة"
+      },
+      "collabAgent": {
+        "title": "وكيل فرعي",
+        "errorTitle": "فشلت مهمة الوكيل الفرعي",
+        "statesLabel": "الوكلاء الفرعيون",
+        "statusRunning": "قيد التشغيل",
+        "statusCompleted": "مكتمل",
+        "statusFailed": "فشل",
+        "statusPending": "قيد البدء",
+        "statusInterrupted": "متوقف",
+        "statusClosed": "مغلق",
+        "statusNotFound": "غير موجود",
+        "opSpawn": "بدء تشغيل الوكيل الفرعي",
+        "opWait": "جلب نتيجة الوكيل الفرعي",
+        "opClose": "إغلاق الوكيل الفرعي",
+        "opResume": "استئناف الوكيل الفرعي"
       }
     },
     "diffPreview": {
@@ -2885,6 +2901,7 @@
     "detection": {
       "installed": "مثبّت",
       "notInstalled": "غير مثبّت",
+      "notRunnable": "مثبّت لكن لا يعمل",
       "installHint": "قم بتثبيت OfficeCLI لتفعيل مهارات إنشاء مستندات Office لوكلاء الذكاء الاصطناعي.",
       "install": "تثبيت",
       "uninstall": "إلغاء التثبيت",

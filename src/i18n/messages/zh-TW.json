@@ -2420,6 +2420,22 @@
         "dismiss": "忽略",
         "reconnectFailed": "重新連線工作階段失敗",
         "applied": "已套用新設定"
+      },
+      "collabAgent": {
+        "title": "子智能體",
+        "errorTitle": "子智能體任務失敗",
+        "statesLabel": "子智能體",
+        "statusRunning": "執行中",
+        "statusCompleted": "已完成",
+        "statusFailed": "失敗",
+        "statusPending": "初始化中",
+        "statusInterrupted": "已中斷",
+        "statusClosed": "已關閉",
+        "statusNotFound": "未找到",
+        "opSpawn": "啟動子智能體",
+        "opWait": "取得子智能體結果",
+        "opClose": "結束子智能體",
+        "opResume": "恢復子智能體"
       }
     },
     "diffPreview": {
@@ -2885,6 +2901,7 @@
     "detection": {
       "installed": "已安裝",
       "notInstalled": "未安裝",
+      "notRunnable": "已安裝但無法執行",
       "installHint": "安裝 OfficeCLI 以為 AI 智慧體啟用辦公文件生成技能。",
       "install": "安裝",
       "uninstall": "解除安裝",
