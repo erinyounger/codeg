@@ -12,6 +12,10 @@ import {
   type AdaptedContentPart,
   type AdaptedToolCallPart,
 } from "./ai-elements-adapter"
+import {
+  appendFeedbackReminder,
+  FEEDBACK_REMINDER_SENTINEL,
+} from "@/lib/feedback-reminder"
 
 function poll(toolName: string, taskId?: string): AdaptedToolCallPart {
   return {
@@ -722,6 +726,89 @@ describe("adaptMessageTurn plan handling", () => {
 
     expect(adapted.content.every((p) => p.type !== "plan")).toBe(true)
   })
+
+  it("converts a persisted Kimi Code TodoList write (title/status shape) into a single plan part", () => {
+    const adapted = adaptMessageTurn(
+      {
+        id: "hist-kimi-plan",
+        role: "assistant",
+        timestamp: "2026-06-02T00:00:00.000Z",
+        blocks: [
+          {
+            type: "tool_use",
+            tool_use_id: "kc-todo-1",
+            tool_name: "TodoList",
+            input_preview: JSON.stringify({
+              todos: [
+                { status: "in_progress", title: "Confirm 401 behavior" },
+                { status: "pending", title: "Unify request.js" },
+                { status: "done", title: "Verify changes" },
+              ],
+            }),
+          },
+          {
+            type: "tool_result",
+            tool_use_id: "kc-todo-1",
+            output_preview: "Todo list updated.",
+            is_error: false,
+          },
+        ],
+      },
+      msgText,
+      false
+    )
+
+    expect(adapted.content.map((p) => p.type)).toEqual(["plan"])
+    expect(adapted.content.some((p) => p.type === "tool-result")).toBe(false)
+    const plan = adapted.content[0]
+    if (plan.type !== "plan") throw new Error("expected a plan part")
+    expect(plan.entries).toEqual([
+      {
+        content: "Confirm 401 behavior",
+        status: "in_progress",
+        priority: "medium",
+      },
+      { content: "Unify request.js", status: "pending", priority: "medium" },
+      { content: "Verify changes", status: "completed", priority: "medium" },
+    ])
+  })
+
+  it.each([
+    ["read", "{}"],
+    ["clear", JSON.stringify({ todos: [] })],
+  ])(
+    "keeps a persisted Kimi TodoList %s (no entries) as a tool card, not a plan part",
+    (_label, inputPreview) => {
+      const adapted = adaptMessageTurn(
+        {
+          id: "hist-kimi-noop",
+          role: "assistant",
+          timestamp: "2026-06-02T00:00:00.000Z",
+          blocks: [
+            {
+              type: "tool_use",
+              tool_use_id: "kc-todo-1",
+              tool_name: "TodoList",
+              input_preview: inputPreview,
+            },
+            {
+              type: "tool_result",
+              tool_use_id: "kc-todo-1",
+              output_preview: "Todo list (empty).",
+              is_error: false,
+            },
+          ],
+        },
+        msgText,
+        false
+      )
+
+      expect(adapted.content.every((p) => p.type !== "plan")).toBe(true)
+      // The non-write TodoList renders through the normal tool-card path
+      // (wrapped in a tool-group by groupConsecutiveToolCalls).
+      expect(adapted.content.some((p) => p.type === "tool-group")).toBe(true)
+    }
+  )
 })
 
 describe("adaptMessageTurn — image tool results", () => {
@@ -1136,5 +1223,66 @@ describe("adaptMessageTurn — user reference resources", () => {
       .join("\n")
     expect(joined).toContain("[#42](codeg://session/codex_abc)")
     expect(joined).toContain("[foo.ts](file:///x/foo.ts)")
+  })
+})
+
+describe("adaptMessageTurn — live-feedback reminder stripping", () => {
+  const msgText = {
+    attachedResources: "Attached resources",
+    toolCallFailed: "Tool failed",
+  }
+  const reminder = "Periodically check for my live feedback."
+
+  it("strips the auto-injected reminder from a user turn so it never shows", () => {
+    // Exactly what the send chokepoint puts on the wire — appendFeedbackReminder
+    // brackets the reminder with the sentinel. On reload the user turn is
+    // reparsed with it attached; the adapter must hide it again.
+    const original = "refactor the auth module"
+    const blocks = appendFeedbackReminder(
+      [{ type: "text", text: original }],
+      reminder
+    )
+    const adapted = adaptMessageTurn(
+      { id: "u1", role: "user", timestamp: "2026-06-11T00:00:00.000Z", blocks },
+      msgText
+    )
+
+    expect(adapted.content).toHaveLength(1)
+    const part = adapted.content[0]
+    if (part.type !== "text") throw new Error("expected a text part")
+    expect(part.text).toBe(original)
+    expect(part.text).not.toContain(FEEDBACK_REMINDER_SENTINEL)
+    expect(part.text).not.toContain(reminder)
+  })
+
+  it("drops the text part entirely when the message was only the reminder", () => {
+    // Attachments-only send: appendFeedbackReminder adds a trailing text block
+    // that is nothing but the reminder. After stripping it collapses to empty
+    // and must not leave a blank text bubble behind.
+    const blocks = appendFeedbackReminder([], reminder)
+    const adapted = adaptMessageTurn(
+      { id: "u2", role: "user", timestamp: "2026-06-11T00:00:00.000Z", blocks },
+      msgText
+    )
+
+    expect(adapted.content.some((p) => p.type === "text")).toBe(false)
+  })
+
+  it("does not strip the sentinel from an assistant turn (user-only)", () => {
+    const text = `here you go\n\n${FEEDBACK_REMINDER_SENTINEL} ${reminder}`
+    const adapted = adaptMessageTurn(
+      {
+        id: "a1",
+        role: "assistant",
+        timestamp: "2026-06-11T00:00:00.000Z",
+        blocks: [{ type: "text", text }],
+      },
+      msgText
+    )
+
+    const joined = adapted.content
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join("\n")
+    expect(joined).toContain(FEEDBACK_REMINDER_SENTINEL)
   })
 })
