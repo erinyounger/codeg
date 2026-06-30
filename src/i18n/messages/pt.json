@@ -841,6 +841,7 @@
       "customInstallSubmit": "Instalar"
     },
     "errors": {
+      "windowsFileLocked": "Os arquivos de {name} estão em uso por uma sessão ativa, então o Windows não consegue substituí-los. Feche todas as sessões de {name} e tente novamente.",
       "nativeJsonMustBeObject": "A configuração JSON nativa deve ser um objeto",
       "nativeJsonInvalid": "Erro de formato na configuração JSON nativa: {message}",
       "openCodeAuthMustBeObject": "OpenCode auth.json deve ser um objeto JSON",
@@ -1191,7 +1192,8 @@
       "sectionChats": "Chat",
       "noChats": "Sem chats",
       "newChatAction": "Novo chat",
-      "automations": "Automações"
+      "automations": "Automações",
+      "loadingSubsessions": "Carregando subconversas…"
     },
     "conversation": {
       "reloadFailed": "Falha ao recarregar conversa: {message}",
@@ -1280,7 +1282,9 @@
       "pin": "Fixar",
       "unpin": "Desafixar",
       "markCompleted": "Marcar como concluída",
-      "reopen": "Reabrir"
+      "reopen": "Reabrir",
+      "expandSubsessions": "Expandir subconversas",
+      "collapseSubsessions": "Recolher subconversas"
     },
     "search": {
       "dialogTitle": "Buscar",
@@ -2440,6 +2444,24 @@
           "other": "{count, plural, one {Usou # ferramenta} other {Usou # ferramentas}}",
           "errorSuffix": "{count, plural, one {# falhou} other {# falharam}}",
           "joiner": " · "
+        },
+        "planMode": {
+          "entered": "Modo de planejamento iniciado",
+          "planLabel": "Plano",
+          "submitted": "Plano enviado",
+          "switched": "Modo alterado"
+        },
+        "backgroundTask": {
+          "title": "Tarefa em segundo plano",
+          "titleWithId": "Tarefa em segundo plano · {id}",
+          "running": "Em execução",
+          "completed": "Concluída",
+          "failed": "Falhou",
+          "stopped": "Interrompida",
+          "exitCode": "saída {code}",
+          "polledTimes": "Consultada {count} vezes",
+          "runningInBackground": "Segundo plano",
+          "launchNote": "Em execução em segundo plano · {id}"
         }
       },
       "messageNav": {

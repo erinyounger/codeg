@@ -841,6 +841,7 @@
       "customInstallSubmit": "تثبيت"
     },
     "errors": {
+      "windowsFileLocked": "ملفات {name} قيد الاستخدام بواسطة جلسة قيد التشغيل، لذا لا يمكن لـ Windows استبدالها. أغلق جميع جلسات {name} ثم حاول مرة أخرى.",
       "nativeJsonMustBeObject": "يجب أن يكون إعداد JSON الأصلي كائنًا",
       "nativeJsonInvalid": "خطأ في تنسيق إعداد JSON الأصلي: {message}",
       "openCodeAuthMustBeObject": "يجب أن يكون OpenCode auth.json كائن JSON",
@@ -1191,7 +1192,8 @@
       "sectionChats": "محادثة",
       "noChats": "لا توجد محادثات",
       "newChatAction": "محادثة جديدة",
-      "automations": "الأتمتة"
+      "automations": "الأتمتة",
+      "loadingSubsessions": "جارٍ تحميل المحادثات الفرعية…"
     },
     "conversation": {
       "reloadFailed": "فشل إعادة تحميل المحادثة: {message}",
@@ -1280,7 +1282,9 @@
       "pin": "تثبيت",
       "unpin": "إلغاء التثبيت",
       "markCompleted": "وضع علامة كمكتمل",
-      "reopen": "إعادة فتح"
+      "reopen": "إعادة فتح",
+      "expandSubsessions": "توسيع المحادثات الفرعية",
+      "collapseSubsessions": "طي المحادثات الفرعية"
     },
     "search": {
       "dialogTitle": "بحث",
@@ -2440,6 +2444,24 @@
           "other": "{count, plural, zero {استخدام صفر أداة} one {استخدام أداة واحدة} two {استخدام أداتين} few {استخدام # أدوات} many {استخدام # أداة} other {استخدام # أداة}}",
           "errorSuffix": "{count, plural, zero {صفر فشل} one {فشل واحد} two {فشلان} few {# فشلوا} many {# فشلاً} other {# فشل}}",
           "joiner": " · "
+        },
+        "planMode": {
+          "entered": "تم بدء وضع التخطيط",
+          "planLabel": "الخطة",
+          "submitted": "تم إرسال الخطة",
+          "switched": "تم تبديل الوضع"
+        },
+        "backgroundTask": {
+          "title": "مهمة في الخلفية",
+          "titleWithId": "مهمة في الخلفية · {id}",
+          "running": "قيد التشغيل",
+          "completed": "اكتملت",
+          "failed": "فشلت",
+          "stopped": "متوقفة",
+          "exitCode": "رمز الخروج {code}",
+          "polledTimes": "تم الاستعلام {count} مرة",
+          "runningInBackground": "في الخلفية",
+          "launchNote": "قيد التشغيل في الخلفية · {id}"
         }
       },
       "messageNav": {

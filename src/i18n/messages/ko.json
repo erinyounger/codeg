@@ -841,6 +841,7 @@
       "customInstallSubmit": "설치"
     },
     "errors": {
+      "windowsFileLocked": "{name}의 파일이 실행 중인 세션에서 사용 중이어서 Windows에서 교체할 수 없습니다. 모든 {name} 세션을 닫은 후 다시 시도하세요.",
       "nativeJsonMustBeObject": "네이티브 JSON 구성은 객체여야 합니다",
       "nativeJsonInvalid": "네이티브 JSON 구성 형식 오류: {message}",
       "openCodeAuthMustBeObject": "OpenCode auth.json은 JSON 객체여야 합니다",
@@ -1191,7 +1192,8 @@
       "sectionChats": "채팅",
       "noChats": "채팅 없음",
       "newChatAction": "새 채팅",
-      "automations": "자동화"
+      "automations": "자동화",
+      "loadingSubsessions": "하위 대화 로드 중…"
     },
     "conversation": {
       "reloadFailed": "대화 다시 불러오기 실패: {message}",
@@ -1280,7 +1282,9 @@
       "pin": "고정",
       "unpin": "고정 해제",
       "markCompleted": "완료로 표시",
-      "reopen": "다시 열기"
+      "reopen": "다시 열기",
+      "expandSubsessions": "하위 대화 펼치기",
+      "collapseSubsessions": "하위 대화 접기"
     },
     "search": {
       "dialogTitle": "검색",
@@ -2440,6 +2444,24 @@
           "other": "도구 {count}개 사용",
           "errorSuffix": "{count}건 실패",
           "joiner": " · "
+        },
+        "planMode": {
+          "entered": "계획 모드 시작",
+          "planLabel": "계획",
+          "submitted": "계획 제출됨",
+          "switched": "모드 전환됨"
+        },
+        "backgroundTask": {
+          "title": "백그라운드 작업",
+          "titleWithId": "백그라운드 작업 · {id}",
+          "running": "실행 중",
+          "completed": "완료됨",
+          "failed": "실패",
+          "stopped": "중지됨",
+          "exitCode": "종료 코드 {code}",
+          "polledTimes": "{count}회 폴링",
+          "runningInBackground": "백그라운드",
+          "launchNote": "백그라운드에서 실행 중 · {id}"
         }
       },
       "messageNav": {

@@ -13,9 +13,14 @@ import {
   isDelegationStatusToolName,
 } from "@/lib/adapters/tool-kind-classifier"
 import { normalizeToolName } from "@/lib/tool-call-normalization"
+import { isBackgroundTaskToolCall } from "@/lib/background-task"
 import { feedbackCheckHasContent } from "@/lib/feedback-check"
 import { stripFeedbackReminder } from "@/lib/feedback-reminder"
-import { isPlanLikeToolName, parseTodosFromJson } from "@/lib/plan-parse"
+import {
+  isPlanLikeToolName,
+  isPlanModeToolName,
+  parseTodosFromJson,
+} from "@/lib/plan-parse"
 import {
   tokenizeReferenceLinks,
   unescapeReferenceLabel,
@@ -118,6 +123,17 @@ export type AdaptedContentPart =
    */
   | {
       type: "delegation-status-group"
+      polls: AdaptedToolCallPart[]
+    }
+  /**
+   * A run of consecutive Claude Code background-task polls (`TaskOutput`),
+   * merged into one card. The agent re-polls the same `task_id` until it
+   * settles (first timeout/running, then success/completed); rather than stack
+   * N near-identical cards, the renderer collapses the run and (grouping by
+   * `task_id`) shows the latest poll per task. See `@/lib/background-task`.
+   */
+  | {
+      type: "background-task-group"
       polls: AdaptedToolCallPart[]
     }
   | AdaptedGoalRunPart
@@ -1110,7 +1126,19 @@ export function groupConsecutiveToolCalls(
   }
 
   for (const part of parts) {
-    if (part.type === "tool-call" && !isAgentLikeToolName(part.toolName)) {
+    if (
+      part.type === "tool-call" &&
+      !isAgentLikeToolName(part.toolName) &&
+      // Plan-mode tools (EnterPlanMode/ExitPlanMode/switch_mode) render through
+      // a dedicated <PlanModeCard>, so they break the run instead of folding
+      // into a "思考 N 次" tool-group. `part.toolName` is the raw name here;
+      // `isPlanModeToolName` normalizes it internally.
+      !isPlanModeToolName(part.toolName) &&
+      // Claude Code background-task polls (TaskOutput/TaskStop) render through a
+      // dedicated <BackgroundTaskCard> that merges a task's repeated polls, so
+      // they break the run instead of folding into a "执行 N 个任务" tool-group.
+      !isBackgroundTaskToolCall(part)
+    ) {
       buffer.push(part)
       continue
     }
@@ -1199,6 +1227,68 @@ export function mergeAdjacentDelegationStatusGroups(
     ) {
       result[result.length - 1] = {
         type: "delegation-status-group",
+        polls: [...last.polls, ...part.polls],
+      }
+    } else {
+      result.push(part)
+    }
+  }
+  return result
+}
+
+/**
+ * Wrap each run of consecutive Claude Code background-task polls
+ * (`TaskOutput`/`TaskStop`) into a single `background-task-group` part. Mirrors
+ * `groupConsecutiveDelegationStatus`: those polls are left standalone by
+ * `groupConsecutiveToolCalls` (they break the run), so they arrive here as bare
+ * `tool-call` parts. Any other part breaks the run, so only genuinely
+ * consecutive polls collapse. Even a single poll is wrapped, so the merged-card
+ * status resolution applies uniformly.
+ */
+export function groupConsecutiveBackgroundTasks(
+  parts: AdaptedContentPart[]
+): AdaptedContentPart[] {
+  const result: AdaptedContentPart[] = []
+  let buffer: AdaptedToolCallPart[] = []
+
+  const flush = () => {
+    if (buffer.length === 0) return
+    const polls = buffer
+    buffer = []
+    result.push({ type: "background-task-group", polls })
+  }
+
+  for (const part of parts) {
+    if (part.type === "tool-call" && isBackgroundTaskToolCall(part)) {
+      buffer.push(part)
+      continue
+    }
+    flush()
+    result.push(part)
+  }
+  flush()
+
+  return result
+}
+
+/**
+ * Merge adjacent `background-task-group` parts into one. Mirrors
+ * `mergeAdjacentDelegationStatusGroups`: each polling round is its own assistant
+ * turn, so the concatenated parts land two single-poll groups next to each
+ * other across the turn boundary.
+ */
+export function mergeAdjacentBackgroundTaskGroups(
+  parts: AdaptedContentPart[]
+): AdaptedContentPart[] {
+  const result: AdaptedContentPart[] = []
+  for (const part of parts) {
+    const last = result[result.length - 1]
+    if (
+      part.type === "background-task-group" &&
+      last?.type === "background-task-group"
+    ) {
+      result[result.length - 1] = {
+        type: "background-task-group",
         polls: [...last.polls, ...part.polls],
       }
     } else {
@@ -1638,6 +1728,18 @@ export function adaptMessageTurn(
 
     const adapted = adaptContentBlock(block, turn.id, index, false)
     if (adapted) {
+      // Drop stray empty redacted-thinking capsules (`{thinking:"",signature}`)
+      // on the history/replay path. Gated on `!isStreaming`: while streaming, an
+      // empty thinking block is a legitimate live state that drives the
+      // "Thinking…" indicator (and is permanent for reasoning-redacting models),
+      // so the streaming reducer keeps it on purpose.
+      if (
+        adapted.type === "reasoning" &&
+        adapted.content.trim() === "" &&
+        !isStreaming
+      ) {
+        continue
+      }
       adaptedContent.push(adapted)
     }
   }
@@ -1654,8 +1756,12 @@ export function adaptMessageTurn(
   const groupedContent =
     turn.role === "assistant"
       ? groupGoalRuns(
-          groupConsecutiveDelegationStatus(
-            groupConsecutiveToolCalls(dropHiddenFeedbackChecks(adaptedContent))
+          groupConsecutiveBackgroundTasks(
+            groupConsecutiveDelegationStatus(
+              groupConsecutiveToolCalls(
+                dropHiddenFeedbackChecks(adaptedContent)
+              )
+            )
           )
         )
       : adaptedContent

@@ -841,6 +841,7 @@
       "customInstallSubmit": "Install"
     },
     "errors": {
+      "windowsFileLocked": "{name}'s files are in use by a running session, so Windows can't replace them. Close all {name} sessions and try again.",
       "nativeJsonMustBeObject": "Native JSON config must be an object",
       "nativeJsonInvalid": "Native JSON config format error: {message}",
       "openCodeAuthMustBeObject": "OpenCode auth.json must be a JSON object",
@@ -1191,7 +1192,8 @@
       "sectionChats": "Chat",
       "noChats": "No chats",
       "newChatAction": "New chat",
-      "automations": "Automations"
+      "automations": "Automations",
+      "loadingSubsessions": "Loading sub-conversations…"
     },
     "conversation": {
       "reloadFailed": "Failed to reload conversation: {message}",
@@ -1280,7 +1282,9 @@
       "pin": "Pin",
       "unpin": "Unpin",
       "markCompleted": "Mark as completed",
-      "reopen": "Reopen"
+      "reopen": "Reopen",
+      "expandSubsessions": "Expand sub-conversations",
+      "collapseSubsessions": "Collapse sub-conversations"
     },
     "search": {
       "dialogTitle": "Search",
@@ -2440,6 +2444,24 @@
           "other": "{count, plural, one {Used # tool} other {Used # tools}}",
           "errorSuffix": "{count, plural, one {# failed} other {# failed}}",
           "joiner": " · "
+        },
+        "planMode": {
+          "entered": "Entered plan mode",
+          "planLabel": "Plan",
+          "submitted": "Plan submitted",
+          "switched": "Switched mode"
+        },
+        "backgroundTask": {
+          "title": "Background task",
+          "titleWithId": "Background task · {id}",
+          "running": "Running",
+          "completed": "Completed",
+          "failed": "Failed",
+          "stopped": "Stopped",
+          "exitCode": "exit {code}",
+          "polledTimes": "Polled {count} times",
+          "runningInBackground": "Background",
+          "launchNote": "Running in background · {id}"
         }
       },
       "messageNav": {

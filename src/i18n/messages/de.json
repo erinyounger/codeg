@@ -841,6 +841,7 @@
       "customInstallSubmit": "Installieren"
     },
     "errors": {
+      "windowsFileLocked": "Die Dateien von {name} werden von einer laufenden Sitzung verwendet, daher kann Windows sie nicht ersetzen. Schließe alle {name}-Sitzungen und versuche es erneut.",
       "nativeJsonMustBeObject": "Native JSON-Konfiguration muss ein Objekt sein",
       "nativeJsonInvalid": "Formatfehler in nativer JSON-Konfiguration: {message}",
       "openCodeAuthMustBeObject": "OpenCode auth.json muss ein JSON-Objekt sein",
@@ -1191,7 +1192,8 @@
       "sectionChats": "Chat",
       "noChats": "Keine Chats",
       "newChatAction": "Neuer Chat",
-      "automations": "Automatisierungen"
+      "automations": "Automatisierungen",
+      "loadingSubsessions": "Unterkonversationen werden geladen…"
     },
     "conversation": {
       "reloadFailed": "Konversation konnte nicht neu geladen werden: {message}",
@@ -1280,7 +1282,9 @@
       "pin": "Anheften",
       "unpin": "Loslösen",
       "markCompleted": "Als abgeschlossen markieren",
-      "reopen": "Erneut öffnen"
+      "reopen": "Erneut öffnen",
+      "expandSubsessions": "Unterkonversationen einblenden",
+      "collapseSubsessions": "Unterkonversationen ausblenden"
     },
     "search": {
       "dialogTitle": "Suchen",
@@ -2440,6 +2444,24 @@
           "other": "{count, plural, one {# Werkzeug verwendet} other {# Werkzeuge verwendet}}",
           "errorSuffix": "{count, plural, one {# fehlgeschlagen} other {# fehlgeschlagen}}",
           "joiner": " · "
+        },
+        "planMode": {
+          "entered": "Planungsmodus gestartet",
+          "planLabel": "Plan",
+          "submitted": "Plan eingereicht",
+          "switched": "Modus gewechselt"
+        },
+        "backgroundTask": {
+          "title": "Hintergrundaufgabe",
+          "titleWithId": "Hintergrundaufgabe · {id}",
+          "running": "Läuft",
+          "completed": "Abgeschlossen",
+          "failed": "Fehlgeschlagen",
+          "stopped": "Gestoppt",
+          "exitCode": "Exit {code}",
+          "polledTimes": "{count}-mal abgefragt",
+          "runningInBackground": "Hintergrund",
+          "launchNote": "Läuft im Hintergrund · {id}"
         }
       },
       "messageNav": {

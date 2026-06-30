@@ -841,6 +841,7 @@
       "customInstallSubmit": "安裝"
     },
     "errors": {
+      "windowsFileLocked": "{name} 的程式檔案正被執行中的工作階段佔用，Windows 下無法替換。請先關閉所有 {name} 工作階段後重試。",
       "nativeJsonMustBeObject": "原生 JSON 配置必須是物件",
       "nativeJsonInvalid": "原生 JSON 配置格式錯誤：{message}",
       "openCodeAuthMustBeObject": "OpenCode auth.json 必須是 JSON 物件",
@@ -1191,7 +1192,8 @@
       "sectionChats": "聊天",
       "noChats": "沒有聊天",
       "newChatAction": "新增聊天",
-      "automations": "自動化"
+      "automations": "自動化",
+      "loadingSubsessions": "正在載入子會話…"
     },
     "conversation": {
       "reloadFailed": "會話重新載入失敗：{message}",
@@ -1280,7 +1282,9 @@
       "pin": "置頂",
       "unpin": "取消置頂",
       "markCompleted": "標記為已完成",
-      "reopen": "重新開啟"
+      "reopen": "重新開啟",
+      "expandSubsessions": "展開子會話",
+      "collapseSubsessions": "摺疊子會話"
     },
     "search": {
       "dialogTitle": "搜尋",
@@ -2440,6 +2444,24 @@
           "other": "呼叫 {count} 個工具",
           "errorSuffix": "{count} 個失敗",
           "joiner": " · "
+        },
+        "planMode": {
+          "entered": "進入計畫模式",
+          "planLabel": "計畫",
+          "submitted": "計畫已提交",
+          "switched": "切換模式"
+        },
+        "backgroundTask": {
+          "title": "背景任務",
+          "titleWithId": "背景任務 · {id}",
+          "running": "執行中",
+          "completed": "已完成",
+          "failed": "失敗",
+          "stopped": "已停止",
+          "exitCode": "退出碼 {code}",
+          "polledTimes": "輪詢 {count} 次",
+          "runningInBackground": "背景執行",
+          "launchNote": "已在背景執行 · {id}"
         }
       },
       "messageNav": {
