@@ -117,6 +117,29 @@
       "sectionTitle": "منطقة اختيار الوضع",
       "sectionDescription": "بطاقات الاختصار «تطوير الكود / الأعمال المكتبية» التي تظهر أعلى مربع الإدخال في صفحة المحادثة الجديدة.",
       "showQuickActions": "العرض في صفحة المحادثة الجديدة"
+    },
+    "workspaceBackground": {
+      "sectionTitle": "خلفية مساحة العمل",
+      "sectionDescription": "عرض صورة خلف مساحة العمل بالكامل. يصبح الشريط الجانبي واللوحات شبه شفافة ومصنفرة لتظهر الصورة من خلالها، ويحافظ القناع على وضوح النص.",
+      "enable": "تفعيل صورة الخلفية",
+      "image": "الصورة",
+      "chooseImage": "اختيار صورة",
+      "replaceImage": "استبدال الصورة",
+      "removeImage": "إزالة",
+      "fillMode": "وضع الملء",
+      "fillModes": {
+        "cover": "تغطية",
+        "contain": "احتواء",
+        "center": "توسيط",
+        "tile": "تكرار"
+      },
+      "maskOpacity": "عتامة القناع",
+      "maskOpacityHint": "القيم الأعلى تمزج الصورة نحو لون خلفية السمة، مما يحسّن تباين النص.",
+      "imageBlur": "تمويه الصورة",
+      "panelOpacity": "عتامة اللوحات",
+      "panelOpacityHint": "مدى عتامة الشريط الجانبي واللوحات وأشرطة التبويب. الأقل يُظهر المزيد من الصورة.",
+      "errorTooLarge": "الصورة كبيرة جدًا (16 ميجابايت كحد أقصى).",
+      "errorUploadFailed": "فشل تعيين صورة الخلفية."
     }
   },
   "SystemSettings": {
@@ -1189,6 +1212,7 @@
         "removeFolderFailed": "فشل إزالة المجلد: {message}",
         "reorderFoldersFailed": "فشل إعادة ترتيب المجلدات: {message}",
         "changeFolderColorFailed": "فشل تغيير اللون: {message}",
+        "setFolderAliasFailed": "فشل تعيين الاسم المستعار: {message}",
         "changeFolderDefaultAgentFailed": "فشل تعيين الوكيل الافتراضي: {message}"
       },
       "statsLabel": "{folders} مجلدات · {convos} محادثة",
@@ -1220,6 +1244,11 @@
         "defaultAgentNone": "بدون افتراضي (استخدام العام)",
         "agentUnavailableSuffix": "(غير متاح)",
         "loadingAgents": "جارٍ تحميل الوكلاء…",
+        "setAlias": "تعيين اسم مستعار…",
+        "setAliasTitle": "تعيين اسم مستعار للمجلد",
+        "setAliasPlaceholder": "أدخل اسمًا مستعارًا (اتركه فارغًا للمسح)",
+        "setAliasSave": "حفظ",
+        "setAliasCancel": "إلغاء",
         "removeFromWorkspace": "إزالة من مساحة العمل"
       },
       "manageConversations": {
@@ -1289,10 +1318,12 @@
         "system": "النظام",
         "toolResult": "النتيجة",
         "toolError": "خطأ"
-      }
+      },
+      "moreActions": "إجراءات إضافية"
     },
     "sessionDetails": {
       "menuLabel": "تفاصيل الجلسة",
+      "noActiveSession": "لا توجد جلسة نشطة",
       "title": "تفاصيل الجلسة",
       "subtitle": "بيانات الجلسة الوصفية واستخدام الرموز",
       "fieldTitle": "العنوان",
@@ -1434,7 +1465,8 @@
       "preview": "معاينة",
       "editSource": "تحرير المصدر",
       "maximize": "تكبير",
-      "restore": "استعادة"
+      "restore": "استعادة",
+      "emptyDirectory": "مجلد فارغ"
     },
     "terminal": {
       "rename": "إعادة تسمية",
@@ -1866,6 +1898,7 @@
         "addToVcsFailed": "فشلت الإضافة إلى VCS",
         "loadBranchesFailed": "فشل تحميل الفروع",
         "renameFailed": "فشل إعادة التسمية",
+        "moveFailed": "فشل النقل",
         "deleteFailed": "فشل الحذف",
         "rolledBack": "تم التراجع عن {name}",
         "rollbackFailed": "فشل التراجع",

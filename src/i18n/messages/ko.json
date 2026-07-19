@@ -117,6 +117,29 @@
       "sectionTitle": "모드 선택 영역",
       "sectionDescription": "새 대화 페이지에서 입력창 위에 표시되는 '코드 개발 / 일상 업무' 바로가기 카드입니다.",
       "showQuickActions": "새 대화 페이지에 표시"
+    },
+    "workspaceBackground": {
+      "sectionTitle": "작업 공간 배경",
+      "sectionDescription": "작업 공간 전체 뒤에 이미지를 표시합니다. 사이드바와 패널이 반투명 유리 효과로 바뀌어 이미지가 비쳐 보이며, 마스크가 텍스트 가독성을 유지합니다.",
+      "enable": "배경 이미지 사용",
+      "image": "이미지",
+      "chooseImage": "이미지 선택",
+      "replaceImage": "이미지 변경",
+      "removeImage": "제거",
+      "fillMode": "채우기 방식",
+      "fillModes": {
+        "cover": "채우기",
+        "contain": "맞춤",
+        "center": "가운데",
+        "tile": "바둑판식"
+      },
+      "maskOpacity": "마스크 불투명도",
+      "maskOpacityHint": "값이 높을수록 이미지가 테마 배경색으로 흐려져 텍스트 대비가 좋아집니다.",
+      "imageBlur": "이미지 흐림",
+      "panelOpacity": "패널 불투명도",
+      "panelOpacityHint": "사이드바, 패널, 탭 바의 불투명도입니다. 낮을수록 이미지가 더 많이 비쳐 보입니다.",
+      "errorTooLarge": "이미지가 너무 큽니다(최대 16 MB).",
+      "errorUploadFailed": "배경 이미지 설정에 실패했습니다."
     }
   },
   "SystemSettings": {
@@ -1189,6 +1212,7 @@
         "removeFolderFailed": "폴더 제거 실패: {message}",
         "reorderFoldersFailed": "폴더 순서 변경 실패: {message}",
         "changeFolderColorFailed": "색상 변경 실패: {message}",
+        "setFolderAliasFailed": "별칭 설정 실패: {message}",
         "changeFolderDefaultAgentFailed": "기본 에이전트 설정 실패: {message}"
       },
       "statsLabel": "{folders}개 폴더 · {convos}개 대화",
@@ -1220,6 +1244,11 @@
         "defaultAgentNone": "설정 없음(전역 사용)",
         "agentUnavailableSuffix": "(사용 불가)",
         "loadingAgents": "에이전트 로드 중…",
+        "setAlias": "별칭 설정…",
+        "setAliasTitle": "폴더 별칭 설정",
+        "setAliasPlaceholder": "별칭 입력 (비우면 지움)",
+        "setAliasSave": "저장",
+        "setAliasCancel": "취소",
         "removeFromWorkspace": "워크스페이스에서 제거"
       },
       "manageConversations": {
@@ -1289,10 +1318,12 @@
         "system": "시스템",
         "toolResult": "결과",
         "toolError": "오류"
-      }
+      },
+      "moreActions": "추가 작업"
     },
     "sessionDetails": {
       "menuLabel": "세션 세부 정보",
+      "noActiveSession": "활성 세션이 없습니다",
       "title": "세션 세부 정보",
       "subtitle": "세션 메타데이터 및 토큰 사용량",
       "fieldTitle": "제목",
@@ -1434,7 +1465,8 @@
       "preview": "미리보기",
       "editSource": "소스 편집",
       "maximize": "최대화",
-      "restore": "복원"
+      "restore": "복원",
+      "emptyDirectory": "빈 폴더"
     },
     "terminal": {
       "rename": "이름 변경",
@@ -1866,6 +1898,7 @@
         "addToVcsFailed": "VCS에 추가하지 못했습니다",
         "loadBranchesFailed": "브랜치를 불러오지 못했습니다",
         "renameFailed": "이름 변경에 실패했습니다",
+        "moveFailed": "이동에 실패했습니다",
         "deleteFailed": "삭제에 실패했습니다",
         "rolledBack": "{name}을(를) 롤백했습니다",
         "rollbackFailed": "롤백에 실패했습니다",

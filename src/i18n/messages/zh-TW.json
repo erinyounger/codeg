@@ -117,6 +117,29 @@
       "sectionTitle": "模式選擇區域",
       "sectionDescription": "新會話頁面輸入框上方顯示的「程式開發 / 日常辦公」快捷卡片區域。",
       "showQuickActions": "在新會話頁面顯示"
+    },
+    "workspaceBackground": {
+      "sectionTitle": "工作區背景",
+      "sectionDescription": "在整個工作區背後顯示一張圖片。側邊欄與面板會變半透明並磨砂讓圖片透出，遮罩確保文字可讀。",
+      "enable": "啟用背景圖片",
+      "image": "圖片",
+      "chooseImage": "選擇圖片",
+      "replaceImage": "更換圖片",
+      "removeImage": "移除",
+      "fillMode": "填滿方式",
+      "fillModes": {
+        "cover": "覆蓋",
+        "contain": "適應",
+        "center": "置中",
+        "tile": "平鋪"
+      },
+      "maskOpacity": "遮罩不透明度",
+      "maskOpacityHint": "數值越高，圖片越向主題背景色淡化，文字對比越清晰。",
+      "imageBlur": "圖片模糊",
+      "panelOpacity": "面板不透明度",
+      "panelOpacityHint": "側邊欄、面板與標籤列的不透明程度。越低，透出的圖片越多。",
+      "errorTooLarge": "圖片太大（最大 16 MB）。",
+      "errorUploadFailed": "設定背景圖片失敗。"
     }
   },
   "SystemSettings": {
@@ -1189,6 +1212,7 @@
         "removeFolderFailed": "移除資料夾失敗：{message}",
         "reorderFoldersFailed": "重新排序資料夾失敗：{message}",
         "changeFolderColorFailed": "修改顏色失敗：{message}",
+        "setFolderAliasFailed": "設定別名失敗：{message}",
         "changeFolderDefaultAgentFailed": "設定預設智能體失敗：{message}"
       },
       "statsLabel": "{folders} 個資料夾 · {convos} 個對話",
@@ -1220,6 +1244,11 @@
         "defaultAgentNone": "不設定（使用全域預設）",
         "agentUnavailableSuffix": "（不可用）",
         "loadingAgents": "正在載入代理…",
+        "setAlias": "設定別名…",
+        "setAliasTitle": "設定資料夾別名",
+        "setAliasPlaceholder": "輸入別名（留空清除）",
+        "setAliasSave": "儲存",
+        "setAliasCancel": "取消",
         "removeFromWorkspace": "從工作區移除"
       },
       "manageConversations": {
@@ -1289,10 +1318,12 @@
         "system": "系統",
         "toolResult": "結果",
         "toolError": "錯誤"
-      }
+      },
+      "moreActions": "更多操作"
     },
     "sessionDetails": {
       "menuLabel": "對話詳情",
+      "noActiveSession": "暫無使用中的對話",
       "title": "對話詳情",
       "subtitle": "對話中繼資料與 Token 用量",
       "fieldTitle": "標題",
@@ -1434,7 +1465,8 @@
       "preview": "預覽",
       "editSource": "編輯原始碼",
       "maximize": "最大化",
-      "restore": "還原"
+      "restore": "還原",
+      "emptyDirectory": "空目錄"
     },
     "terminal": {
       "rename": "重新命名",
@@ -1866,6 +1898,7 @@
         "addToVcsFailed": "加入到 VCS 失敗",
         "loadBranchesFailed": "載入分支失敗",
         "renameFailed": "重新命名失敗",
+        "moveFailed": "移動失敗",
         "deleteFailed": "刪除失敗",
         "rolledBack": "已回滾 {name}",
         "rollbackFailed": "回滾失敗",

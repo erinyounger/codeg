@@ -64,6 +64,10 @@ import {
   formatFileRangeLabel,
 } from "@/lib/reference-link"
 import {
+  hasFileTreeDragType,
+  readFileTreeDragPayload,
+} from "@/lib/file-tree-dnd"
+import {
   filesFromClipboard,
   clipboardHasText,
   imageFilesFromClipboardApi,
@@ -1741,6 +1745,42 @@ export function MessageInput({
     [appendFilesFromInput, disabled]
   )
 
+  // Insert an inline file reference for a file-tree entry dropped onto the
+  // composer, placing the caret at the drop point first so the badge lands where
+  // the user released (native-textarea feel). Shared by the editor-level drop
+  // (`onDropFiles`) and the container-chrome drop (`handleContainerDrop`).
+  const insertTreeDropAtPoint = useCallback(
+    (absPath: string, clientX: number, clientY: number) => {
+      editorRef.current?.focusAtCoords(clientX, clientY)
+      appendResourceAttachments([absPath], { atCaret: true })
+    },
+    [appendResourceAttachments]
+  )
+
+  // Routed from RichComposer's `onDropFiles` (ProseMirror's `handleDrop`).
+  // Consumes a file-tree drag so PM does not insert the drag's `text/plain`
+  // absolute-path fallback as literal text, and stops propagation so the
+  // container's own drop handler doesn't double-insert. Returns false for every
+  // other drop (OS files, editor text moves) so existing behavior is untouched.
+  const handleEditorDrop = useCallback(
+    (event: DragEvent): boolean => {
+      if (disabled) return false
+      if (!hasFileTreeDragType(event.dataTransfer)) return false
+      const payload = readFileTreeDragPayload(event.dataTransfer)
+      if (!payload) return false
+      event.preventDefault()
+      event.stopPropagation()
+      // `stopPropagation` keeps the container's `onDrop` from double-inserting,
+      // but that handler is also what clears the drag overlay — and a completed
+      // drop doesn't reliably emit `dragleave`. Clear it here so the overlay
+      // can't get stuck covering the composer.
+      setDragActiveIfChanged(false)
+      insertTreeDropAtPoint(payload.absPath, event.clientX, event.clientY)
+      return true
+    },
+    [disabled, insertTreeDropAtPoint, setDragActiveIfChanged]
+  )
+
   useEffect(() => {
     if (!showModeSelector) return
     if (!effectiveModeId || !onModeChange) return
@@ -2575,9 +2615,12 @@ export function MessageInput({
 
   const handleContainerDragOver = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      if (!hasDragFiles(event.dataTransfer)) return
+      const isTreeDrag = hasFileTreeDragType(event.dataTransfer)
+      if (!hasDragFiles(event.dataTransfer) && !isTreeDrag) return
       event.preventDefault()
       if (!disabled) {
+        // A file-tree entry is copied in as a reference, not moved.
+        if (isTreeDrag) event.dataTransfer.dropEffect = "copy"
         setDragActiveIfChanged(true)
       }
     },
@@ -2601,11 +2644,21 @@ export function MessageInput({
 
   const handleContainerDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      if (!hasDragFiles(event.dataTransfer)) return
+      const treePayload = hasFileTreeDragType(event.dataTransfer)
+        ? readFileTreeDragPayload(event.dataTransfer)
+        : null
+      if (!hasDragFiles(event.dataTransfer) && !treePayload) return
       event.preventDefault()
       lastDomDropAtRef.current = Date.now()
       setDragActiveIfChanged(false)
       if (disabled) return
+      // A file-tree entry dropped on the composer chrome (the editor's own drop
+      // surface is handled first by `handleEditorDrop`) becomes an inline file
+      // reference at the drop point.
+      if (treePayload) {
+        insertTreeDropAtPoint(treePayload.absPath, event.clientX, event.clientY)
+        return
+      }
       const files = Array.from(event.dataTransfer.files ?? [])
       if (files.length > 0) {
         void appendFilesFromInput(files).catch((error) => {
@@ -2613,7 +2666,12 @@ export function MessageInput({
         })
       }
     },
-    [appendFilesFromInput, disabled, setDragActiveIfChanged]
+    [
+      appendFilesFromInput,
+      disabled,
+      insertTreeDropAtPoint,
+      setDragActiveIfChanged,
+    ]
   )
 
   const hasImageAttachments = imageAttachments.length > 0
@@ -2845,6 +2903,12 @@ export function MessageInput({
     <div
       ref={containerRef}
       className="relative"
+      // Marks this composer as a file-tree drop zone. On desktop Tauri's webview
+      // swallows the HTML5 `drop`, so a dragged entry is committed from Tauri's
+      // native drag-drop event by hit-testing the drop point; this attribute
+      // lets that hit-test route the drop to this session's input (see the tree
+      // tab's desktop commit). Absent when there's no tab to attach to.
+      data-tree-drop-composer={attachmentTabId ?? undefined}
       onKeyDown={handleContainerKeyDown}
       onDragOver={handleContainerDragOver}
       onDragLeave={handleContainerDragLeave}
@@ -2933,11 +2997,21 @@ export function MessageInput({
                 // blank areas (padding, the dead space below a short message, the
                 // action-bar gaps) so the whole input reads as clickable-to-type;
                 // interactive controls re-assert their own cursor (see globals.css).
-                "codeg-composer-chrome @container relative flex flex-col rounded-xl border border-input bg-transparent transition-colors",
+                // Resting border uses `border-foreground/20` (a touch darker than
+                // the default `border-input`, which is near-invisible at rest and
+                // vanishes over a workspace background image); it adapts per theme
+                // (dark ink in light mode, light ink in dark) and stays legible.
+                // Focus still swaps to `border-ring` below.
+                "codeg-composer-chrome @container relative flex flex-col rounded-xl border border-foreground/20 bg-transparent transition-colors",
                 // Standard focus ring — always shown when the composer is
-                // focused (the plain default input style).
+                // focused (the plain default input style). `bg-background
+                // ws-transparent-bg`: opaque surface normally, but with a
+                // workspace-bg image the composer goes transparent to reveal the
+                // real image like the rest of the canvas (no frosted treatment) —
+                // the border stays. Off (no image) it's the plain background,
+                // unchanged.
                 folderBranchPickerAttached
-                  ? "bg-background focus-within:border-ring focus-within:ring-[3px] focus-within:ring-inset focus-within:ring-ring/50"
+                  ? "bg-background ws-transparent-bg focus-within:border-ring focus-within:ring-[3px] focus-within:ring-inset focus-within:ring-ring/50"
                   : "focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50",
                 // Active session, tiled across multiple sessions: a gradient
                 // flows around the border to mark which tile is active — but ONLY
@@ -3004,6 +3078,7 @@ export function MessageInput({
                 onSubmit={handleSend}
                 onFocus={onFocus}
                 onPasteFiles={handlePasteFiles}
+                onDropFiles={handleEditorDrop}
                 onPlainPaste={handlePlainPasteShortcut}
                 submitShortcut={shortcuts.send_message}
                 newlineShortcut={shortcuts.newline_in_message}

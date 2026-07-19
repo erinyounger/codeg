@@ -117,6 +117,29 @@
       "sectionTitle": "Zone de sélection du mode",
       "sectionDescription": "Les cartes de raccourci « Développement / Bureautique » affichées au-dessus du champ de saisie sur la page de nouvelle conversation.",
       "showQuickActions": "Afficher sur la page de nouvelle conversation"
+    },
+    "workspaceBackground": {
+      "sectionTitle": "Arrière-plan de l'espace de travail",
+      "sectionDescription": "Affiche une image derrière tout l'espace de travail. La barre latérale et les panneaux deviennent translucides et dépolis pour laisser transparaître l'image, et un masque préserve la lisibilité du texte.",
+      "enable": "Activer l'image d'arrière-plan",
+      "image": "Image",
+      "chooseImage": "Choisir une image",
+      "replaceImage": "Remplacer l'image",
+      "removeImage": "Supprimer",
+      "fillMode": "Mode de remplissage",
+      "fillModes": {
+        "cover": "Remplir",
+        "contain": "Ajuster",
+        "center": "Centrer",
+        "tile": "Mosaïque"
+      },
+      "maskOpacity": "Opacité du masque",
+      "maskOpacityHint": "Des valeurs élevées fondent l'image vers la couleur d'arrière-plan du thème, améliorant le contraste du texte.",
+      "imageBlur": "Flou de l'image",
+      "panelOpacity": "Opacité des panneaux",
+      "panelOpacityHint": "Opacité de la barre latérale, des panneaux et des barres d'onglets. Plus c'est bas, plus l'image transparaît.",
+      "errorTooLarge": "L'image est trop volumineuse (16 Mo maximum).",
+      "errorUploadFailed": "Échec de la définition de l'image d'arrière-plan."
     }
   },
   "SystemSettings": {
@@ -1189,6 +1212,7 @@
         "removeFolderFailed": "Échec de la suppression du dossier : {message}",
         "reorderFoldersFailed": "Échec du réordonnancement des dossiers : {message}",
         "changeFolderColorFailed": "Échec du changement de couleur : {message}",
+        "setFolderAliasFailed": "Échec de la définition de l'alias : {message}",
         "changeFolderDefaultAgentFailed": "Échec de la définition de l'agent par défaut : {message}"
       },
       "statsLabel": "{folders} dossiers · {convos} conversations",
@@ -1220,6 +1244,11 @@
         "defaultAgentNone": "Aucun (utiliser la valeur globale)",
         "agentUnavailableSuffix": "(indisponible)",
         "loadingAgents": "Chargement des agents…",
+        "setAlias": "Définir un alias…",
+        "setAliasTitle": "Définir l'alias du dossier",
+        "setAliasPlaceholder": "Saisir un alias (laisser vide pour effacer)",
+        "setAliasSave": "Enregistrer",
+        "setAliasCancel": "Annuler",
         "removeFromWorkspace": "Retirer de l'espace de travail"
       },
       "manageConversations": {
@@ -1289,10 +1318,12 @@
         "system": "Système",
         "toolResult": "Résultat",
         "toolError": "Erreur"
-      }
+      },
+      "moreActions": "Plus d’actions"
     },
     "sessionDetails": {
       "menuLabel": "Détails de la session",
+      "noActiveSession": "Aucune session active",
       "title": "Détails de la session",
       "subtitle": "Métadonnées de la session et utilisation des tokens",
       "fieldTitle": "Titre",
@@ -1434,7 +1465,8 @@
       "preview": "Aperçu",
       "editSource": "Modifier la source",
       "maximize": "Agrandir",
-      "restore": "Restaurer"
+      "restore": "Restaurer",
+      "emptyDirectory": "Dossier vide"
     },
     "terminal": {
       "rename": "Renommer",
@@ -1866,6 +1898,7 @@
         "addToVcsFailed": "Échec de l'ajout au VCS",
         "loadBranchesFailed": "Échec du chargement des branches",
         "renameFailed": "Échec du renommage",
+        "moveFailed": "Échec du déplacement",
         "deleteFailed": "Échec de la suppression",
         "rolledBack": "{name} annulé",
         "rollbackFailed": "Échec de l'annulation",

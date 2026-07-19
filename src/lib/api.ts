@@ -1382,6 +1382,13 @@ export async function updateFolderColor(
   return getTransport().call("update_folder_color", { folderId, color })
 }
 
+export async function updateFolderAlias(
+  folderId: number,
+  alias: string | null
+): Promise<FolderDetail> {
+  return getTransport().call("update_folder_alias", { folderId, alias })
+}
+
 export async function updateFolderDefaultAgent(
   folderId: number,
   defaultAgentType: AgentType | null
@@ -2953,6 +2960,24 @@ export async function renameFileTreeEntry(
     rootPath,
     path,
     newName,
+  })
+}
+
+/**
+ * Move a file/directory into a different directory of the same workspace,
+ * keeping its name. `sourcePath` and `destDir` are workspace-relative
+ * (forward slashes); `destDir` is `""` for the workspace root. Resolves to the
+ * moved entry's new workspace-relative path.
+ */
+export async function moveFileTreeEntry(
+  rootPath: string,
+  sourcePath: string,
+  destDir: string
+): Promise<string> {
+  return getTransport().call("move_file_tree_entry", {
+    rootPath,
+    sourcePath,
+    destDir,
   })
 }
 

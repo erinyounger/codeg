@@ -117,6 +117,29 @@
       "sectionTitle": "Modusauswahlbereich",
       "sectionDescription": "Die Shortcut-Karten „Code-Entwicklung / Büroarbeit“ über dem Eingabefeld auf der Seite für eine neue Konversation.",
       "showQuickActions": "Auf der Seite für neue Konversationen anzeigen"
+    },
+    "workspaceBackground": {
+      "sectionTitle": "Arbeitsbereich-Hintergrund",
+      "sectionDescription": "Zeigt ein Bild hinter dem gesamten Arbeitsbereich. Seitenleiste und Panels werden durchscheinend und mattiert, sodass das Bild durchscheint, und eine Maske sorgt für lesbaren Text.",
+      "enable": "Hintergrundbild aktivieren",
+      "image": "Bild",
+      "chooseImage": "Bild auswählen",
+      "replaceImage": "Bild ersetzen",
+      "removeImage": "Entfernen",
+      "fillMode": "Füllmodus",
+      "fillModes": {
+        "cover": "Füllen",
+        "contain": "Einpassen",
+        "center": "Zentrieren",
+        "tile": "Kacheln"
+      },
+      "maskOpacity": "Maskendeckkraft",
+      "maskOpacityHint": "Höhere Werte blenden das Bild zur Hintergrundfarbe des Themes aus und verbessern den Textkontrast.",
+      "imageBlur": "Bildunschärfe",
+      "panelOpacity": "Panel-Deckkraft",
+      "panelOpacityHint": "Wie deckend Seitenleiste, Panels und Tab-Leisten sind. Niedriger lässt mehr vom Bild durchscheinen.",
+      "errorTooLarge": "Bild ist zu groß (max. 16 MB).",
+      "errorUploadFailed": "Hintergrundbild konnte nicht festgelegt werden."
     }
   },
   "SystemSettings": {
@@ -1189,6 +1212,7 @@
         "removeFolderFailed": "Ordner konnte nicht entfernt werden: {message}",
         "reorderFoldersFailed": "Ordner konnten nicht neu sortiert werden: {message}",
         "changeFolderColorFailed": "Farbe konnte nicht geändert werden: {message}",
+        "setFolderAliasFailed": "Alias konnte nicht festgelegt werden: {message}",
         "changeFolderDefaultAgentFailed": "Standard-Agent konnte nicht gesetzt werden: {message}"
       },
       "statsLabel": "{folders} Ordner · {convos} Konversationen",
@@ -1220,6 +1244,11 @@
         "defaultAgentNone": "Kein Standard (global verwenden)",
         "agentUnavailableSuffix": "(nicht verfügbar)",
         "loadingAgents": "Agenten werden geladen…",
+        "setAlias": "Alias festlegen…",
+        "setAliasTitle": "Ordner-Alias festlegen",
+        "setAliasPlaceholder": "Alias eingeben (zum Entfernen leer lassen)",
+        "setAliasSave": "Speichern",
+        "setAliasCancel": "Abbrechen",
         "removeFromWorkspace": "Aus Arbeitsbereich entfernen"
       },
       "manageConversations": {
@@ -1289,10 +1318,12 @@
         "system": "System",
         "toolResult": "Ergebnis",
         "toolError": "Fehler"
-      }
+      },
+      "moreActions": "Weitere Aktionen"
     },
     "sessionDetails": {
       "menuLabel": "Sitzungsdetails",
+      "noActiveSession": "Keine aktive Sitzung",
       "title": "Sitzungsdetails",
       "subtitle": "Sitzungsmetadaten und Token-Nutzung",
       "fieldTitle": "Titel",
@@ -1434,7 +1465,8 @@
       "preview": "Vorschau",
       "editSource": "Quelle bearbeiten",
       "maximize": "Maximieren",
-      "restore": "Wiederherstellen"
+      "restore": "Wiederherstellen",
+      "emptyDirectory": "Leerer Ordner"
     },
     "terminal": {
       "rename": "Umbenennen",
@@ -1866,6 +1898,7 @@
         "addToVcsFailed": "Hinzufügen zu VCS fehlgeschlagen",
         "loadBranchesFailed": "Branches konnten nicht geladen werden",
         "renameFailed": "Umbenennen fehlgeschlagen",
+        "moveFailed": "Verschieben fehlgeschlagen",
         "deleteFailed": "Löschen fehlgeschlagen",
         "rolledBack": "{name} zurückgesetzt",
         "rollbackFailed": "Zurücksetzen fehlgeschlagen",

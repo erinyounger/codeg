@@ -6,6 +6,7 @@ pub use network::proxy::init_proxy_from_db;
 mod app_error;
 pub mod app_state;
 pub mod automation;
+pub mod backgrounds;
 pub mod chat_channel;
 pub mod commands;
 pub mod db;
@@ -47,7 +48,7 @@ mod tauri_app {
     use crate::chat_channel::manager::ChatChannelManager;
     use crate::commands::{
         acp as acp_commands, app_update as app_update_commands,
-        automation as automation_commands, backup,
+        automation as automation_commands, background as background_commands, backup,
         chat_channel as chat_channel_commands, conversations,
         custom_skills as custom_skills_commands, delegation as delegation_commands,
         experts as experts_commands, feedback as feedback_commands, file_io, folder_commands,
@@ -680,7 +681,15 @@ mod tauri_app {
                         .title("Codeg")
                         .inner_size(1260.0, 860.0)
                         .min_inner_size(400.0, 600.0);
-                    if let Ok(w) = windows::apply_platform_window_style(builder).build() {
+                    let builder = windows::apply_platform_window_style(builder);
+                    // The workspace title bar is taller than the shared default
+                    // (it hosts the tab strips), so nudge the native macOS
+                    // traffic lights down to stay vertically centred.
+                    #[cfg(target_os = "macos")]
+                    let builder = builder.traffic_light_position(
+                        windows::workspace_window_traffic_light_position(),
+                    );
+                    if let Ok(w) = builder.build() {
                         windows::post_window_setup(&w);
                     }
                 }
@@ -895,6 +904,7 @@ mod tauri_app {
                 folders::remove_folder_from_workspace,
                 folders::reorder_folders,
                 folders::update_folder_color,
+                folders::update_folder_alias,
                 folders::update_folder_default_agent,
                 folders::add_folder_to_history,
                 folders::remove_folder_from_history,
@@ -959,6 +969,7 @@ mod tauri_app {
                 folders::save_file_content,
                 folders::save_file_copy,
                 folders::rename_file_tree_entry,
+                folders::move_file_tree_entry,
                 folders::delete_file_tree_entry,
                 folders::create_file_tree_entry,
                 folders::git_log,
@@ -1017,6 +1028,9 @@ mod tauri_app {
                 pet_commands::pet_celebrate,
                 pet_commands::pet_get_current_state,
                 pet_commands::pet_list_active_sessions,
+                background_commands::background_read,
+                background_commands::background_set,
+                background_commands::background_clear,
                 app_update_commands::app_update_state,
                 app_update_commands::perform_app_update,
                 app_update_commands::restart_app,

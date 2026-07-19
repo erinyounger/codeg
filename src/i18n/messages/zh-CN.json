@@ -117,6 +117,29 @@
       "sectionTitle": "模式选择区域",
       "sectionDescription": "新会话页面输入框上方显示的「代码开发 / 日常办公」快捷卡片区域。",
       "showQuickActions": "在新会话页面显示"
+    },
+    "workspaceBackground": {
+      "sectionTitle": "工作区背景",
+      "sectionDescription": "在整个工作区背后显示一张图片。侧栏与面板会变半透明并磨砂让图片透出，遮罩保证文字可读。",
+      "enable": "启用背景图片",
+      "image": "图片",
+      "chooseImage": "选择图片",
+      "replaceImage": "更换图片",
+      "removeImage": "移除",
+      "fillMode": "填充方式",
+      "fillModes": {
+        "cover": "覆盖",
+        "contain": "适应",
+        "center": "居中",
+        "tile": "平铺"
+      },
+      "maskOpacity": "遮罩不透明度",
+      "maskOpacityHint": "数值越高，图片越向主题背景色淡化，文字对比越清晰。",
+      "imageBlur": "图片模糊",
+      "panelOpacity": "面板不透明度",
+      "panelOpacityHint": "侧栏、面板与标签栏的不透明程度。越低，透出的图片越多。",
+      "errorTooLarge": "图片太大（最大 16 MB）。",
+      "errorUploadFailed": "设置背景图片失败。"
     }
   },
   "SystemSettings": {
@@ -1189,6 +1212,7 @@
         "removeFolderFailed": "移除文件夹失败：{message}",
         "reorderFoldersFailed": "重新排序文件夹失败：{message}",
         "changeFolderColorFailed": "修改颜色失败：{message}",
+        "setFolderAliasFailed": "设置别名失败：{message}",
         "changeFolderDefaultAgentFailed": "设置默认智能体失败：{message}"
       },
       "statsLabel": "{folders} 个文件夹 · {convos} 个会话",
@@ -1220,6 +1244,11 @@
         "defaultAgentNone": "不设置（使用全局默认）",
         "agentUnavailableSuffix": "（不可用）",
         "loadingAgents": "正在加载代理…",
+        "setAlias": "设置别名…",
+        "setAliasTitle": "设置文件夹别名",
+        "setAliasPlaceholder": "输入别名（留空清除）",
+        "setAliasSave": "保存",
+        "setAliasCancel": "取消",
         "removeFromWorkspace": "从工作区移除"
       },
       "manageConversations": {
@@ -1289,10 +1318,12 @@
         "system": "系统",
         "toolResult": "结果",
         "toolError": "错误"
-      }
+      },
+      "moreActions": "更多操作"
     },
     "sessionDetails": {
       "menuLabel": "会话详情",
+      "noActiveSession": "暂无活动会话",
       "title": "会话详情",
       "subtitle": "会话元信息与 Token 用量",
       "fieldTitle": "标题",
@@ -1434,7 +1465,8 @@
       "preview": "预览",
       "editSource": "编辑源码",
       "maximize": "最大化",
-      "restore": "还原"
+      "restore": "还原",
+      "emptyDirectory": "空目录"
     },
     "terminal": {
       "rename": "重命名",
@@ -1866,6 +1898,7 @@
         "addToVcsFailed": "添加到 VCS 失败",
         "loadBranchesFailed": "加载分支失败",
         "renameFailed": "重命名失败",
+        "moveFailed": "移动失败",
         "deleteFailed": "删除失败",
         "rolledBack": "已回滚 {name}",
         "rollbackFailed": "回滚失败",

@@ -117,6 +117,29 @@
       "sectionTitle": "Mode selection area",
       "sectionDescription": "The Code Development / Office Work shortcut cards shown above the composer on the new conversation page.",
       "showQuickActions": "Show on the new conversation page"
+    },
+    "workspaceBackground": {
+      "sectionTitle": "Workspace background",
+      "sectionDescription": "Show a picture behind the whole workspace. Sidebar and panels turn translucent and frosted so the image shows through, and a mask keeps text readable.",
+      "enable": "Enable background image",
+      "image": "Image",
+      "chooseImage": "Choose image",
+      "replaceImage": "Replace image",
+      "removeImage": "Remove",
+      "fillMode": "Fill mode",
+      "fillModes": {
+        "cover": "Cover",
+        "contain": "Contain",
+        "center": "Center",
+        "tile": "Tile"
+      },
+      "maskOpacity": "Mask opacity",
+      "maskOpacityHint": "Higher values fade the image toward the theme background, improving text contrast.",
+      "imageBlur": "Image blur",
+      "panelOpacity": "Panel opacity",
+      "panelOpacityHint": "How opaque the sidebar, panels and tab bars are. Lower lets more of the image show through.",
+      "errorTooLarge": "Image is too large (max 16 MB).",
+      "errorUploadFailed": "Failed to set the background image."
     }
   },
   "SystemSettings": {
@@ -1189,6 +1212,7 @@
         "removeFolderFailed": "Failed to remove folder: {message}",
         "reorderFoldersFailed": "Failed to reorder folders: {message}",
         "changeFolderColorFailed": "Failed to change folder color: {message}",
+        "setFolderAliasFailed": "Failed to set alias: {message}",
         "changeFolderDefaultAgentFailed": "Failed to set default agent: {message}"
       },
       "statsLabel": "{folders} folders · {convos} conversations",
@@ -1220,6 +1244,11 @@
         "defaultAgentNone": "No default (use global)",
         "agentUnavailableSuffix": "(unavailable)",
         "loadingAgents": "Loading agents…",
+        "setAlias": "Set alias…",
+        "setAliasTitle": "Set folder alias",
+        "setAliasPlaceholder": "Enter an alias (leave empty to clear)",
+        "setAliasSave": "Save",
+        "setAliasCancel": "Cancel",
         "removeFromWorkspace": "Remove from workspace"
       },
       "manageConversations": {
@@ -1289,10 +1318,12 @@
         "system": "System",
         "toolResult": "Result",
         "toolError": "Error"
-      }
+      },
+      "moreActions": "More actions"
     },
     "sessionDetails": {
       "menuLabel": "Session Details",
+      "noActiveSession": "No active session",
       "title": "Session Details",
       "subtitle": "Session metadata and token usage",
       "fieldTitle": "Title",
@@ -1434,7 +1465,8 @@
       "preview": "Preview",
       "editSource": "Edit Source",
       "maximize": "Maximize",
-      "restore": "Restore"
+      "restore": "Restore",
+      "emptyDirectory": "Empty folder"
     },
     "terminal": {
       "rename": "Rename",
@@ -1866,6 +1898,7 @@
         "addToVcsFailed": "Failed to add to VCS",
         "loadBranchesFailed": "Failed to load branches",
         "renameFailed": "Rename failed",
+        "moveFailed": "Move failed",
         "deleteFailed": "Delete failed",
         "rolledBack": "Rolled back {name}",
         "rollbackFailed": "Rollback failed",

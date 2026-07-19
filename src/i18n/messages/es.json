@@ -117,6 +117,29 @@
       "sectionTitle": "Área de selección de modo",
       "sectionDescription": "Las tarjetas de acceso rápido «Desarrollo de código / Ofimática» que se muestran sobre el editor en la página de nueva conversación.",
       "showQuickActions": "Mostrar en la página de nueva conversación"
+    },
+    "workspaceBackground": {
+      "sectionTitle": "Fondo del espacio de trabajo",
+      "sectionDescription": "Muestra una imagen detrás de todo el espacio de trabajo. La barra lateral y los paneles se vuelven translúcidos y esmerilados para dejar ver la imagen, y una máscara mantiene el texto legible.",
+      "enable": "Activar imagen de fondo",
+      "image": "Imagen",
+      "chooseImage": "Elegir imagen",
+      "replaceImage": "Reemplazar imagen",
+      "removeImage": "Quitar",
+      "fillMode": "Modo de relleno",
+      "fillModes": {
+        "cover": "Cubrir",
+        "contain": "Ajustar",
+        "center": "Centrar",
+        "tile": "Mosaico"
+      },
+      "maskOpacity": "Opacidad de la máscara",
+      "maskOpacityHint": "Los valores más altos difuminan la imagen hacia el color de fondo del tema, mejorando el contraste del texto.",
+      "imageBlur": "Desenfoque de la imagen",
+      "panelOpacity": "Opacidad de los paneles",
+      "panelOpacityHint": "Cuán opacos son la barra lateral, los paneles y las barras de pestañas. Más bajo deja ver más la imagen.",
+      "errorTooLarge": "La imagen es demasiado grande (máx. 16 MB).",
+      "errorUploadFailed": "No se pudo establecer la imagen de fondo."
     }
   },
   "SystemSettings": {
@@ -1189,6 +1212,7 @@
         "removeFolderFailed": "Error al eliminar carpeta: {message}",
         "reorderFoldersFailed": "Error al reordenar carpetas: {message}",
         "changeFolderColorFailed": "Error al cambiar el color: {message}",
+        "setFolderAliasFailed": "Error al establecer el alias: {message}",
         "changeFolderDefaultAgentFailed": "Error al establecer agente predeterminado: {message}"
       },
       "statsLabel": "{folders} carpetas · {convos} conversaciones",
@@ -1220,6 +1244,11 @@
         "defaultAgentNone": "Sin valor (usar predeterminado global)",
         "agentUnavailableSuffix": "(no disponible)",
         "loadingAgents": "Cargando agentes…",
+        "setAlias": "Establecer alias…",
+        "setAliasTitle": "Establecer alias de la carpeta",
+        "setAliasPlaceholder": "Introduce un alias (déjalo vacío para borrarlo)",
+        "setAliasSave": "Guardar",
+        "setAliasCancel": "Cancelar",
         "removeFromWorkspace": "Quitar del espacio de trabajo"
       },
       "manageConversations": {
@@ -1289,10 +1318,12 @@
         "system": "Sistema",
         "toolResult": "Resultado",
         "toolError": "Error"
-      }
+      },
+      "moreActions": "Más acciones"
     },
     "sessionDetails": {
       "menuLabel": "Detalles de la sesión",
+      "noActiveSession": "No hay ninguna sesión activa",
       "title": "Detalles de la sesión",
       "subtitle": "Metadatos de la sesión y uso de tokens",
       "fieldTitle": "Título",
@@ -1434,7 +1465,8 @@
       "preview": "Vista previa",
       "editSource": "Editar fuente",
       "maximize": "Maximizar",
-      "restore": "Restaurar"
+      "restore": "Restaurar",
+      "emptyDirectory": "Carpeta vacía"
     },
     "terminal": {
       "rename": "Renombrar",
@@ -1866,6 +1898,7 @@
         "addToVcsFailed": "No se pudo añadir a VCS",
         "loadBranchesFailed": "No se pudieron cargar las ramas",
         "renameFailed": "Error al renombrar",
+        "moveFailed": "Error al mover",
         "deleteFailed": "Error al eliminar",
         "rolledBack": "Se revirtió {name}",
         "rollbackFailed": "Error al revertir",
