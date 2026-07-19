@@ -663,6 +663,49 @@
       "autoCompactLabel": "自動圧縮のしきい値（%）",
       "autoCompactHint": "コンテキスト使用率がこの割合に達したら会話を圧縮します（Grok の既定は 85）。`[session]` に書き込まれます。"
     },
+    "cursor": {
+      "configDescription": "ここで Cursor を設定します。まず認証方式を選択し——公式サブスクリプション（ブラウザログイン）またはヘッドレス/サーバー用の Cursor API キー——次にモデルを選び、CLI の権限ルールとサンドボックスを編集します。codeg はこれらを ~/.cursor/cli-config.json に書き込み、cursor-agent CLI と共有します。",
+      "authTitle": "認証",
+      "authChecking": "確認中…",
+      "authNotInstalled": "cursor-agent が未インストールです",
+      "authLoggedIn": "ログイン済み",
+      "authNotLoggedIn": "未ログイン",
+      "loginHint": "ターミナルで次のコマンドを実行して Cursor アカウントにログイン（ブラウザが開きます）し、完了後に更新を押してください：",
+      "apiKeyLabel": "Cursor API キー",
+      "apiKeyPlaceholder": "cursor.com/dashboard で取得",
+      "apiKeyHint": "CURSOR_API_KEY —— Cursor ダッシュボードのアカウントキー。ヘッドレス/サーバー環境でブラウザログインの代わりに使用します。サードパーティや OpenAI のキーではありません。",
+      "modelTitle": "デフォルトモデル",
+      "loadModels": "モデル一覧を取得",
+      "modelsUnavailable": "モデル一覧を取得できません",
+      "modelHint": "セッション開始時に --model として CLI に渡されます。既定のままなら Cursor が選択します。",
+      "permissionsTitle": "権限とサンドボックス",
+      "permissionsDescription": "CLI の権限ルール（cli-config.json）のビジュアルエディタ。許可ルールは確認なしで実行、拒否ルールは常にブロックされます。",
+      "permissionModeLabel": "権限モード",
+      "permissionModeDefault": "実行前に確認（デフォルト）",
+      "permissionModeForce": "Run Everything（--force）",
+      "permissionModeHint": "Run Everything は --force でセッションを起動します：deny ルール以外のツール呼び出しはすべて確認なしで自動許可されます（組織ポリシーにより allow ルール一致のみに制限される場合があります）。新しいセッションから有効です。",
+      "optionDefault": "既定（未設定）",
+      "sandboxLabel": "サンドボックス",
+      "sandboxEnabled": "有効",
+      "sandboxDisabled": "無効",
+      "allowRulesLabel": "許可ルール",
+      "denyRulesLabel": "拒否ルール",
+      "addRule": "ルールを追加",
+      "rulesSyntaxHint": "ルール構文：Shell(コマンド)、Read(パス/グロブ)、Write(パス/グロブ)、WebFetch(ドメイン)、Mcp(サーバー:ツール)——deny ルールが常に優先されます。",
+      "saveConfig": "設定を保存",
+      "advancedToggle": "詳細：cli-config.json（生ファイル）",
+      "advancedHint": "~/.cursor/cli-config.json の全文です。ここでの保存はそのまま書き込み、上の構造化コントロールはマージして書き込みます。",
+      "saveRawConfig": "ファイルを保存",
+      "authMode": "認証方式",
+      "subscriptionHint": "Cursor アカウントでサインインし、Cursor のモデルを使用します。",
+      "customApiKeyRequired": "Cursor API キーが必要です。",
+      "authModeApiKey": "Cursor API キー（ヘッドレス/サーバー）",
+      "authModeApiKeyHint": "Cursor ダッシュボードで発行したアカウント API キーで認証します（ヘッドレス/サーバー環境向け）。これは Cursor アカウントのキーであり、サードパーティ/OpenAI エンドポイントではありません——cursor-agent は Cursor 自身のバックエンドにのみ接続します。codex/OpenAI 互換エンドポイントを使うには、代わりに Codex エージェントを使用してください。",
+      "modelPickerPlaceholder": "モデルを検索…",
+      "modelNoMatch": "一致するモデルがありません",
+      "modelsNeedAuth": "サインインするとモデル一覧を読み込みます。",
+      "modelDefaultBadge": "既定"
+    },
     "codex": {
       "configDescription": "API URL、API Key、モデル名、reasoning effort を素早く設定でき、`auth.json` / `config.toml` と同期します。",
       "authMode": "認証方式",
@@ -944,6 +987,8 @@
       "grokSaved": "Grok 設定を保存しました",
       "saveGrokNativeFailed": "Grok のネイティブ設定の保存に失敗しました",
       "saveGrokApiKeyFailed": "設定は保存されましたが、API キーを保存できませんでした",
+      "cursorSaved": "Cursor の設定を保存しました",
+      "saveCursorConfigFailed": "Cursor の設定の保存に失敗しました",
       "codexSaved": "Codex設定を保存しました",
       "saveCodexNativeFailed": "Codexネイティブ設定の保存に失敗しました",
       "geminiSaved": "Gemini設定を保存しました",
@@ -2190,7 +2235,8 @@
         "enableAgentFirstPlaceholder": "セッション開始前に少なくとも1つのエージェントを有効化してください...",
         "prepareSessionFailed": "チャットセッションを準備できませんでした。もう一度お試しください。",
         "createConversationFailed": "会話を作成できませんでした。もう一度お試しください。",
-        "askAnythingPlaceholder": "何でも質問してください..."
+        "askAnythingPlaceholder": "何でも質問してください...",
+        "agentNotInstalled": "{agent} はインストールされていません · クリックして Agents 設定でインストール"
       },
       "welcomePanel": {
         "greeting": "今日は<highlight>何を</highlight>しましょうか？",
@@ -2290,7 +2336,8 @@
       },
       "agentSelector": {
         "noEnabledAgents": "有効なエージェントがありません",
-        "openAgentsSettings": "エージェント設定を開く"
+        "openAgentsSettings": "エージェント設定を開く",
+        "notInstalled": "未インストール"
       },
       "subAgentOverlay": {
         "title": "サブエージェント",

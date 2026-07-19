@@ -663,6 +663,49 @@
       "autoCompactLabel": "عتبة الضغط التلقائي (%)",
       "autoCompactHint": "يضغط المحادثة عندما يبلغ استخدام السياق هذه النسبة المئوية (الافتراضي في Grok هو 85). يُكتَب في `[session]`."
     },
+    "cursor": {
+      "configDescription": "اضبط Cursor هنا. اختر طريقة مصادقة — اشتراك رسمي (تسجيل دخول عبر المتصفح) أو مفتاح Cursor API للأجهزة بدون واجهة أو الخوادم — ثم اختر نموذجًا وحرّر قواعد أذونات CLI وبيئة الحماية. يكتبها codeg في ~/.cursor/cli-config.json، بالمشاركة مع أداة cursor-agent.",
+      "authTitle": "المصادقة",
+      "authChecking": "جارٍ التحقق…",
+      "authNotInstalled": "cursor-agent غير مثبّت",
+      "authLoggedIn": "تم تسجيل الدخول",
+      "authNotLoggedIn": "غير مسجّل الدخول",
+      "loginHint": "شغّل هذا الأمر في الطرفية لتسجيل الدخول إلى حساب Cursor (سيفتح المتصفح)، ثم اضغط تحديث:",
+      "apiKeyLabel": "مفتاح Cursor API",
+      "apiKeyPlaceholder": "المفتاح من cursor.com/dashboard",
+      "apiKeyHint": "CURSOR_API_KEY — مفتاح حساب من لوحة تحكم Cursor، بديل لتسجيل الدخول عبر المتصفح للأجهزة بدون واجهة أو الخوادم. ليس مفتاحًا خارجيًا أو من OpenAI.",
+      "modelTitle": "النموذج الافتراضي",
+      "loadModels": "جلب النماذج",
+      "modelsUnavailable": "قائمة النماذج غير متاحة",
+      "modelHint": "يُمرَّر إلى CLI عبر ‎--model عند بدء الجلسة. اتركه افتراضيًا ليختار Cursor بنفسه.",
+      "permissionsTitle": "الأذونات ووضع الحماية",
+      "permissionsDescription": "محرّر بصري لقواعد أذونات CLI‏ (cli-config.json). القواعد المسموحة تُنفَّذ دون تأكيد؛ والمرفوضة تُحظر دائمًا.",
+      "permissionModeLabel": "وضع الأذونات",
+      "permissionModeDefault": "السؤال قبل التنفيذ (افتراضي)",
+      "permissionModeForce": "تشغيل كل شيء (--force)",
+      "permissionModeHint": "يبدأ وضع Run Everything الجلسات بـ --force: يُسمح تلقائيًا بجميع استدعاءات الأدوات باستثناء قواعد الرفض دون طلب تأكيد (قد تقيّده سياسة المؤسسة بقواعد السماح فقط). يسري على الجلسات الجديدة.",
+      "optionDefault": "افتراضي (غير محدد)",
+      "sandboxLabel": "وضع الحماية",
+      "sandboxEnabled": "مفعّل",
+      "sandboxDisabled": "معطّل",
+      "allowRulesLabel": "قواعد السماح",
+      "denyRulesLabel": "قواعد الرفض",
+      "addRule": "إضافة قاعدة",
+      "rulesSyntaxHint": "صيغة القواعد: Shell(أمر)، Read(مسار/نمط)، Write(مسار/نمط)، WebFetch(نطاق)، Mcp(خادم:أداة) — قواعد الرفض لها الأولوية دائمًا.",
+      "saveConfig": "حفظ الإعدادات",
+      "advancedToggle": "متقدم: cli-config.json الخام",
+      "advancedHint": "ملف ‎~/.cursor/cli-config.json كاملًا. الحفظ هنا يكتب الملف كما هو؛ أما عناصر التحكم أعلاه فتُدمج فيه.",
+      "saveRawConfig": "حفظ الملف",
+      "authMode": "طريقة المصادقة",
+      "subscriptionHint": "سجّل الدخول بحساب Cursor واستخدم نماذج Cursor.",
+      "customApiKeyRequired": "مفتاح Cursor API مطلوب.",
+      "authModeApiKey": "مفتاح Cursor API (بدون واجهة/خادم)",
+      "authModeApiKeyHint": "المصادقة باستخدام مفتاح API لحساب Cursor من لوحة تحكم Cursor (للأجهزة بدون واجهة أو الخوادم). هذا مفتاح حساب Cursor وليس نقطة نهاية خارجية/OpenAI — إذ يتصل cursor-agent بخادم Cursor الخاص فقط. لاستخدام نقطة نهاية متوافقة مع codex/OpenAI، استخدم وكيل Codex بدلاً من ذلك.",
+      "modelPickerPlaceholder": "ابحث عن النماذج…",
+      "modelNoMatch": "لا يوجد نموذج مطابق",
+      "modelsNeedAuth": "سجّل الدخول لتحميل قائمة النماذج.",
+      "modelDefaultBadge": "افتراضي"
+    },
     "codex": {
       "configDescription": "يدعم الإعداد السريع لعنوان API ومفتاح API واسم النموذج وجهد الاستدلال، مع المزامنة مع `auth.json` / `config.toml`.",
       "authMode": "طريقة المصادقة",
@@ -944,6 +987,8 @@
       "grokSaved": "تم حفظ إعدادات Grok",
       "saveGrokNativeFailed": "فشل حفظ إعدادات Grok الأصلية",
       "saveGrokApiKeyFailed": "تم حفظ الإعدادات، لكن تعذّر حفظ مفتاح API",
+      "cursorSaved": "تم حفظ إعدادات Cursor",
+      "saveCursorConfigFailed": "فشل حفظ إعدادات Cursor",
       "codexSaved": "تم حفظ إعداد Codex",
       "saveCodexNativeFailed": "فشل حفظ إعداد Codex الأصلي",
       "geminiSaved": "تم حفظ إعداد Gemini",
@@ -2190,7 +2235,8 @@
         "enableAgentFirstPlaceholder": "فعّل وكيلًا واحدًا على الأقل قبل بدء جلسة...",
         "prepareSessionFailed": "تعذّر تحضير جلسة الدردشة. يرجى المحاولة مرة أخرى.",
         "createConversationFailed": "تعذّر إنشاء المحادثة. يرجى المحاولة مرة أخرى.",
-        "askAnythingPlaceholder": "اسأل أي شيء..."
+        "askAnythingPlaceholder": "اسأل أي شيء...",
+        "agentNotInstalled": "{agent} غير مثبّت · افتح إعدادات Agents لتثبيته"
       },
       "welcomePanel": {
         "greeting": "ماذا تودّ أن <highlight>تفعل اليوم</highlight>؟",
@@ -2290,7 +2336,8 @@
       },
       "agentSelector": {
         "noEnabledAgents": "لا يوجد وكلاء مفعّلون",
-        "openAgentsSettings": "فتح إعدادات الوكلاء"
+        "openAgentsSettings": "فتح إعدادات الوكلاء",
+        "notInstalled": "غير مثبّت"
       },
       "subAgentOverlay": {
         "title": "الوكلاء الفرعيون",

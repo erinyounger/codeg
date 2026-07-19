@@ -663,6 +663,49 @@
       "autoCompactLabel": "Schwellenwert für Auto-Verdichtung (%)",
       "autoCompactHint": "Verdichtet die Unterhaltung, wenn die Kontextnutzung diesen Prozentsatz erreicht (Grok-Standard 85). Wird in `[session]` geschrieben."
     },
+    "cursor": {
+      "configDescription": "Konfiguriere Cursor hier. Wähle eine Authentifizierungsmethode – offizielles Abo (Browser-Anmeldung) oder einen Cursor-API-Schlüssel für Headless-/Servermaschinen – wähle dann ein Modell und bearbeite die Berechtigungsregeln und die Sandbox des CLI. codeg schreibt sie in ~/.cursor/cli-config.json, gemeinsam mit dem cursor-agent-CLI.",
+      "authTitle": "Authentifizierung",
+      "authChecking": "Prüfe…",
+      "authNotInstalled": "cursor-agent ist nicht installiert",
+      "authLoggedIn": "Angemeldet",
+      "authNotLoggedIn": "Nicht angemeldet",
+      "loginHint": "Führe dies im Terminal aus, um dich mit deinem Cursor-Konto anzumelden (ein Browserfenster öffnet sich), und klicke danach auf Aktualisieren:",
+      "apiKeyLabel": "Cursor-API-Schlüssel",
+      "apiKeyPlaceholder": "Schlüssel von cursor.com/dashboard",
+      "apiKeyHint": "CURSOR_API_KEY – ein Cursor-Dashboard-Kontoschlüssel, Alternative zur Browser-Anmeldung für Headless-/Servermaschinen. Kein Drittanbieter- oder OpenAI-Schlüssel.",
+      "modelTitle": "Standardmodell",
+      "loadModels": "Modelle laden",
+      "modelsUnavailable": "Modellliste nicht verfügbar",
+      "modelHint": "Wird der CLI beim Sitzungsstart als --model übergeben. Auf Standard lassen, damit Cursor wählt.",
+      "permissionsTitle": "Berechtigungen & Sandbox",
+      "permissionsDescription": "Visueller Editor für die Berechtigungsregeln der CLI (cli-config.json). Erlaubte Regeln laufen ohne Rückfrage; verweigerte werden immer blockiert.",
+      "permissionModeLabel": "Berechtigungsmodus",
+      "permissionModeDefault": "Vor der Ausführung fragen (Standard)",
+      "permissionModeForce": "Run Everything (--force)",
+      "permissionModeHint": "Run Everything startet Sitzungen mit --force: Alle Tool-Aufrufe werden ohne Rückfrage automatisch erlaubt, außer Deny-Regeln (eine Organisationsrichtlinie kann dies auf Allow-Regeln beschränken). Gilt für neue Sitzungen.",
+      "optionDefault": "Standard (nicht gesetzt)",
+      "sandboxLabel": "Sandbox",
+      "sandboxEnabled": "Aktiviert",
+      "sandboxDisabled": "Deaktiviert",
+      "allowRulesLabel": "Erlauben-Regeln",
+      "denyRulesLabel": "Verweigern-Regeln",
+      "addRule": "Regel hinzufügen",
+      "rulesSyntaxHint": "Regelsyntax: Shell(Befehl), Read(Pfad/Glob), Write(Pfad/Glob), WebFetch(Domain), Mcp(Server:Tool) — Deny-Regeln haben immer Vorrang.",
+      "saveConfig": "Konfiguration speichern",
+      "advancedToggle": "Erweitert: rohe cli-config.json",
+      "advancedHint": "Die komplette ~/.cursor/cli-config.json. Speichern schreibt die Datei unverändert; die strukturierten Steuerelemente oben werden stattdessen zusammengeführt.",
+      "saveRawConfig": "Datei speichern",
+      "authMode": "Authentifizierungsmethode",
+      "subscriptionHint": "Mit deinem Cursor-Konto anmelden und Cursors Modelle verwenden.",
+      "customApiKeyRequired": "Ein Cursor-API-Schlüssel ist erforderlich.",
+      "authModeApiKey": "Cursor-API-Schlüssel (Headless/Server)",
+      "authModeApiKeyHint": "Mit einem Cursor-Konto-API-Schlüssel aus dem Cursor-Dashboard authentifizieren (für Headless-/Servermaschinen). Das ist ein Cursor-Kontoschlüssel, kein Drittanbieter-/OpenAI-Endpunkt – cursor-agent kommuniziert nur mit dem Cursor-Backend. Um einen codex-/OpenAI-kompatiblen Endpunkt zu nutzen, verwende stattdessen den Codex-Agenten.",
+      "modelPickerPlaceholder": "Modelle suchen…",
+      "modelNoMatch": "Kein passendes Modell",
+      "modelsNeedAuth": "Melde dich an, um die Modellliste zu laden.",
+      "modelDefaultBadge": "Standard"
+    },
     "codex": {
       "configDescription": "Unterstützt schnelle Konfiguration von API-URL, API-Key, Modellname und reasoning effort und synchronisiert mit `auth.json` / `config.toml`.",
       "authMode": "Authentifizierungsmodus",
@@ -944,6 +987,8 @@
       "grokSaved": "Grok-Konfiguration gespeichert",
       "saveGrokNativeFailed": "Grok-Nativkonfiguration konnte nicht gespeichert werden",
       "saveGrokApiKeyFailed": "Einstellungen gespeichert, aber der API-Schlüssel konnte nicht gespeichert werden",
+      "cursorSaved": "Cursor-Konfiguration gespeichert",
+      "saveCursorConfigFailed": "Cursor-Konfiguration konnte nicht gespeichert werden",
       "codexSaved": "Codex-Konfiguration gespeichert",
       "saveCodexNativeFailed": "Speichern der nativen Codex-Konfiguration fehlgeschlagen",
       "geminiSaved": "Gemini-Konfiguration gespeichert",
@@ -2190,7 +2235,8 @@
         "enableAgentFirstPlaceholder": "Aktivieren Sie mindestens einen Agenten, bevor Sie eine Sitzung starten...",
         "prepareSessionFailed": "Die Chat-Sitzung konnte nicht vorbereitet werden. Bitte versuche es erneut.",
         "createConversationFailed": "Die Konversation konnte nicht erstellt werden. Bitte versuche es erneut.",
-        "askAnythingPlaceholder": "Fragen Sie alles..."
+        "askAnythingPlaceholder": "Fragen Sie alles...",
+        "agentNotInstalled": "{agent} ist nicht installiert · in den Agents-Einstellungen installieren"
       },
       "welcomePanel": {
         "greeting": "Was möchtest du heute <highlight>machen</highlight>?",
@@ -2290,7 +2336,8 @@
       },
       "agentSelector": {
         "noEnabledAgents": "Keine aktivierten Agenten",
-        "openAgentsSettings": "Agenten-Einstellungen öffnen"
+        "openAgentsSettings": "Agenten-Einstellungen öffnen",
+        "notInstalled": "Nicht installiert"
       },
       "subAgentOverlay": {
         "title": "Subagenten",
