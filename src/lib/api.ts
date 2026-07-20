@@ -77,6 +77,7 @@ import type {
   TerminalInfo,
   PromptInputBlock,
   FileTreeNode,
+  WorkspaceFileEntry,
   DirectoryEntry,
   DirectoryItem,
   UploadAttachmentResult,
@@ -2885,6 +2886,17 @@ export async function getFileTree(
   })
 }
 
+/**
+ * Flat, gitignore-aware listing of every file/dir under `path`. Ignored
+ * directories are pruned during the backend walk (no depth cap), so deeply
+ * nested files are reachable while the payload stays small. Used by file search.
+ */
+export async function listWorkspaceFiles(
+  path: string
+): Promise<WorkspaceFileEntry[]> {
+  return getTransport().call("list_workspace_files", { path })
+}
+
 export async function startWorkspaceStateStream(
   rootPath: string,
   wantsTreeGit = true
@@ -3035,13 +3047,15 @@ export async function gitLog(
   path: string,
   limit?: number,
   branch?: string,
-  remote?: string
+  remote?: string,
+  skip?: number
 ): Promise<GitLogResult> {
   return getTransport().call("git_log", {
     path,
     limit: limit ?? null,
     branch: branch ?? null,
     remote: remote ?? null,
+    skip: skip ?? null,
   })
 }
 
