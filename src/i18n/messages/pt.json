@@ -1318,6 +1318,7 @@
       "searchPlaceholder": "Buscar conversas...",
       "viewOptions": "Opções de exibição",
       "showCompleted": "Mostrar conversas concluídas",
+      "showWorktrees": "Mostrar pastas de worktree",
       "moreOptions": "Mais opções",
       "sortBy": "Ordenar por",
       "sortByCreatedAt": "Data de criação",
@@ -1829,6 +1830,7 @@
       "copyMessage": "Copiar mensagem",
       "author": "Autor",
       "noFileChangeDetails": "Sem detalhes de alteração de arquivos disponíveis.",
+      "loadingFiles": "Carregando arquivos...",
       "branchesTitle": "Branches Git",
       "loadingBranches": "Carregando branches...",
       "noContainingBranches": "Nenhuma branch contendo este commit foi encontrada.",
@@ -1857,14 +1859,28 @@
         "resetSuccessDescription": "{branch} foi resetada para {shortHash} com {mode}",
         "resetFailed": "Falha no reset"
       },
+      "authorFilter": {
+        "label": "Autor",
+        "searchPlaceholder": "Pesquisar autor",
+        "noAuthors": "Nenhum autor encontrado",
+        "you": "você",
+        "filterByAuthorAria": "Filtrar commits por autor",
+        "filterByQuery": "Filtrar por \"{query}\"",
+        "clearAuthorFilterAria": "Limpar filtro de autor",
+        "recent": "Recentes",
+        "matchingAuthors": "Autores correspondentes",
+        "removeFromRecent": "Remover {name} dos recentes"
+      },
       "branchSelector": {
+        "label": "Branch",
         "searchBranch": "Pesquisar branch...",
         "noBranches": "Nenhum branch",
         "selectBranchPlaceholder": "Selecionar branch...",
         "localBranches": "Branches locais",
         "current": "Atual",
         "remoteBranches": "Branches remotas",
-        "refreshCommitHistory": "Atualizar histórico de commits"
+        "refreshCommitHistory": "Atualizar histórico de commits",
+        "clearBranchFilterAria": "Limpar filtro de branch"
       },
       "dialogs": {
         "newBranchTitle": "Nova branch",
