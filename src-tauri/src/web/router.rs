@@ -615,6 +615,10 @@ pub fn build_router(
             post(handlers::acp::acp_set_config_option),
         )
         .route(
+            "/acp_goal_control",
+            post(handlers::acp::acp_goal_control),
+        )
+        .route(
             "/acp_describe_agent_options",
             post(handlers::acp::acp_describe_agent_options),
         )
@@ -627,6 +631,10 @@ pub fn build_router(
         .route(
             "/acp_answer_question",
             post(handlers::acp::acp_answer_question),
+        )
+        .route(
+            "/acp_answer_plan_approval",
+            post(handlers::acp::acp_answer_plan_approval),
         )
         .route(
             "/acp_list_connections",
@@ -1211,6 +1219,10 @@ pub fn build_router(
         .route(
             "/pet_marketplace_install",
             post(handlers::pet::pet_marketplace_install),
+        )
+        .route(
+            "/pet_marketplace_asset",
+            post(handlers::pet::pet_marketplace_asset),
         )
         .route("/pet_celebrate", post(handlers::pet::pet_celebrate))
         .route(
