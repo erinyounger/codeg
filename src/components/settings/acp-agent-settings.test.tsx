@@ -21,6 +21,7 @@ import type { AcpAgentInfo, AgentType, PreflightResult } from "@/lib/types"
 function makeAgent(overrides: Partial<AcpAgentInfo>): AcpAgentInfo {
   return {
     agent_type: "hermes" as AgentType,
+    skills_capable: true,
     registry_id: "hermes",
     registry_version: "0.16.0",
     name: "Hermes Agent",
@@ -45,6 +46,7 @@ function makeAgent(overrides: Partial<AcpAgentInfo>): AcpAgentInfo {
     cursor_cli_config_json: null,
     cursor_settings: null,
     model_provider_id: null,
+    icon_url: null,
     ...overrides,
   }
 }

@@ -646,6 +646,10 @@ pub struct ConversationConnectionInfo {
 #[derive(Debug, Clone, Serialize)]
 pub struct AcpAgentInfo {
     pub agent_type: crate::models::agent::AgentType,
+    /// Whether this agent has a codeg-known skill store — every built-in, and
+    /// custom agents that declared the shared `.agents/skills` store. Gates
+    /// the skills matrices frontend-side.
+    pub skills_capable: bool,
     pub registry_id: String,
     pub registry_version: Option<String>,
     pub name: String,
@@ -690,6 +694,11 @@ pub struct AcpAgentInfo {
     /// for `AgentType::Cursor`. Derived from `cursor_cli_config_json`.
     pub cursor_settings: Option<CursorSettings>,
     pub model_provider_id: Option<i32>,
+    /// Display icon for a custom ACP agent — normally an inlined
+    /// `data:image/…;base64,…` URL (see
+    /// `crate::acp::custom_registry::CustomAgentDef::icon_url`). Always `None`
+    /// for built-ins, which ship hand-drawn marks in the frontend.
+    pub icon_url: Option<String>,
 }
 
 /// The `~/.codex/config.toml` sandbox / approval keys surfaced as structured
